@@ -1,5 +1,7 @@
 # README
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/f4703d0acccd4fe1adfbd2993f70521e)](https://app.codacy.com/gh/Equationzhao/GoDDNS?utm_source=github.com&utm_medium=referral&utm_content=Equationzhao/GoDDNS&utm_campaign=Badge_Grade)
+
 GoDDNS
 
 a DDNS tool written in go
