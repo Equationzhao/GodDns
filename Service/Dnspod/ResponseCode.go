@@ -3,8 +3,8 @@
  *     @file: ResponseCode.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午3:27
+ *     @last modified: 2023/3/18 上午3:26
  *
  *
  *
@@ -12,7 +12,7 @@
 
 package Dnspod
 
-import "DDNS/DDNS"
+import "GodDns/DDNS"
 
 const (
 	BanedDomain                    = "-15"

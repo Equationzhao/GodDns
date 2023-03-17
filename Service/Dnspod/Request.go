@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午12:59
- *     @last modified: 2023/3/18 上午12:50
+ *     @time: 2023/3/18 上午3:27
+ *     @last modified: 2023/3/18 上午3:26
  *
  *
  *
@@ -13,8 +13,8 @@
 package Dnspod
 
 import (
-	"DDNS/DDNS"
-	"DDNS/Util"
+	"GodDns/DDNS"
+	"GodDns/Util"
 	"fmt"
 	"strconv"
 

@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午1:32
- *     @last modified: 2023/3/18 上午1:31
+ *     @time: 2023/3/18 上午3:27
+ *     @last modified: 2023/3/18 上午3:25
  *
  *
  *
@@ -13,11 +13,11 @@
 package main
 
 import (
-	"DDNS/DDNS"
-	"DDNS/Device"
-	"DDNS/Log"
-	"DDNS/Net"
-	"DDNS/Util"
+	"GodDns/DDNS"
+	"GodDns/Device"
+	"GodDns/Log"
+	"GodDns/Net"
+	"GodDns/Util"
 	"errors"
 	"flag"
 	"fmt"
@@ -31,7 +31,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 
-	_ "DDNS/Service" // register all services
+	_ "GodDns/Service" // register all services
 )
 
 var output = os.Stdout

@@ -1,4 +1,4 @@
-module DDNS
+module GodDns
 
 go 1.20
 
