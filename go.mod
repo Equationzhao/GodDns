@@ -1,4 +1,4 @@
-module GodDns
+module github.com/Equationzhao/GodDns
 
 go 1.20
 

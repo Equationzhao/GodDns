@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:27
- *     @last modified: 2023/3/18 上午3:26
+ *     @time: 2023/3/18 上午3:34
+ *     @last modified: 2023/3/18 上午3:34
  *
  *
  *
@@ -13,9 +13,9 @@
 package Dnspod
 
 import (
-	"GodDns/DDNS"
-	"GodDns/Util"
 	"fmt"
+	"github.com/Equationzhao/GodDns/DDNS"
+	"github.com/Equationzhao/GodDns/Util"
 	"strconv"
 
 	"github.com/go-resty/resty/v2"

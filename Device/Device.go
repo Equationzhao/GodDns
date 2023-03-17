@@ -3,8 +3,8 @@
  *     @file: Device.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:27
- *     @last modified: 2023/3/18 上午3:25
+ *     @time: 2023/3/18 上午3:34
+ *     @last modified: 2023/3/18 上午3:34
  *
  *
  *
@@ -15,8 +15,8 @@
 package Device
 
 import (
-	"GodDns/DDNS"
-	"GodDns/Util"
+	"github.com/Equationzhao/GodDns/DDNS"
+	"github.com/Equationzhao/GodDns/Util"
 	"strings"
 
 	"gopkg.in/ini.v1"

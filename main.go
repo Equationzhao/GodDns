@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:27
- *     @last modified: 2023/3/18 上午3:25
+ *     @time: 2023/3/18 上午3:34
+ *     @last modified: 2023/3/18 上午3:34
  *
  *
  *
@@ -13,14 +13,14 @@
 package main
 
 import (
-	"GodDns/DDNS"
-	"GodDns/Device"
-	"GodDns/Log"
-	"GodDns/Net"
-	"GodDns/Util"
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Equationzhao/GodDns/DDNS"
+	"github.com/Equationzhao/GodDns/Device"
+	"github.com/Equationzhao/GodDns/Log"
+	"github.com/Equationzhao/GodDns/Net"
+	"github.com/Equationzhao/GodDns/Util"
 	"io"
 	"os"
 	"path"
@@ -31,7 +31,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 
-	_ "GodDns/Service" // register all services
+	_ "github.com/Equationzhao/GodDns/Service" // register all services
 )
 
 var output = os.Stdout

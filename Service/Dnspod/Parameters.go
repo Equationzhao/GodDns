@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:27
- *     @last modified: 2023/3/18 上午3:26
+ *     @time: 2023/3/18 上午3:34
+ *     @last modified: 2023/3/18 上午3:34
  *
  *
  *
@@ -14,10 +14,10 @@ package Dnspod
 
 import "C"
 import (
-	"GodDns/DDNS"
-	"GodDns/Net"
-	"GodDns/Util"
 	"encoding/json"
+	"github.com/Equationzhao/GodDns/DDNS"
+	"github.com/Equationzhao/GodDns/Net"
+	"github.com/Equationzhao/GodDns/Util"
 )
 
 const serviceName = "Dnspod"
