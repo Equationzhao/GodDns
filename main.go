@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午1:32
+ *     @last modified: 2023/3/18 上午1:31
  *
  *
  *
@@ -31,7 +31,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 
-	_ "DDNS/Service"
+	_ "DDNS/Service" // register all services
 )
 
 var output = os.Stdout
