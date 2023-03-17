@@ -3,8 +3,8 @@
  *     @file: Util.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/17 下午11:42
  *
  *
  *
@@ -18,16 +18,42 @@ import (
 	"runtime"
 )
 
-// OSDetect
-// OS detection
+// OSDetect OS detection
 func OSDetect() string {
 	return runtime.GOOS
 }
 
+// ConvertableKeyValue  Convert any type to key-value according to the format
 type ConvertableKeyValue interface {
 	Convert2KeyValue(format string) string
 }
 
+// Convert2KeyValue Convert any type to key-value according to the format
+// if the type implements ConvertableKeyValue, use its method
+// else use reflection
+// if the type has a field named "KeyValue", use it as key
+// else if the type has a field named "json", use it as key
+// else use the field name as key
+// example:
+//
+//		type A struct {
+//			Device string `KeyValue:"device" json:"device"`
+//			IP     string `json:"ip"`
+//		 	Type   string
+//	     	unexported string
+//		}
+//
+// a := A{Device: "device", IP: "ip", Type: "type"}
+//
+// fmt.Println(Convert2KeyValue("%s: %s", a))
+//
+// output:
+//
+// device: device
+//
+// ip: ip
+//
+// Type: type
 func Convert2KeyValue(format string, i any) string {
 
 	if _, ok := i.(ConvertableKeyValue); ok {
@@ -58,8 +84,28 @@ type ConvertableXWWWFormUrlencoded interface {
 	Convert2XWWWFormUrlencoded() string
 }
 
-// Convert2XWWWFormUrlencoded
-// 按键名称转换为 x-www-form-urlencoded 格式
+// Convert2XWWWFormUrlencoded Convert to x-www-form-urlencoded format
+// if the type implements ConvertableXWWWFormUrlencoded, use its method
+// else use reflection
+// if the type has a field named "xwwwformurlencoded", use it as key
+// else if the type has a field named "json", use it as key
+// else use the field name as key
+// example:
+//
+//		type A struct {
+//			Device string `xwwwformurlencoded:"device" json:"device"`
+//			IP     string `json:"ip"`
+//		 	Type   string
+//	     	unexported string
+//		}
+//
+// a := A{Device: "device", IP: "ip", Type: "type"}
+//
+// fmt.Println(Convert2XWWWFormUrlencoded(a))
+//
+// output:
+//
+// device=device&ip=ip&Type=type
 func Convert2XWWWFormUrlencoded(i any) string {
 
 	if _, ok := i.(ConvertableXWWWFormUrlencoded); ok {
@@ -73,6 +119,10 @@ func Convert2XWWWFormUrlencoded(i any) string {
 	n := t.NumField()
 	for i := 0; i < n; i++ {
 		if !t.Field(i).IsExported() {
+			if i == n-1 && content != "" {
+				content = content[:len(content)-1]
+			}
+
 			continue
 		}
 		name := t.Field(i).Tag.Get("xwwwformurlencoded")
@@ -95,8 +145,7 @@ func Convert2XWWWFormUrlencoded(i any) string {
 	return content
 }
 
-// HasVariable
-// Check if struct has variable by name
+// HasVariable Check if struct has variable by name
 // can access variable both exported and unexported
 // if `i` is a pointer, it will be dereferenced
 func HasVariable(i any, name string) bool {
@@ -144,8 +193,7 @@ func GetVariable(i any, name string) (any, error) {
 	}
 }
 
-// SetVariable
-// Set Field from struct by name
+// SetVariable Set Field from struct by name
 // can only set exported variable
 // ptr2i must be a pointer to struct otherwise it will return an error because the field can't be set
 func SetVariable(ptr2i any, name string, value any) error {
@@ -184,6 +232,30 @@ func SetVariable(ptr2i any, name string, value any) error {
 
 }
 
+// GetTypeName Get type name of variable
+// example:
+//
+//	  	s := DDNS.Status{
+//			Name:    "Test",
+//			Msg:     "Hello",
+//			Success: DDNS.Success,
+//	 	}
+//
+//		fmt.(Util.GetTypeName(s))
+//		fmt.(Util.GetTypeName(&s))
+//
+//		b := make(map[string]int, 10)
+//		c := make([]string, 10)
+//
+//		fmt.(Util.GetTypeName(b))
+//		fmt.(Util.GetTypeName(c))
+//
+// output:
+//
+//	DDNS.Status
+//	*DDNS.Status
+//	map[string]int
+//	[]string
 func GetTypeName(variable any) string {
 	return reflect.TypeOf(variable).String()
 }

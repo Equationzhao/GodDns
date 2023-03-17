@@ -3,8 +3,8 @@
  *     @file: Util_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:07
  *
  *
  *
@@ -40,11 +40,12 @@ func init() {
 			RecordId:   2,
 			Subdomain:  "s1",
 			RecordLine: "默认",
-			Value:      "2001:da8:208:38:0:c2:12c3:2a42",
+			Value:      "fe80::ad29:79b2:f25b:aec4%36",
 			TTL:        600,
 			Type:       "AAAA",
 		},
 	}
+
 }
 
 func TestConfigFileGenerator(t *testing.T) {
@@ -53,23 +54,49 @@ func TestConfigFileGenerator(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(DDNS.GetConfigureLocation())
-	err = DDNS.ConfigureWriter("test.conf", os.O_TRUNC, dnspod)
+
+	err = DDNS.ConfigureWriter("test.conf", os.O_CREATE|os.O_TRUNC, dnspod)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestConvert2KeyValue(t *testing.T) {
-	fmt.Println(Util.Convert2KeyValue("%s = %v", p))
-	if Util.Convert2KeyValue("%s = %v", p) != "login_token = 550W_MOSS\nformat = json\nlang = en\nerror_on_empty = no\ndomain = example.com\nrecord_id = 2\nsub_domain = s1\nrecord_line = 默认\nvalue = 2001:da8:208:38:0:c2:12c3:2a42\nttl = 600\ntype = AAAA\n" {
+
+	type A struct {
+		Device     string `KeyValue:"device" json:"device"`
+		IP         string `json:"ip"`
+		Type       string
+		unexported string
+	}
+
+	a := A{Device: "device", IP: "ip", Type: "type", unexported: "123"}
+
+	t.Log(Util.Convert2KeyValue("%s: %s", a))
+
+	fmt.Println(Util.Convert2KeyValue("%s = %v", &p))
+	if Util.Convert2KeyValue("%s = %v", &p) != "login_token = 550W_MOSS\nformat = json\nlang = en\nerror_on_empty = no\ndomain = example.com\nrecord_id = 2\nsub_domain = s1\nrecord_line = 默认\nvalue = fe80::ad29:79b2:f25b:aec4%36\nttl = 600\ntype = AAAA\n" {
 		t.FailNow()
 	}
 
 }
 
 func TestConvert2XWWWFormUrlencoded(t *testing.T) {
-	if Util.Convert2XWWWFormUrlencoded(p) != "login_token=550W_MOSS&format=json&lang=en&error_on_empty=no&domain=example.com&record_id=2&sub_domain=s1&record_line=默认&value=2001:da8:208:38:0:c2:12c3:2a42&ttl=600&type=AAAA" {
+
+	type A struct {
+		Device     string `KeyValue:"device" json:"device"`
+		IP         string `json:"ip"`
+		Type       string
+		unexported string
+	}
+
+	a := A{Device: "device", IP: "ip", Type: "type", unexported: "123"}
+	urlencoded := Util.Convert2XWWWFormUrlencoded(a)
+	t.Log(urlencoded)
+
+	res := Util.Convert2XWWWFormUrlencoded(&p)
+	t.Log(res)
+	if res != "login_token=550W_MOSS&format=json&lang=en&error_on_empty=no&domain=example.com&record_id=2&sub_domain=s1&record_line=默认&value=fe80::ad29:79b2:f25b:aec4%36&ttl=600&type=AAAA" {
 		t.FailNow()
 	}
 }
@@ -178,11 +205,13 @@ func TestGetTypeName(t *testing.T) {
 		Success: DDNS.Success,
 	}
 
-	fmt.Println(Util.GetTypeName(s))
-	fmt.Println(Util.GetTypeName(&s))
+	t.Log(Util.GetTypeName(s))
+	t.Log(Util.GetTypeName(&s))
 
 	b := make(map[string]int, 10)
+	c := make([]string, 10)
 
-	fmt.Println(Util.GetTypeName(b))
+	t.Log(Util.GetTypeName(b))
+	t.Log(Util.GetTypeName(c))
 
 }

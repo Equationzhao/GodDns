@@ -3,8 +3,8 @@
  *     @file: IP_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/17 下午10:20
  *
  *
  *
@@ -53,13 +53,13 @@ func TestWhichType(t *testing.T) {
 }
 
 func TestGetIPFromIpify(t *testing.T) {
-	s, err := GetIPFromIpify(4)
+	s, err := getIPFromIpify(4)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(s)
 
-	s, err = GetIPFromIpify(6)
+	s, err = getIPFromIpify(6)
 	if err != nil {
 		t.Error(err)
 	}
@@ -67,13 +67,13 @@ func TestGetIPFromIpify(t *testing.T) {
 }
 
 func TestGetIPFromIdentMe(t *testing.T) {
-	s, err := GetIPFromIdentMe(4)
+	s, err := getIPFromIdentMe(4)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(s)
 
-	s, err = GetIPFromIdentMe(6)
+	s, err = getIPFromIdentMe(6)
 	if err != nil {
 		t.Error(err)
 	}

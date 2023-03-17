@@ -3,8 +3,8 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:36
  *
  *
  *
@@ -23,31 +23,26 @@ import (
 type Config struct {
 }
 
-var ConfigFactoryInstance ConfigFactory
-
 func init() {
 	DDNS.ConfigFactoryList = append(DDNS.ConfigFactoryList, ConfigFactoryInstance)
 }
 
+// GetName Get name of service
 func (c Config) GetName() string {
 	return serviceName
 }
 
-// GenerateDefaultConfigInfo
-// Create default config
-// Parameters:none
-// Return: Parameters , error
+// GenerateDefaultConfigInfo Create default config
+// Return: DDNS.ConfigStr , error
 // if any error occurs, FileName will be ""
 func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
-	P := new(Parameters)
-	*P = GenerateDefaultConfigInfo()
-	return c.GenerateConfigInfo(P, 0)
+	P := GenerateDefaultConfigInfo()
+	return c.GenerateConfigInfo(&P, 0)
 }
 
-// ReadConfig
-// Read config file
-// Parameters:none
-// Return: Parameters
+// ReadConfig Read config file
+// Parameters: sec ini.Section
+// Return: DDNS.Parameters and error
 // if any error occurs, returned Parameters will be nil
 func (c Config) ReadConfig(sec ini.Section) (DDNS.Parameters, error) {
 	var err error = nil
@@ -157,24 +152,31 @@ func (c Config) ReadConfig(sec ini.Section) (DDNS.Parameters, error) {
 	return d, nil
 }
 
+// ConfigFactoryInstance a Factory instance to make dnspod config
+var ConfigFactoryInstance ConfigFactory
+
+// ConfigFactory is a factory that create a new Config
 type ConfigFactory struct {
 }
 
+// GetName return the name of dnspod
 func (c ConfigFactory) GetName() string {
 	return serviceName
 }
 
+// Get return a new Config
 func (c ConfigFactory) Get() DDNS.Config {
 	return &Config{}
 }
 
+// New return a new Config
 func (c ConfigFactory) New() *DDNS.Config {
 	var config DDNS.Config = &Config{}
 	return &config
 }
 
 // GenerateConfigInfo
-// use reflect to get information of PublicParameter and ExternalParameter
+// Generate KeyValue style config
 func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
 	head := DDNS.ConfigHead(parameters, No)
 

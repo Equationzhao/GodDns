@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:53
  *
  *
  *
@@ -16,11 +16,13 @@ import (
 	"fmt"
 )
 
+// Parameters basic interface
 type Parameters interface {
 	GetName() string                       // return like "dnspod"
 	SaveConfig(No uint) (ConfigStr, error) //todo LoadOptions with comment/without comment(default)/...
 }
 
+// ServiceParameters is an interface a service must implement
 type ServiceParameters interface {
 	Parameters
 

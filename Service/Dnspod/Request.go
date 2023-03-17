@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:50
  *
  *
  *
@@ -23,8 +23,10 @@ import (
 )
 
 const (
+	// RecordListUrl url of getting Record list
 	RecordListUrl = "https://dnsapi.cn/Record.List"
-	DDNSUrl       = "https://dnsapi.cn/Record.Ddns"
+	// DDNSUrl  url of DDNS
+	DDNSUrl = "https://dnsapi.cn/Record.Ddns"
 )
 
 // usage
@@ -32,38 +34,41 @@ const (
 // r.Init(Parameters)
 // r.MakeRequest()
 
+// Request implements DDNS.Request
 type Request struct {
 	parameters Parameters
 	status     DDNS.Status
 }
 
+// Status return DDNS.Status which contains execution result etc.
 func (r *Request) Status() DDNS.Status {
 	return r.status
 }
 
+// ToParameters return DDNS.Parameters
 func (r *Request) ToParameters() DDNS.Parameters {
 	return &r.parameters
 }
 
+// Run implements Cron.Job
 func (r *Request) Run() {
 	err := r.MakeRequest()
-
 	logrus.Debugf("status:%+v,err:%s", r.Status(), err)
 }
 
+// GetName return "dnspod"
 func (r *Request) GetName() string {
 	return serviceName
 }
 
+// Init set parameter
 func (r *Request) Init(parameters DDNS.Parameters) error {
 	r.parameters.PublicParameter = parameters.(*Parameters).PublicParameter
 	r.parameters.ExternalParameter = parameters.(*Parameters).ExternalParameter
 	return nil
 }
 
-// MakeRequest
-// 1.GetRecordId
-// 2.DDNS
+// MakeRequest  1.GetRecordId  2.DDNS
 func (r *Request) MakeRequest() error {
 	status, err := r.GetRecordId()
 	if err != nil || status.Success != DDNS.Success {
@@ -102,9 +107,7 @@ func (r *Request) MakeRequest() error {
 	}
 }
 
-// GetRecordId
-// make request to Dnspod to get RecordId
-// set ExternalParameter.RecordId
+// GetRecordId make request to Dnspod to get RecordId and set ExternalParameter.RecordId
 func (r *Request) GetRecordId() (DDNS.Status, error) {
 
 	s := &struct {

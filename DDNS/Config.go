@@ -3,13 +3,15 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:10
  *
  *
  *
  */
 
+// Package DDNS
+// basic interfaces and tools for DDNS service
 package DDNS
 
 import (
@@ -64,31 +66,36 @@ type Config interface {
 	GenerateConfigInfo(Parameters, uint) (ConfigStr, error)
 }
 
-// NameMatch
-// customized name rule to match
+// NameMatch customized name rule to match
+// used in ConfigureReader
+// if a service implements this interface
+// the service will match section name by its NameMatch rule
 type NameMatch interface {
 	MatchName(string) bool
 }
 
-// ConfigFactory
-// factory to create Config
+// ConfigFactory factory to create Config
 type ConfigFactory interface {
 	GetName() string
 	Get() Config
 	New() *Config
 }
 
+// ConfigStr config file content
+// Name: config service name
+// Content: config service content
 type ConfigStr struct {
 	Name    string
 	Content string
 }
 
+// GetConfigureLocation  Get config file location
+// Should call after GetDefaultConfigurationLocation or UpdateConfigureLocation
 func GetConfigureLocation() string {
 	return configFileLocation
 }
 
-// ConfigureWriter
-// Create key style config file
+// ConfigureWriter Create key style config file
 // structure :
 // ServiceName -> [ServiceName]
 // Key -> Key=value
@@ -156,9 +163,9 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	secs := cfg.Sections()
 	for _, sec := range secs {
 		for _, c := range configs {
-			match := false
+			var match bool
 			if _, ok := c.Get().(NameMatch); ok {
-				match = c.Get().(NameMatch).MatchName(sec.Name()) // todo get regexp from c.Get() if it is can Match names
+				match = c.Get().(NameMatch).MatchName(sec.Name())
 			} else {
 				pattern := regexp.MustCompile(regexp.QuoteMeta(c.GetName()) + `(#\d+)?$`) // default pattern
 				match = pattern.MatchString(sec.Name())

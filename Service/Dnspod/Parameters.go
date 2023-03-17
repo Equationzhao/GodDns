@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:43
  *
  *
  *
@@ -22,6 +22,10 @@ import (
 
 const serviceName = "Dnspod"
 
+// Parameters implements DeviceOverridable
+// PublicParameter is public parameter of dnspod
+// ExternalParameter is external parameter of dnspod ddns
+// device is device name when overriding ip with specific device/interface
 type Parameters struct {
 	PublicParameter   PublicParameter
 	ExternalParameter ExternalParameter
@@ -29,38 +33,47 @@ type Parameters struct {
 	device string
 }
 
+// IsDeviceSet return whether the device is set
 func (p *Parameters) IsDeviceSet() bool {
 	return p.device != ""
 }
 
+// IsTypeSet return whether the type is set correctly
 func (p *Parameters) IsTypeSet() bool {
 	return p.ExternalParameter.Type == "AAAA" || p.ExternalParameter.Type == "A"
 }
 
+// SetValue set ip
 func (p *Parameters) SetValue(value string) {
 	p.ExternalParameter.Value = value
 }
 
+// GetDevice return device name
 func (p *Parameters) GetDevice() string {
 	return p.device
 }
 
+// GetType return Type like "4" or "6" and "" if invalid type
 func (p *Parameters) GetType() string {
 	return Net.Type2Num(p.ExternalParameter.Type)
 }
 
+// SaveConfig return DDNS.ConfigStr
 func (p *Parameters) SaveConfig(No uint) (DDNS.ConfigStr, error) {
 	return Config{}.GenerateConfigInfo(p, No)
 }
 
+// GetName return "dnspod"
 func (p *Parameters) GetName() string {
 	return serviceName
 }
 
+// GetIP return ip value
 func (p *Parameters) GetIP() string {
 	return p.ExternalParameter.Value
 }
 
+// GenerateDefaultConfigInfo  return Default config
 func GenerateDefaultConfigInfo() Parameters {
 	return Parameters{
 		PublicParameter: PublicParameter{
@@ -99,8 +112,7 @@ type ExternalParameter struct {
 	Type       string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"type"`
 }
 
-// MarshalJSON
-// rewrite Parameters marshal function
+// MarshalJSON rewrite Parameters marshal function
 func (p *Parameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		LoginToken   string
@@ -130,18 +142,17 @@ func (p *Parameters) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// Convert2XWWWFormUrlencoded
-// rewrite Parameters Convert2XWWWFormUrlencoded function
+// Convert2XWWWFormUrlencoded rewrite Parameters Convert2XWWWFormUrlencoded function
 func (p *Parameters) Convert2XWWWFormUrlencoded() string {
 	return Util.Convert2XWWWFormUrlencoded(p.PublicParameter) + "&" + Util.Convert2XWWWFormUrlencoded(p.ExternalParameter)
 }
 
-// Convert2KeyValue
-// rewrite Parameters Convert2KeyValue function
+// Convert2KeyValue rewrite Parameters Convert2KeyValue function
 func (p *Parameters) Convert2KeyValue(format string) string {
 	return Util.Convert2KeyValue(format, p.PublicParameter) + Util.Convert2KeyValue(format, p.ExternalParameter)
 }
 
+// ToRequest Convert to DDNS.Request
 func (p *Parameters) ToRequest() (DDNS.Request, error) {
 	r := new(Request)
 	err := r.Init(p)
@@ -159,6 +170,7 @@ func getDefaultType() string {
 	return ""
 }
 
+// getTotalDomain return subdomain+domain
 func (p *Parameters) getTotalDomain() string {
 	return p.ExternalParameter.Subdomain + "." + p.ExternalParameter.Domain
 }

@@ -3,8 +3,8 @@
  *     @file: IP.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/17 下午11:52
  *
  *
  *
@@ -27,19 +27,23 @@ const (
 	DefaultType          = A
 )
 
+// Api is a type = function that return a string and an error
 type Api = func(uint8) (string, error)
 
+// Apis contains a map of apis
 type Apis struct {
 	a map[string]func(uint8) (string, error)
 }
 
+// ApiMap is a default Apis, contains a map of apis
 var ApiMap = Apis{
 	a: map[string]func(uint8) (string, error){
-		"ipify":   GetIPFromIpify,
-		"identMe": GetIPFromIdentMe,
+		"ipify":   getIPFromIpify,
+		"identMe": getIPFromIdentMe,
 	},
 }
 
+// GetApiName return the names of apis
 func (a *Apis) GetApiName() []string {
 	var res = make([]string, 0, len(a.a)) // todo check make(), reserve cap
 	for s := range a.a {
@@ -48,21 +52,22 @@ func (a *Apis) GetApiName() []string {
 	return res
 }
 
+// Add2Apis add api to Map
 func (a *Apis) Add2Apis(name string, f Api) {
 	a.a[name] = f
 }
 
+// GetApi return the api function
 func (a *Apis) GetApi(name string) Api {
 	return a.a[name]
 }
 
+// GetMap return the map of apis
 func (a *Apis) GetMap() map[string]Api {
 	return a.a
 }
 
-// GetIp
-// return Ip list of corresponding interface and nil error
-// when error occurs, return nil and error
+// GetIp return Ip list of corresponding interface and nil error when error occurs, return nil and error
 func GetIp(NameToMatch string) ([]string, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -92,7 +97,7 @@ func GetIp(NameToMatch string) ([]string, error) {
 	return nil, fmt.Errorf("not found")
 }
 
-// WhichType
+// WhichType get the type of ip
 // parameter: ip
 // if ip is an ipv4 address return 4, if it's an ipv6 address return 6, else return 0
 func WhichType(ip string) uint8 {
@@ -110,8 +115,7 @@ func WhichType(ip string) uint8 {
 	return 0
 }
 
-// GetIpByType
-// get specific type ip of corresponding interface
+// GetIpByType get specific type ip of corresponding interface
 // parameter: NameToMatch, Type
 // NameToMatch: interface name
 // Type: 4 for ipv4, 6 for ipv6 (use constant A and AAAA)
@@ -137,7 +141,8 @@ func GetIpByType(NameToMatch string, Type uint8) ([]string, error) {
 	}
 }
 
-func GetIPFromIpify(Type uint8) (string, error) {
+// getIPFromIpify get ip from ipify
+func getIPFromIpify(Type uint8) (string, error) {
 
 	switch Type {
 	case 6:
@@ -154,14 +159,15 @@ func GetIPFromIpify(Type uint8) (string, error) {
 	return ip, nil
 }
 
-func GetIPFromIdentMe(Type uint8) (string, error) {
+// getIPFromIdentMe get ip from ident.me
+func getIPFromIdentMe(Type uint8) (string, error) {
 	ApiUri := ""
 
 	switch Type {
 	case 6:
-		ApiUri = "http://v6.ident.me"
+		ApiUri = "https://v6.ident.me"
 	case 4:
-		ApiUri = "http://v4.ident.me"
+		ApiUri = "https://v4.ident.me"
 	default:
 		return "", fmt.Errorf("invalid type: %d", Type)
 	}
@@ -174,17 +180,17 @@ func GetIPFromIdentMe(Type uint8) (string, error) {
 	return res.String(), nil
 }
 
-func moreThan[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64](a T, b T) bool {
+type IntegerNumeric interface {
+	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64
+}
+
+func moreThan[T IntegerNumeric](a T, b T) bool {
 	return a > b
 }
 
-// TypeEqual
-/*
-
-if t1 = 4 or "A", t2 = 4 or "A" ,return true
-if t1 = 6 or "AAAA", t2 = 6 or "AAAA", return true
-
-*/
+// TypeEqual compare t1 and t2
+// if t1 = 4 or "A", t2 = 4 or "A" ,return true
+// if t1 = 6 or "AAAA", t2 = 6 or "AAAA", return true
 func TypeEqual(t1, t2 any) bool {
 	// if t1/t2 is string, convert it to uint8
 	// the compare uint8(t1) and uint8(t2)
@@ -312,7 +318,7 @@ func TypeEqual(t1, t2 any) bool {
 
 }
 
-// Type2Num
+// Type2Num Convert type string to number string
 // Receive “A”/“4” and “AAAA”/“6”, return “4” or “6”, if not match return ""
 func Type2Num(Type string) string {
 	switch Type {
@@ -325,7 +331,7 @@ func Type2Num(Type string) string {
 	}
 }
 
-// Type2Str
+// Type2Str Convert type string to string
 // Receive “A”/“4” and “AAAA”/“6”, return “A” or “AAAA”, if not match return ""
 func Type2Str(Type string) string {
 	switch Type {
@@ -338,6 +344,8 @@ func Type2Str(Type string) string {
 	}
 }
 
+// Type2Uint8 Convert type string to uint8
+// Receive “A”/“4” and “AAAA”/“6”, return “A” or “AAAA”, if not match return ""
 func Type2Uint8(Type string) uint8 {
 	switch Type {
 	case "A", "4":
@@ -349,6 +357,9 @@ func Type2Uint8(Type string) uint8 {
 	}
 }
 
+// IsTypeValid check if the type is valid
+// "A" or "4" or "AAAA" or "6" is valid
+// others is invalid
 func IsTypeValid(Type string) bool {
 	switch Type {
 	case "A", "4", "AAAA", "6":
@@ -359,6 +370,8 @@ func IsTypeValid(Type string) bool {
 
 }
 
+// DealWithIp deal with ip
+// like get specific ip ?
 func DealWithIp(ip ...string) string {
 	//todo deal with ip like get specific ip
 	return ip[0]

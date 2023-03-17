@@ -3,8 +3,8 @@
  *     @file: Hook.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 上午12:59
+ *     @last modified: 2023/3/18 上午12:57
  *
  *
  *
@@ -27,13 +27,13 @@ type LogrusOriginally2writer struct {
 	writers []io.Writer
 }
 
+// Levels return applied levels
 func (l LogrusOriginally2writer) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
 // Fire writes the original message to the writer
 // It is used by LogrusOriginally2writer
-
 func (l LogrusOriginally2writer) Fire(entry *logrus.Entry) error {
 	line := entry.Message
 	var err error
