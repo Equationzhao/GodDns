@@ -10,8 +10,18 @@
 a DDNS tool written in go
 
 ## usage
+- go run
 
-`> go run DDNS [-R -A -O] [-api=ApiName] [-t=time] [-retry=times] [-S] [-G] [-log=Trace/Debug/Info/Warn/Error] [-config=Config]`
+	```bash
+	go run GodDns [-R -A -O] [-api=ApiName] [-t=time] [-retry=times] [-S] [-G] [-log=Trace/Debug/Info/Warn/Error] [-config=Config]
+	```
+	
+- go build
+	```bash
+	go build GodDns
+	./GodDns [-R -A -O] [-api=ApiName] [-t=time] [-retry=times] [-S] [-G] [-log=Trace/Debug/Info/Warn/Error] [-config=Config]
+	```
+	
 
 ## Flags
 
