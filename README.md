@@ -5,20 +5,26 @@ GoDDNS
 a DDNS tool written in go
 
 ## Flags
--R run ddns
-	-A automatically get ip from device from Device Section
-		-O override ip with device set from each service Section
-	-api=ApiName get ip from ipify.org/ident.me Etc.
-	-t=time(seconds) run ddns per time(seconds)
-	-retry=times retry times when error occurs
 
--S no output to stdout
+	-R run ddns
+	
+		-A automatically get ip from device from Device Section
+		
+			-O override ip with device set from each service Section
+	
+		-api=ApiName get ip from ipify.org/ident.me Etc.
+	
+		-t=time(seconds) run ddns per time(seconds)
+	
+		-retry=times retry times when error occurs
 
--G generate default configure
+	-S no output to stdout
 
--log = Trace/Debug/Info/Warn/Error log level
+	-G generate default configure
 
--config= Config
+	-log = Trace/Debug/Info/Warn/Error log level
+
+	-config= Config
 
 ## Configure
 [Device] # required
