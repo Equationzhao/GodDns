@@ -43,3 +43,9 @@ device=[$YourDeviceName1$,$YourDeviceName2$,...]
 key=value # key and value of the Service (start with lower case)
 
 ...
+
+
+
+## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com)  Structure
+[![Structure](https://images.repography.com/35290882/Equationzhao/GoDDNS/structure/Xvtsc2MXHRRRBOO98rPykluHsbjgiXVtv151YJjZe-g/eV5f7dIVTtGDBh-UK4EnRsrCo0rHTumqrtoK3Ih6Ap0_table.svg)](https://github.com/Equationzhao/GoDDNS)
+
