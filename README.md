@@ -1,4 +1,6 @@
 # README
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FEquationzhao%2FGoDDNS.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FEquationzhao%2FGoDDNS?ref=badge_shield)
+
 
 GoDDNS 
 
@@ -46,6 +48,6 @@ key=value # key and value of the Service (start with lower case)
 
 
 
+
 ## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com)  Structure
 [![Structure](https://images.repography.com/35290882/Equationzhao/GoDDNS/structure/Xvtsc2MXHRRRBOO98rPykluHsbjgiXVtv151YJjZe-g/eV5f7dIVTtGDBh-UK4EnRsrCo0rHTumqrtoK3Ih6Ap0_table.svg)](https://github.com/Equationzhao/GoDDNS)
-
