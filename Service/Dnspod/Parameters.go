@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:43
- *     @last modified: 2023/3/18 上午3:42
+ *     @time: 2023/3/19 上午2:00
+ *     @last modified: 2023/3/19 上午1:27
  *
  *
  *
@@ -96,20 +96,20 @@ func GenerateDefaultConfigInfo() Parameters {
 }
 
 type PublicParameter struct {
-	LoginToken   string `json:"login_token,omitempty" xwwwformurlencoded:"login_token" KeyValue:"login_token"`
-	Format       string `json:"format,omitempty" xwwwformurlencoded:"format" KeyValue:"format"`
-	Lang         string `json:"lang,omitempty" xwwwformurlencoded:"lang" KeyValue:"lang"`
-	ErrorOnEmpty string `json:"error_on_empty,omitempty" xwwwformurlencoded:"error_on_empty" KeyValue:"error_on_empty"`
+	LoginToken   string `json:"login_token,omitempty" xwwwformurlencoded:"login_token" KeyValue:"login_token,get from https://console.dnspod.cn/account/token/token, 'ID,Token'"`
+	Format       string `json:"format,omitempty" xwwwformurlencoded:"format" KeyValue:"format,data format, json(recommended) or xml"`
+	Lang         string `json:"lang,omitempty" xwwwformurlencoded:"lang" KeyValue:"lang,language, en or zh(recommended)"`
+	ErrorOnEmpty string `json:"error_on_empty,omitempty" xwwwformurlencoded:"error_on_empty" KeyValue:"error_on_empty,return error if the data doesn't exist,no(recommended) or yes"`
 }
 
 type ExternalParameter struct {
-	Domain     string `json:"domain,omitempty" xwwwformurlencoded:"domain" KeyValue:"domain"`
-	RecordId   uint32 `json:"record_id,omitempty" xwwwformurlencoded:"record_id" KeyValue:"record_id"`
-	Subdomain  string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain" KeyValue:"sub_domain"`
-	RecordLine string `json:"record_line,omitempty" xwwwformurlencoded:"record_line" KeyValue:"record_line"`
-	Value      string `json:"value,omitempty" xwwwformurlencoded:"value" KeyValue:"value"`
-	TTL        uint16 `json:"ttl,omitempty" xwwwformurlencoded:"ttl" KeyValue:"ttl"`
-	Type       string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"type"`
+	Domain     string `json:"domain,omitempty" xwwwformurlencoded:"domain" KeyValue:"domain,domain name"`
+	RecordId   uint32 `json:"record_id,omitempty" xwwwformurlencoded:"record_id" KeyValue:"record_id,record id can be get by making http POST request with required Parameters to https://dnsapi.cn/Record.List, more at https://docs.dnspod.com/api/get-record-list/"`
+	Subdomain  string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain" KeyValue:"sub_domain,record name like www."`
+	RecordLine string `json:"record_line,omitempty" xwwwformurlencoded:"record_line" KeyValue:"record_line,The record line.You can get the list from the API.The default value is '默认'"`
+	Value      string `json:"value,omitempty" xwwwformurlencoded:"value" KeyValue:"value,IP address like 6.6.6.6"`
+	TTL        uint16 `json:"ttl,omitempty" xwwwformurlencoded:"ttl" KeyValue:"ttl,Time-To-Live, 600(default)"`
+	Type       string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"type,A/AAAA/4/6"`
 }
 
 // MarshalJSON rewrite Parameters marshal function

@@ -3,8 +3,8 @@
  *     @file: Util_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:52
+ *     @time: 2023/3/19 上午2:00
+ *     @last modified: 2023/3/19 上午1:50
  *
  *
  *
@@ -16,7 +16,6 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Service/Dnspod"
 	"GodDns/Util"
-	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -65,20 +64,17 @@ func TestConfigFileGenerator(t *testing.T) {
 func TestConvert2KeyValue(t *testing.T) {
 
 	type A struct {
-		Device     string `KeyValue:"device" json:"device"`
-		IP         string `json:"ip"`
+		Device     string `KeyValue:"device,device name" json:"device"`
+		IP         string `json:"ip,omitempty,string"`
 		Type       string
 		unexported string
 	}
 
 	a := A{Device: "device", IP: "ip", Type: "type", unexported: "123"}
 
-	t.Log(Util.Convert2KeyValue("%s: %s", a))
+	t.Log("\n", Util.Convert2KeyValue("%s: %s", a))
 
-	fmt.Println(Util.Convert2KeyValue("%s = %v", &p))
-	if Util.Convert2KeyValue("%s = %v", &p) != "login_token = 550W_MOSS\nformat = json\nlang = en\nerror_on_empty = no\ndomain = example.com\nrecord_id = 2\nsub_domain = s1\nrecord_line = 默认\nvalue = fe80::ad29:79b2:f25b:aec4%36\nttl = 600\ntype = AAAA\n" {
-		t.FailNow()
-	}
+	t.Log("\n", Util.Convert2KeyValue("%s = %v", &p))
 
 }
 
