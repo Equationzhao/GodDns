@@ -19,8 +19,20 @@ import (
 )
 
 // OSDetect OS detection
-func OSDetect() string {
-	return runtime.GOOS
+// return os and arch
+// if it's 386, replace it with x86
+func OSDetect() (os string, arch string) {
+	os = runtime.GOOS
+	arch = runtime.GOARCH
+	switch arch {
+	case "amd64":
+	case "386":
+		arch = "x86"
+	default:
+
+	}
+
+	return
 }
 
 // ConvertableKeyValue  Convert any type to key-value according to the format

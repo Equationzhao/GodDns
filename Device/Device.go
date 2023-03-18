@@ -3,8 +3,8 @@
  *     @file: Device.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:43
- *     @last modified: 2023/3/18 上午3:42
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:47
  *
  *
  *
@@ -59,7 +59,7 @@ func (d Device) SaveConfig(No uint) (DDNS.ConfigStr, error) {
 // should not return error
 func (d Device) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 	return d.GenerateConfigInfo(Device{
-		Devices: []string{"DeviceName"},
+		Devices: []string{"interface1", "interface2", "..."},
 	}, 0)
 }
 
@@ -73,7 +73,7 @@ func (d Device) ReadConfig(sec ini.Section) (DDNS.Parameters, error) { // todo
 	}
 
 	// convert to []string
-	//[DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> split " " -> []string
+	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> split " " -> []string
 	d.Devices = strings.Split(strings.Trim(strings.Replace(deviceList.String(), ",", " ", -1), "[]"), " ") // remove [] and remove " "
 	return d, nil
 }

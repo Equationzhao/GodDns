@@ -46,8 +46,7 @@ var (
 	NoStdout       = flag.Bool("S", false, "no stdout")
 	ApiName        = flag.String("api", "", "api name")
 	retryAttempt   = flag.Int("retry", 3, "retry attempt times")
-	// todo RPC :=  flag.Bool("RPC", false, "run ddns with RPC") run RPC server
-	config = flag.String("config", "", "config file path")
+	config         = flag.String("config", "", "config file path")
 )
 
 // InitLog
@@ -197,6 +196,8 @@ func main() {
 
 	length := len(os.Args)
 	if length == 1 {
+		_, _ = fmt.Fprintln(output, DDNS.NowVersionInfo(), "\n--------------------------------------------")
+		CheckVersionUpgrade()
 		os.Args = append(os.Args, "-h")
 	}
 
@@ -696,4 +697,28 @@ func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
 		}
 	}
 	return Parameters2Save
+}
+
+func CheckVersionUpgrade() {
+	// start checking version upgrade
+	hasUpgrades, v, url, err := DDNS.CheckUpdate()
+
+	if err != nil {
+		if errors.Is(err, DDNS.NoCompatibleVersionError) {
+			// "no suitable version")
+			_, _ = fmt.Fprintf(output, "new version %s is available\n", v.Info())
+			_, _ = fmt.Fprintln(output, "no compatible release for your operating system, consider building from source: ", DDNS.RepoURLs())
+		}
+		// error checking version upgrade
+		return
+	}
+
+	if hasUpgrades {
+		_, _ = fmt.Fprintf(output, "new version %s is available\n", v.Info())
+		_, _ = fmt.Fprintln(output, "download url: ", url)
+	} else {
+		// "already the latest version")
+		return
+	}
+
 }

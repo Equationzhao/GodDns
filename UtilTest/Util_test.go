@@ -17,10 +17,11 @@ import (
 	"GodDns/Service/Dnspod"
 	"GodDns/Util"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 var p Dnspod.Parameters
@@ -102,7 +103,11 @@ func TestConvert2XWWWFormUrlencoded(t *testing.T) {
 }
 
 func TestConfigureReader(t *testing.T) {
-	ps, err, errs := DDNS.ConfigureReader(DDNS.GetConfigureLocation(), Dnspod.ConfigFactory{})
+	location, err := DDNS.GetDefaultConfigurationLocation()
+	if err != nil {
+		t.Error(err)
+	}
+	ps, err, errs := DDNS.ConfigureReader(location, Dnspod.ConfigFactory{})
 	if err != nil {
 		t.Error(err)
 	}

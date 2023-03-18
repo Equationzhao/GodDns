@@ -30,7 +30,13 @@ func TestCreateDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = DDNS.ConfigureWriter(DDNS.GetConfigureLocation(), os.O_CREATE, config)
+
+	location, err := DDNS.GetDefaultConfigurationLocation()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = DDNS.ConfigureWriter(location, os.O_CREATE, config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,4 +81,22 @@ func TestStatus_AppendMsgF(t *testing.T) {
 		t.Error("AppendMsg failed")
 	}
 	t.Log(s.Msg)
+}
+
+func TestVersion(t *testing.T) {
+	t.Log(DDNS.NowVersion)
+	t.Log(DDNS.NowVersionInfo())
+
+	latest, _, err := DDNS.GetLatestVersionInfo()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("latest version: v%s", latest)
+
+	if DDNS.Version.Compare(latest, DDNS.NowVersion) > 0 {
+		t.Log("new version available")
+	} else {
+		t.Log("already latest version")
+	}
+
 }

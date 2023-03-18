@@ -81,12 +81,4 @@ func TestConvert2StringSlice(t *testing.T) {
 
 }
 
-func TestSingleConfig(t *testing.T) {
-	a := ConfigFactory{}.New()
-	b := ConfigFactory{}.New()
 
-	if &a != &b {
-		t.Errorf("Not single,%p!=%p", &a, &b)
-	}
-
-}

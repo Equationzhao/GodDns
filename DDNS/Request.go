@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/17 下午9:54
- *     @last modified: 2023/3/17 下午8:07
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:47
  *
  *
  *
@@ -39,8 +39,8 @@ type Status struct {
 	Success int
 }
 
-//const Success = "success"
-//const Failed = "failed"
+// const Success = "success"
+// const Failed = "failed"
 
 // AppendMsg
 // append msg to Status.Msg, using fmt.Sprint
