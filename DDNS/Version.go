@@ -3,8 +3,8 @@
  *     @file: Version.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午4:11
- *     @last modified: 2023/3/18 下午4:11
+ *     @time: 2023/3/19 上午12:20
+ *     @last modified: 2023/3/19 上午12:20
  *
  *
  *
@@ -95,8 +95,8 @@ func NowVersionInfo() string {
 // NowVersion is current version of GodDns
 var NowVersion = Version{
 	major: 0,
-	minor: 1,
-	patch: 0,
+	minor: 0,
+	patch: 2,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub
