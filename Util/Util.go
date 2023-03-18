@@ -3,8 +3,8 @@
  *     @file: Util.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:52
+ *     @time: 2023/3/19 上午2:00
+ *     @last modified: 2023/3/19 上午1:50
  *
  *
  *
@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 )
 
 // OSDetect OS detection
@@ -43,29 +44,23 @@ type ConvertableKeyValue interface {
 // Convert2KeyValue Convert any type to key-value according to the format
 // if the type implements ConvertableKeyValue, use its method
 // else use reflection
-// if the type has a field named "KeyValue", use it as key
-// else if the type has a field named "json", use it as key
+// if the type has a tag named "KeyValue", use it as key (the first word is key, the rest content after the first ',' is comments)
+// else if the type has a tag named "json", use it as key (use the first word before the first ',' as key)
 // else use the field name as key
 // example:
 //
-//		type A struct {
-//			Device string `KeyValue:"device" json:"device"`
-//			IP     string `json:"ip"`
-//		 	Type   string
-//	     	unexported string
-//		}
-//
-// a := A{Device: "device", IP: "ip", Type: "type"}
-//
-// fmt.Println(Convert2KeyValue("%s: %s", a))
-//
-// output:
-//
-// device: device
-//
-// ip: ip
-//
-// Type: type
+//	type A struct {
+//		Device     string `KeyValue:"device,device name" json:"device"`
+//		IP         string `json:"ip,omitempty"`
+//		Type       string
+//		unexported string
+//	}
+//	a := A{Device: "device", IP: "ip", Type: "type"}
+//	fmt.Println(Convert2KeyValue("%s: %s", a))
+//	output:
+//	device: device # device name
+//	ip: ip
+//	Type: type
 func Convert2KeyValue(format string, i any) string {
 
 	if _, ok := i.(ConvertableKeyValue); ok {
@@ -79,19 +74,35 @@ func Convert2KeyValue(format string, i any) string {
 		if !t.Field(i).IsExported() {
 			continue
 		}
-		name := t.Field(i).Tag.Get("KeyValue")
+		name := t.Field(i).Tag.Get("KeyValue") // `name,comments`
+
+		comments := ""
+		if strings.Contains(name, ",") {
+			comments = strings.SplitN(name, ",", 2)[1] // get comments
+			name = strings.Split(name, ",")[0]         // get name
+		}
+
 		if name == "" {
 			name = t.Field(i).Tag.Get("json")
-			if name == "" {
-				name = t.Field(i).Name
+			if strings.Contains(name, ",") {
+				name = strings.SplitN(name, ",", 2)[0] // get name
 			}
 		}
-		content += fmt.Sprintf(format, name, v.Field(i).Interface()) + "\n"
-	}
+		if name == "" {
+			name = t.Field(i).Name
+		}
 
+		if comments != "" {
+			content += fmt.Sprintf(format, name, v.Field(i).Interface()) + fmt.Sprintf(" # %s", comments) + "\n"
+		} else {
+			content += fmt.Sprintf(format, name, v.Field(i).Interface()) + "\n"
+		}
+
+	}
 	return content
 }
 
+// ConvertableXWWWFormUrlencoded Convert any type to x-www-form-urlencoded format
 type ConvertableXWWWFormUrlencoded interface {
 	Convert2XWWWFormUrlencoded() string
 }
@@ -110,14 +121,10 @@ type ConvertableXWWWFormUrlencoded interface {
 //		 	Type   string
 //	     	unexported string
 //		}
-//
-// a := A{Device: "device", IP: "ip", Type: "type"}
-//
-// fmt.Println(Convert2XWWWFormUrlencoded(a))
-//
-// output:
-//
-// device=device&ip=ip&Type=type
+//		a := A{Device: "device", IP: "ip", Type: "type"}
+//		fmt.Println(Convert2XWWWFormUrlencoded(a))
+//		output:
+//		device=device&ip=ip&Type=type
 func Convert2XWWWFormUrlencoded(i any) string {
 
 	if _, ok := i.(ConvertableXWWWFormUrlencoded); ok {
@@ -272,6 +279,7 @@ func GetTypeName(variable any) string {
 	return reflect.TypeOf(variable).String()
 }
 
+// Pair is a struct that contains two variables
 type Pair[T, U any] struct {
 	First  T
 	Second U
