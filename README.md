@@ -1,7 +1,22 @@
-
 # GodDNS
 
-&#x20;                                                 ![GitHub](https://img.shields.io/github/license/Equationzhao/GoDDNS) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/18444501bfd44f919c3a4c87b4e8fcaf)](https://app.codacy.com/gh/Equationzhao/GoDDNS/dashboard?utm\_source=gh\&utm\_medium=referral\&utm\_content=\&utm\_campaign=Badge\_grade) [![CodeFactor](https://www.codefactor.io/repository/github/equationzhao/goddns/badge)](https://www.codefactor.io/repository/github/equationzhao/goddns)
+```
+   ______              __   ____     _   __        
+  / ____/  ____   ____/ /  / __ \   / | / /  _____
+ / / __   / __ \ / __  /  / / / /  /  |/ /  / ___/
+/ /_/ /  / /_/ // /_/ /  / /_/ /  / /|  /  (__  ) 
+\____/   \____/ \__,_/  /_____/  /_/ |_/  /____/  
+                         .___  .___             
+   ____   ____         __| _/__| _/____   ______
+  / ___\ /  _ \  ___  / __ |/ __ |/    \ /  ___/
+ / /_/  >  <_> ) --- / /_/ / /_/ |   |  \\___ \ 
+ \___  / \____/      \____ \____ |___|  /____  |
+/_____/                   \/    \/    \/     \/ 
+                                               
+                                                
+```
+
+![GitHub](https://img.shields.io/github/license/Equationzhao/GoDDNS) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/18444501bfd44f919c3a4c87b4e8fcaf)](https://app.codacy.com/gh/Equationzhao/GoDDNS/dashboard?utm\_source=gh\&utm\_medium=referral\&utm\_content=\&utm\_campaign=Badge\_grade) [![CodeFactor](https://www.codefactor.io/repository/github/equationzhao/goddns/badge)](https://www.codefactor.io/repository/github/equationzhao/goddns)
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/Equationzhao/GoDDNS) ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/Equationzhao/GoDDNS)
 
