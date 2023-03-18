@@ -3,13 +3,15 @@
  *     @file: Version.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/19 上午12:20
- *     @last modified: 2023/3/19 上午12:20
+ *     @time: 2023/3/19 上午3:52
+ *     @last modified: 2023/3/19 上午3:50
  *
  *
  *
  */
 
+// Package DDNS
+// basic interfaces and tools for DDNS service
 package DDNS
 
 import (
@@ -33,14 +35,16 @@ const (
 	repo  = "GodDns"
 )
 
-var gits = []string{"github.com", "gitee.com", "gitlab.com", "gitea.equationzhao.space"}
+var gits = []string{"github.com", "gitea.equationzhao.space:3000"}
 
+// Version contains the major, minor, and patch versions.
 type Version struct {
 	major int
 	minor int
 	patch int
 }
 
+// RepoURLs return all repo urls
 func RepoURLs() []string {
 	var urls []string
 	for _, git := range gits {
@@ -56,6 +60,7 @@ func (v Version) String() string {
 	return strconv.Itoa(v.major) + "." + strconv.Itoa(v.minor) + "." + strconv.Itoa(v.patch)
 }
 
+// Info returns version info in format "v1.2.3"
 func (v Version) Info() string {
 	return fmt.Sprintf("v%s", v.String())
 }
@@ -175,6 +180,7 @@ func GetLatestVersionInfo() (Version, string, error) {
 		Body       string `json:"body"`
 	}{}
 
+	// https://api.github.com/repos/owner/projectname/releases/latest
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 	_, err := resty.New().R().SetResult(&versionResponse).Get(url)
 	latest := Version{}
@@ -200,9 +206,11 @@ func GetLatestVersionInfo() (Version, string, error) {
 	return latest, "", NoCompatibleVersionError
 }
 
+// NoCompatibleVersion no compatible version of new release
 type NoCompatibleVersion struct {
 }
 
+// NoCompatibleVersionError is the error of no compatible version
 var NoCompatibleVersionError = NoCompatibleVersion{}
 
 // Error return error info
@@ -217,7 +225,7 @@ func (n NoCompatibleVersion) Error() string {
 // if there is an error, return false, zero version, "", err
 // if there is no new version, return false, zero version, "", nil
 func CheckUpdate() (hasUpgrades bool, v Version, url string, err error) {
-	latest, downloadUrl, err := GetLatestVersionInfo()
+	latest, downloadURL, err := GetLatestVersionInfo()
 	if err != nil {
 		if errors.Is(err, NoCompatibleVersionError) {
 			return true, latest, "", err
@@ -228,9 +236,11 @@ func CheckUpdate() (hasUpgrades bool, v Version, url string, err error) {
 
 	if NowVersion.Compare(latest) < 0 {
 		// has upgrades
-		return true, latest, downloadUrl, nil
+		return true, latest, downloadURL, nil
 	} else {
 		// no upgrades
 		return false, v, "", nil
 	}
 }
+
+// ? CheckPreRelease check if there is a new pre-release version

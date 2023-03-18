@@ -3,13 +3,15 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:47
+ *     @time: 2023/3/19 上午3:52
+ *     @last modified: 2023/3/19 上午3:43
  *
  *
  *
  */
 
+// Package DDNS
+// basic interfaces and tools for DDNS service
 package DDNS
 
 import (

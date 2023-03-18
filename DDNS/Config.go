@@ -170,7 +170,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 		for _, c := range configs {
 			var match bool
 			if _, ok := c.Get().(NameMatch); ok {
-				match = c.Get().(NameMatch).MatchName(sec.Name())
+				match = c.Get().(NameMatch).MatchName(sec.Name()) // customized pattern, you can compare NameI NameII NameIII... if you want
 			} else {
 				pattern := regexp.MustCompile(regexp.QuoteMeta(c.GetName()) + `(#\d+)?$`) // default pattern
 				match = pattern.MatchString(sec.Name())
@@ -243,4 +243,8 @@ func ConfigHead(parameters Parameters, No uint) (head string) {
 		head = "[" + parameters.GetName() + "]" + "\n"
 	}
 	return
+}
+
+// ProgramConfig  config for program
+type ProgramConfig struct {
 }
