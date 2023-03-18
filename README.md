@@ -47,7 +47,7 @@ a DDNS tool written in go
 -config= Config
 ```
 
-## Configure
+## Configuration
 
 \[Device] # required
 
@@ -76,7 +76,6 @@ key=value # key and value of the Service (start with lower case)
 
 1. may be bug when deleting element in loop, see main.go:408
 2. error saving config in linux
-3. inconsistent section name when generating default config for device and saving config after running
 
 ## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com) Structure
 

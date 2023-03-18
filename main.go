@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:43
- *     @last modified: 2023/3/18 上午3:42
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:52
  *
  *
  *
@@ -27,7 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"time"
-	//"github.com/hedzr/cmdr/flag"
+	// "github.com/hedzr/cmdr/flag"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 
@@ -207,7 +207,7 @@ func main() {
 		output = nil
 	}
 
-	if a, err := InitLog("ddns.log", 0664, *LogLevel, output); err != nil {
+	if a, err := InitLog("ddns.log", 0666, *LogLevel, output); err != nil {
 		logrus.Error("log file init failed ", err)
 		defer a()
 	}
@@ -223,7 +223,7 @@ func main() {
 
 }
 
-//-----------------------------------------------------------------------------------------------------------------------------------------//
+// -----------------------------------------------------------------------------------------------------------------------------------------//
 
 func RunDDNS(configs []DDNS.ConfigFactory) {
 	logrus.Debugf("-R is set, run ddns")
@@ -434,7 +434,7 @@ func RunOverride(parameters []DDNS.Parameters, GlobalDevice Device.Device, reque
 	var errCount uint16
 
 	for i, parameter := range parameters {
-		//skip the device parameter
+		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
 			if d, ok := parameter.(DDNS.DeviceOverridable); ok {
@@ -488,7 +488,7 @@ func RunOverride(parameters []DDNS.Parameters, GlobalDevice Device.Device, reque
 			}
 
 		}
-	} //loop ends
+	} // loop ends
 
 	logrus.Infof("finish overriding ip with %d error(s)", errCount)
 
@@ -575,7 +575,7 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) {
 		logrus.Error(err.Error())
 		return
 	}
-	logrus.Info("generate a default config file at", DDNS.GetConfigureLocation())
+	logrus.Info("generate a default config file at ", DDNS.GetConfigureLocation())
 
 }
 
@@ -624,7 +624,7 @@ func GenerateRequests(parameters []DDNS.Parameters, requests []DDNS.Request) []D
 	var errCount uint8 = 0
 	for _, parameter := range parameters {
 		if parameter.GetName() == Device.ServiceName {
-			continue //skip
+			continue // skip
 		}
 
 		logrus.Infof("service: %s", parameter.GetName())

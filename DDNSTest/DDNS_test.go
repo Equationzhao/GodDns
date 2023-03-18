@@ -3,8 +3,8 @@
  *     @file: DDNS_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午2:50
- *     @last modified: 2023/3/17 下午9:54
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:52
  *
  *
  *
@@ -13,8 +13,8 @@
 package DDNS_test
 
 import (
-	"DDNS/DDNS"
-	"DDNS/Service/Dnspod"
+	"GodDns/DDNS"
+	"GodDns/Service/Dnspod"
 	"fmt"
 	"os"
 	"testing"

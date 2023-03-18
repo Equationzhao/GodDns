@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:43
- *     @last modified: 2023/3/18 上午3:42
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:52
  *
  *
  *
@@ -97,7 +97,7 @@ func (r *Request) MakeRequest() error {
 	logrus.Tracef("response: %v", response)
 	logrus.Debugf("result:%+v", s)
 
-	//r.status = *code2msg(s.Status.Code).AppendMsg(" ", s.Status.Message, "at ", s.Status.CreatedAt, " ", r.parameters.getTotalDomain(), " ", s.Record.Value)
+	// r.status = *code2msg(s.Status.Code).AppendMsg(" ", s.Status.Message, "at ", s.Status.CreatedAt, " ", r.parameters.getTotalDomain(), " ", s.Record.Value)
 	r.status = *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 
 	if err != nil {

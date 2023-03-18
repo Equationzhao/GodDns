@@ -3,8 +3,8 @@
  *     @file: IP.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午12:59
- *     @last modified: 2023/3/17 下午11:52
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:52
  *
  *
  *
@@ -86,10 +86,10 @@ func GetIp(NameToMatch string) ([]string, error) {
 			for _, addr := range address {
 				// ? how
 				ips = append(ips, addr.(*net.IPNet).IP.String())
-				//switch v := addr.(type) {
-				//case *net.IPNet:
+				// switch v := addr.(type) {
+				// case *net.IPNet:
 				//	ips = append(ips, v.IP.String())
-				//}
+				// }
 			}
 			return ips, nil
 		}
@@ -373,6 +373,6 @@ func IsTypeValid(Type string) bool {
 // DealWithIp deal with ip
 // like get specific ip ?
 func DealWithIp(ip ...string) string {
-	//todo deal with ip like get specific ip
+	// todo deal with ip like get specific ip
 	return ip[0]
 }

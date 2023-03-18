@@ -3,8 +3,8 @@
  *     @file: ResponseCode.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午3:43
- *     @last modified: 2023/3/18 上午3:42
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:52
  *
  *
  *
@@ -30,8 +30,8 @@ const (
 
 	LoginError          = "-1"
 	APIOverLimit        = "-2"
-	InvalidProxy        = "-3" //proxy only
-	NotUnderProxy       = "-4" //proxy only
+	InvalidProxy        = "-3" // proxy only
+	NotUnderProxy       = "-4" // proxy only
 	APIPermissionDenied = "-7"
 	TemporarilyBaned    = "-8"
 	LoginRegionLimited  = "85"
@@ -40,8 +40,8 @@ const (
 	PostOnly            = "2"
 	UnknownError        = "3"
 
-	//BadUserId                  = 6 //proxy only
-	//BadUserOwner               = 7 //proxy only
+	// BadUserId                  = 6 //proxy only
+	// BadUserOwner               = 7 //proxy only
 
 	AccountLocked = "83"
 )
@@ -97,9 +97,9 @@ func code2msg(code string) *DDNS.Status {
 		msg.Msg = "请求方法错误"
 	case UnknownError:
 		msg.Msg = "未知错误"
-	//case BadUserId:
+	// case BadUserId:
 	//	msg.msg = "用户 ID 错误"
-	//case BadUserOwner:
+	// case BadUserOwner:
 	//	msg.msg = "用户不属于您"
 	case AccountLocked:
 		msg.Msg = "账号被锁定"

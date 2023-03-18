@@ -3,8 +3,8 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 上午12:59
- *     @last modified: 2023/3/18 上午12:10
+ *     @time: 2023/3/18 下午3:52
+ *     @last modified: 2023/3/18 下午3:52
  *
  *
  *
@@ -26,17 +26,19 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+// Format define the key=value format of config file
 const Format = "%s=%v"
 
-var configFileLocation string // todo support customized location
+var configFileLocation string
 
+// ConfigFactoryList is a list of ConfigFactory
 var ConfigFactoryList []ConfigFactory
 
 func init() {
 	ini.PrettyFormat = false // config style key=value without space
-
 }
 
+// GetDefaultConfigurationLocation get default configuration location
 var GetDefaultConfigurationLocation = defaultConfigurationLocation()
 
 func defaultConfigurationLocation() func() (string, error) {
@@ -45,7 +47,7 @@ func defaultConfigurationLocation() func() (string, error) {
 	// get user config dir
 	defaultConfiguration, err := os.UserConfigDir()
 	// create sub directory
-	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+"DDNS-go", 0664))
+	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+"DDNS-go", 0666))
 
 	defaultConfiguration += sep + "DDNS-go" + sep + "DDNS.conf"
 
@@ -54,10 +56,12 @@ func defaultConfigurationLocation() func() (string, error) {
 	}
 }
 
+// UpdateConfigureLocation update config file location
 func UpdateConfigureLocation(newLocation string) {
 	configFileLocation = newLocation
 }
 
+// Config interface for config that can be read and write config from/to file/parameters
 type Config interface {
 	GetName() string
 	GenerateDefaultConfigInfo() (ConfigStr, error)
@@ -104,7 +108,7 @@ func GetConfigureLocation() string {
 func ConfigureWriter(Filename string, flag int, config ...ConfigStr) error { // option: append/w
 	logrus.Debugf("open file at %s", Filename)
 
-	configure, err := os.OpenFile(Filename, flag, 0664) // os.O_CREATE|os.O_WRONLY
+	configure, err := os.OpenFile(Filename, flag, 0666) // os.O_CREATE|os.O_WRONLY
 
 	if err != nil {
 		return err
@@ -121,11 +125,12 @@ func ConfigureWriter(Filename string, flag int, config ...ConfigStr) error { // 
 
 	for _, service := range config {
 		logrus.Trace("write config for ", service.Name)
-		_, err = configure.Write([]byte(service.Content))
+		_, err = configure.WriteString(service.Content)
 		if err != nil {
 			return err
 		}
 	}
+	_ = configure.Sync()
 	return nil
 }
 
@@ -196,19 +201,21 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	return ps, nil, ReadConfigErrs
 }
 
+// IsConfigureExist check if config file exist
 func IsConfigureExist() bool {
 	_, err := os.Stat(GetConfigureLocation())
 
 	return !errors.Is(err, os.ErrNotExist)
 }
 
+// SaveConfig save parameters to file with flag
 func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
 	var err error
 	n := make(map[string]uint)
 	ConStrs := make([]ConfigStr, 0)
 	for _, parameter := range parameters {
 		var no uint
-		if parameter.GetName() == "Devices" { // todo refactor do not use hard code "Devices"
+		if parameter.GetName() == "Device" { // todo refactor do not use hard code "Device"
 			no = 0
 		} else {
 			n[parameter.GetName()]++
@@ -226,6 +233,9 @@ func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
 	return err
 }
 
+// ConfigHead generate config head, the section name
+// [Name#No]
+// if No == 0, [Name]
 func ConfigHead(parameters Parameters, No uint) (head string) {
 	if No != 0 {
 		head = "[" + parameters.GetName() + "#" + strconv.Itoa(int(No)) + "]" + "\n"
