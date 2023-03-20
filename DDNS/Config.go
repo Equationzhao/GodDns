@@ -3,8 +3,8 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:52
+ *     @time: 2023/3/20 下午11:29
+ *     @last modified: 2023/3/20 下午11:27
  *
  *
  *
@@ -104,7 +104,6 @@ func GetConfigureLocation() string {
 // ServiceName -> [ServiceName]
 // Key -> Key=value
 // Any Service should use this function to create config file
-// todo support comments
 func ConfigureWriter(Filename string, flag int, config ...ConfigStr) error { // option: append/w
 	logrus.Debugf("open file at %s", Filename)
 
@@ -163,7 +162,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 
 	cfg.BlockMode = false // !make sure read only
 	defer func() { cfg.BlockMode = true }()
-
+	ps = make([]Parameters, 0, 2*len(configs))
 	var errCount uint8 = 0
 	secs := cfg.Sections()
 	for _, sec := range secs {
@@ -190,6 +189,11 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 				logrus.Tracef("%s : %v", c.GetName(), temp)
 				logrus.Debugf("succeed to read config for %s", c.GetName())
 				ps = append(ps, temp)
+			} else {
+				// unknown service
+				// todo
+				// look up plugin folder, call external cmd if a same-name executable file or shell script exist
+				// exec.Command()
 			}
 		}
 
@@ -212,7 +216,7 @@ func IsConfigureExist() bool {
 func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
 	var err error
 	n := make(map[string]uint)
-	ConStrs := make([]ConfigStr, 0)
+	ConStrs := make([]ConfigStr, 0, len(parameters))
 	for _, parameter := range parameters {
 		var no uint
 		if parameter.GetName() == "Device" { // todo refactor do not use hard code "Device"
@@ -236,7 +240,7 @@ func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
 // ConfigHead generate config head, the section name
 // [Name#No]
 // if No == 0, [Name]
-func ConfigHead(parameters Parameters, No uint) (head string) {
+func ConfigHead(parameters Parameters, No uint) (head string) { // todo head comment
 	if No != 0 {
 		head = "[" + parameters.GetName() + "#" + strconv.Itoa(int(No)) + "]" + "\n"
 	} else {
@@ -247,4 +251,16 @@ func ConfigHead(parameters Parameters, No uint) (head string) {
 
 // ProgramConfig  config for program
 type ProgramConfig struct {
+	// todo add config for program
+	// 1. proxy
+	// 2. custom apis
+	// 3. custom services Vscode-like
+	// ...
+}
+
+// LoadApiFromConfig load api from config, add to Net.ApiMap
+func LoadApiFromConfig() {
+	// todo load api from config
+	// URLPattern := regexp.MustCompile(`^http(s)?://[a-z0-9-]+(.[a-z0-9-]+)*(:[0-9]+)?(/.*)?$`)
+	// isURL, _ := regexp.Match(URLPattern.String(), []byte(ApiName))
 }

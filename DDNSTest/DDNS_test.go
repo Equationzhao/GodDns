@@ -3,8 +3,8 @@
  *     @file: DDNS_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:52
+ *     @time: 2023/3/20 下午11:29
+ *     @last modified: 2023/3/20 下午11:27
  *
  *
  *
@@ -99,4 +99,9 @@ func TestVersion(t *testing.T) {
 		t.Log("already latest version")
 	}
 
+}
+
+func TestFeedback(t *testing.T) {
+	str := DDNS.Feedback()
+	t.Log(str)
 }

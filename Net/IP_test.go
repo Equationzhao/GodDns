@@ -3,8 +3,8 @@
  *     @file: IP_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:52
+ *     @time: 2023/3/20 下午11:29
+ *     @last modified: 2023/3/20 下午11:28
  *
  *
  *
@@ -116,7 +116,8 @@ func TestAdd2APIMap(t *testing.T) {
 		return "Test", nil
 	})
 	t.Log(ApiMap)
-	s, err := ApiMap.GetApi("ipify")(4)
+	s, err := ApiMap.GetApi("ipify")
+	s(4)
 	if err != nil {
 		t.Error(err)
 	}

@@ -25,41 +25,43 @@
 a DDNS tool written in go
 
 ## usage
-- go run
-
-	```bash
-	go run GodDns [-R -A -O] [-api=ApiName] [-t=time] [-retry=times] [-S] [-G] [-log=Trace/Debug/Info/Warn/Error] [-config=Config]
-	```
-	
-- go build
-	```bash
-	go build GodDns
-	./GodDns [-R -A -O] [-api=ApiName] [-t=time] [-retry=times] [-S] [-G] [-log=Trace/Debug/Info/Warn/Error] [-config=Config]
-	```
-	
-
-## Flags
+```bash
+USAGE:
+   GodDns [global options] command [command options] [arguments...]
+   GodDns run - run the DDNS service
+   GodDns run auto - run ddns, use ip address of interface set in Device Section automatically
+   GodDns run auto override - run ddns, override the ip address of interface set in each service Section
+   GodDns generate - generate a default configuration file
+```
 
 ```
--R run ddns
+COMMANDS:
+   run, r, R       run the DDNS service 
+   [--api ApiName, -i ApiName, -I ApiName  get ip address from provided ApiName, eg: ipify/identMe]
+	   auto, a, A  run ddns, use ip address of interface set in Device Section automatically
+   			override, o, O  run ddns, override the ip address of interface set in each service Section
+OPTIONS:
+   --time seconds                         run ddns per time(seconds) (default: 0)
+   --retry times                          retry times (default: 3)
+   --silent, -s, -S                       no message output (default: false)
+   --log value, -l value, -L value        Trace/Debug/Info/Warn/Error (default: "info")
+   --config file, -c file, -C file        set configuration file
+   --help, -h, -H                         show help (default: false)
 
-	-A automatically get ip from device from Device Section
-	
-		-O override ip with device set from each service Section
+COMMANDS:
+   generate, g, G  generate a default configuration file
+   help, h         Shows a list of commands or help for one command
 
-	-api=ApiName get ip from ipify.org/ident.me Etc.
+OPTIONS:
+   --silent, -s, -S                 no message output (default: false)
+   --log value, -l value, -L value  Trace/Debug/Info/Warn/Error
+   --config file, -c file, -C file  set configuration file
+   --help, -h, -H                   show help (default: false)
 
-	-t=time(seconds) run ddns per time(seconds)
+GLOBAL OPTIONS:
+   --help, -h, -H     show help (default: false)
+   --version, -v, -V  print the version info (default: false)
 
-	-retry=times retry times when error occurs
-
--S no output to stdout
-
--G generate default configure
-
--log = Trace/Debug/Info/Warn/Error log level
-
--config= Config
 ```
 
 ## Configuration
@@ -78,7 +80,7 @@ key=value # key and value of the Service (start with lower case)
 
 * [ ] add more service
 * [ ] check flag validation
-* [ ] add support to write comment to configuration
+* [x] add support to write comment to configuration
 * [ ] to fix RunPerTime at main.go:664
 * [ ] refactor see DDNS.Config.go:211
 * [ ] todo replace net with netip

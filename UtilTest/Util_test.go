@@ -3,8 +3,8 @@
  *     @file: Util_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/19 上午2:00
- *     @last modified: 2023/3/19 上午1:50
+ *     @time: 2023/3/20 下午11:29
+ *     @last modified: 2023/3/20 下午11:27
  *
  *
  *
@@ -209,7 +209,7 @@ func TestGetTypeName(t *testing.T) {
 	t.Log(Util.GetTypeName(s))
 	t.Log(Util.GetTypeName(&s))
 
-	b := make(map[string]int, 10)
+	b := make(map[string]int)
 	c := make([]string, 10)
 
 	t.Log(Util.GetTypeName(b))

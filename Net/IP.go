@@ -3,8 +3,8 @@
  *     @file: IP.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/18 下午3:52
- *     @last modified: 2023/3/18 下午3:52
+ *     @time: 2023/3/20 下午11:29
+ *     @last modified: 2023/3/20 下午11:27
  *
  *
  *
@@ -13,6 +13,7 @@
 package Net
 
 import (
+	"errors"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/rdegges/go-ipify"
@@ -45,11 +46,15 @@ var ApiMap = Apis{
 
 // GetApiName return the names of apis
 func (a *Apis) GetApiName() []string {
-	var res = make([]string, 0, len(a.a)) // todo check make(), reserve cap
+	var res = make([]string, 0, len(a.a))
 	for s := range a.a {
 		res = append(res, s)
 	}
 	return res
+}
+
+func CreateApiFromURL(URL string) {
+
 }
 
 // Add2Apis add api to Map
@@ -58,8 +63,12 @@ func (a *Apis) Add2Apis(name string, f Api) {
 }
 
 // GetApi return the api function
-func (a *Apis) GetApi(name string) Api {
-	return a.a[name]
+func (a *Apis) GetApi(name string) (Api, error) {
+	api, ok := a.a[name]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return api, nil
 }
 
 // GetMap return the map of apis
@@ -126,7 +135,7 @@ func GetIpByType(NameToMatch string, Type uint8) ([]string, error) {
 		return nil, fmt.Errorf("invalid type: %d", Type)
 	} else {
 		ips, err := GetIp(NameToMatch)
-		res := make([]string, 0)
+		res := make([]string, 0, len(ips))
 		if err != nil {
 			return nil, err
 		}
@@ -373,6 +382,6 @@ func IsTypeValid(Type string) bool {
 // DealWithIp deal with ip
 // like get specific ip ?
 func DealWithIp(ip ...string) string {
-	// todo deal with ip like get specific ip
+	// todo deal with ip like getting specific ip
 	return ip[0]
 }
