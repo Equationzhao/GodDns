@@ -1,10 +1,10 @@
 /*
  *     @Copyright
- *     @file: Version.go
+ *     @file: Info.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/19 上午3:52
- *     @last modified: 2023/3/19 上午3:50
+ *     @time: 2023/3/21 上午11:22
+ *     @last modified: 2023/3/21 上午11:11
  *
  *
  *
@@ -26,13 +26,14 @@ import (
 )
 
 const (
-	fullName = "GodDns"
-	nickname = "go ddns"
+	FullName = "GodDns"
+	Nickname = "go ddns"
 )
 
 const (
-	owner = "Equationzhao"
-	repo  = "GodDns"
+	owner  = "Equationzhao"
+	repo   = "GodDns"
+	Author = "Equationzhao"
 )
 
 var gits = []string{"github.com", "gitea.equationzhao.space:3000"}
@@ -92,16 +93,16 @@ func (v Version) Compare(v2 Version) int {
 
 // NowVersionInfo return version info
 // like "GodDns (go ddns) version 0.1.0"
-// fullName (nickname) version major.minor.patch
+// FullName (Nickname) version major.minor.patch
 func NowVersionInfo() string {
-	return fmt.Sprintf("%s (%s) version %s", fullName, nickname, NowVersion)
+	return fmt.Sprintf("%s (%s) version %s", FullName, Nickname, NowVersion)
 }
 
 // NowVersion is current version of GodDns
 var NowVersion = Version{
 	major: 0,
-	minor: 0,
-	patch: 2,
+	minor: 1,
+	patch: 0,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub
@@ -180,7 +181,7 @@ func GetLatestVersionInfo() (Version, string, error) {
 		Body       string `json:"body"`
 	}{}
 
-	// https://api.github.com/repos/owner/projectname/releases/latest
+	// https://api.github.com/repos/$owner$/$repo$/releases/latest
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 	_, err := resty.New().R().SetResult(&versionResponse).Get(url)
 	latest := Version{}
@@ -244,3 +245,21 @@ func CheckUpdate() (hasUpgrades bool, v Version, url string, err error) {
 }
 
 // ? CheckPreRelease check if there is a new pre-release version
+
+// FeedBackLink return feedback link
+// https://github.com/$owner$/$repo$/issues
+func FeedBackLink() string {
+	return fmt.Sprintf("https://github.com/%s/%s/issues", owner, repo)
+}
+
+var feedbackEmail = "equationzhao@foxmail.com"
+
+// FeedbackEmail return feedback email
+func FeedbackEmail() string {
+	return feedbackEmail
+}
+
+// Feedback return link and email
+func Feedback() string {
+	return fmt.Sprintf("Feedback: %s\nEmail: %s\n", FeedBackLink(), FeedbackEmail())
+}
