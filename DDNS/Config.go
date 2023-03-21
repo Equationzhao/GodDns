@@ -3,8 +3,8 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/22 上午6:29
+ *     @last modified: 2023/3/22 上午6:28
  *
  *
  *
@@ -33,6 +33,11 @@ var configFileLocation string
 
 // ConfigFactoryList is a list of ConfigFactory
 var ConfigFactoryList []ConfigFactory
+
+// Add2FactoryList add ConfigFactory to ConfigFactoryList
+func Add2FactoryList(factory ...ConfigFactory) {
+	ConfigFactoryList = append(ConfigFactoryList, factory...)
+}
 
 func init() {
 	ini.PrettyFormat = false // config style key=value without space
@@ -65,7 +70,7 @@ func UpdateConfigureLocation(newLocation string) {
 type Config interface {
 	GetName() string
 	GenerateDefaultConfigInfo() (ConfigStr, error)
-	ReadConfig(sec ini.Section) (Parameters, error)
+	ReadConfig(sec ini.Section) ([]Parameters, error)
 	// GenerateConfigInfo [Name#No]\n + KeyValue(s) + \n\n
 	GenerateConfigInfo(Parameters, uint) (ConfigStr, error)
 }
@@ -97,6 +102,22 @@ type ConfigStr struct {
 // Should call after GetDefaultConfigurationLocation or UpdateConfigureLocation
 func GetConfigureLocation() string {
 	return configFileLocation
+}
+
+// MissingKeyErr presents a key is not found in config file
+type MissingKeyErr struct {
+	Name        string
+	ServiceName string
+}
+
+// NewMissKeyErr create a new MissingKeyErr
+func NewMissKeyErr(name string, serviceName string) *MissingKeyErr {
+	return &MissingKeyErr{Name: name, ServiceName: serviceName}
+}
+
+// Error return error message
+func (m MissingKeyErr) Error() string {
+	return fmt.Sprintf("miss key %s", m.Name)
 }
 
 // ConfigureWriter Create key style config file
@@ -164,7 +185,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	defer func() {
 		cfg.BlockMode = true
 	}()
-	ps = make([]Parameters, 0, 2*len(configs))
+	ps = make([]Parameters, 0, 5*len(configs))
 	var errCount uint8 = 0
 	secs := cfg.Sections()
 	for _, sec := range secs {
@@ -190,7 +211,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 				}
 				logrus.Tracef("%s : %v", c.GetName(), temp)
 				logrus.Debugf("succeed to read config for %s", c.GetName())
-				ps = append(ps, temp)
+				ps = append(ps, temp...)
 			} else {
 				// unknown service
 				// todo

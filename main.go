@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/21 下午4:38
- *     @last modified: 2023/3/21 下午4:28
+ *     @time: 2023/3/22 上午6:29
+ *     @last modified: 2023/3/22 上午6:21
  *
  *
  *
@@ -106,8 +106,20 @@ func init() {
 	}
 
 	cli.VersionPrinter = func(c *cli.Context) {
+		msg := make(chan string, 2)
+		go CheckVersionUpgrade(msg)
 		fmt.Println(DDNS.NowVersionInfo())
-		CheckVersionUpgrade()
+		for i := 0; i < 2; i++ {
+			select {
+			case s := <-msg:
+				if s != "" {
+					fmt.Println(s)
+				}
+			case <-time.After(2 * time.Second):
+				return
+			}
+		}
+
 	}
 
 	cli.HelpFlag = &cli.BoolFlag{

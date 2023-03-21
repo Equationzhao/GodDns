@@ -3,8 +3,8 @@
  *     @file: Info.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/21 上午11:22
- *     @last modified: 2023/3/21 上午11:11
+ *     @time: 2023/3/22 上午6:29
+ *     @last modified: 2023/3/22 上午6:21
  *
  *
  *
@@ -102,7 +102,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 0,
+	patch: 1,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub

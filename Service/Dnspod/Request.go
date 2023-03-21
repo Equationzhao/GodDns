@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/21 下午4:38
- *     @last modified: 2023/3/21 下午4:20
+ *     @time: 2023/3/22 上午6:29
+ *     @last modified: 2023/3/22 上午6:21
  *
  *
  *
@@ -15,8 +15,10 @@ package Dnspod
 import (
 	"GodDns/DDNS"
 	"GodDns/Util"
+	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
@@ -45,6 +47,14 @@ func (r *Request) Status() DDNS.Status {
 	return r.status
 }
 
+func newStatus() *DDNS.Status {
+	return &DDNS.Status{
+		Name:    serviceName,
+		Msg:     "",
+		Success: DDNS.NotExecute,
+	}
+}
+
 // ToParameters return DDNS.Parameters
 func (r *Request) ToParameters() DDNS.Parameters {
 	return &r.parameters
@@ -62,20 +72,20 @@ func (r *Request) GetName() string {
 }
 
 // Init set parameter
-func (r *Request) Init(parameters DDNS.Parameters) error {
-	r.parameters.PublicParameter = parameters.(*Parameters).PublicParameter
-	r.parameters.ExternalParameter = parameters.(*Parameters).ExternalParameter
+func (r *Request) Init(parameters Parameters) error {
+	r.parameters = parameters
+
 	return nil
 }
 
 // MakeRequest  1.GetRecordId  2.DDNS
 func (r *Request) MakeRequest() error {
-	status, err := r.GetRecordId()
-	if err != nil || status.Success != DDNS.Success {
-		r.status.Success = DDNS.Success
-		r.status.Msg = status.Msg
-		return err
-	}
+	done := make(chan bool)
+	status := newStatus()
+	var err error
+	go func(done chan bool) {
+		*status, err = r.GetRecordId(done)
+	}(done)
 
 	s := &struct {
 		Status struct {
@@ -90,7 +100,21 @@ func (r *Request) MakeRequest() error {
 		} `json:"record"`
 	}{}
 
-	content := Util.Convert2XWWWFormUrlencoded(&r.parameters)
+	content := ""
+	select {
+	case <-done:
+		if err != nil || status.Success != DDNS.Success {
+			r.status.Success = DDNS.Success
+			r.status.Msg = status.Msg
+			return err
+		}
+		content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
+	case <-time.After(time.Second * 20):
+		r.status.Success = DDNS.Timeout
+		r.status.Msg = "GetRecordId timeout"
+		return errors.New("GetRecordId timeout")
+	}
+
 	logrus.Debug(content)
 	client := resty.New()
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
@@ -108,8 +132,10 @@ func (r *Request) MakeRequest() error {
 }
 
 // GetRecordId make request to Dnspod to get RecordId and set ExternalParameter.RecordId
-func (r *Request) GetRecordId() (DDNS.Status, error) {
-
+func (r *Request) GetRecordId(done chan<- bool) (DDNS.Status, error) {
+	defer func() {
+		done <- true
+	}()
 	s := &struct {
 		Status struct {
 			Code      string `json:"code"`
@@ -146,13 +172,14 @@ func (r *Request) GetRecordId() (DDNS.Status, error) {
 		Subdomain    string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain"`
 		Type         string `json:"record_type,omitempty" xwwwformurlencoded:"record_type"`
 	}{
-		LoginToken:   r.parameters.PublicParameter.LoginToken,
-		Format:       r.parameters.PublicParameter.Format,
-		Lang:         r.parameters.PublicParameter.Lang,
-		ErrorOnEmpty: r.parameters.PublicParameter.ErrorOnEmpty,
-		Type:         r.parameters.ExternalParameter.Type,
-		Domain:       r.parameters.ExternalParameter.Domain,
-		Subdomain:    r.parameters.ExternalParameter.Subdomain}
+		LoginToken:   r.parameters.LoginToken,
+		Format:       r.parameters.Format,
+		Lang:         r.parameters.Lang,
+		ErrorOnEmpty: r.parameters.ErrorOnEmpty,
+		Type:         r.parameters.Type,
+		Domain:       r.parameters.Domain,
+		Subdomain:    r.parameters.Subdomain,
+	}
 
 	content := Util.Convert2XWWWFormUrlencoded(p)
 	logrus.Debug(content)
@@ -177,6 +204,6 @@ func (r *Request) GetRecordId() (DDNS.Status, error) {
 		return status, err
 	}
 
-	r.parameters.ExternalParameter.RecordId = uint32(id)
+	r.parameters.RecordId = uint32(id)
 	return status, nil
 }

@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/21 下午4:38
- *     @last modified: 2023/3/21 下午4:34
+ *     @time: 2023/3/22 上午6:29
+ *     @last modified: 2023/3/22 上午6:21
  *
  *
  *
@@ -51,7 +51,11 @@ func RunDDNS(parameters []DDNS.Parameters) error {
 	}
 
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
+
 	return SaveFromParameters(Parameters2Save...)
 }
 
@@ -131,7 +135,10 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
 	return SaveFromParameters(Parameters2Save...)
 }
 
@@ -220,7 +227,10 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
 	return SaveFromParameters(Parameters2Save...)
 
 }
@@ -318,7 +328,10 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
 	return SaveFromParameters(Parameters2Save...)
 
 }
@@ -408,8 +421,8 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		status := ""
 		res := request.Status()
 		if res.Success == DDNS.Success {
-			logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 			status = "Success"
+			logrus.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
 		} else if res.Success == DDNS.Failed {
 			logrus.Errorf("error executing request, %s", err.Error())
 			status = "Failed"
@@ -499,6 +512,7 @@ func RunPerTime(Time uint64, requests []DDNS.Request) {
 }
 
 func SaveFromParameters(parameters ...DDNS.Parameters) error {
+	// todo Merge Parameters that differ only by subdomain
 	err := DDNS.SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
 		logrus.Errorf("error saving config: %s", err.Error())
@@ -508,6 +522,8 @@ func SaveFromParameters(parameters ...DDNS.Parameters) error {
 	return nil
 }
 
+// Requests2Parameters convert successful requests to parameters
+// ![deprecated]
 func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
 	Parameters2Save := make([]DDNS.Parameters, 0, len(requests))
 	for _, request := range requests {
@@ -518,23 +534,28 @@ func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
 	return Parameters2Save
 }
 
-func CheckVersionUpgrade() {
+func CheckVersionUpgrade(msg chan<- string) {
 	// start checking version upgrade
 	hasUpgrades, v, url, err := DDNS.CheckUpdate()
-
+	defer close(msg)
+	defer func() {
+		logrus.Tracef("check version upgrade finished")
+	}()
 	if err != nil {
 		if errors.Is(err, DDNS.NoCompatibleVersionError) {
 			// "no suitable version")
-			_, _ = fmt.Fprintf(output, "new version %s is available\n", v.Info())
-			_, _ = fmt.Fprintln(output, "no compatible release for your operating system, consider building from source: ", DDNS.RepoURLs())
+			msg <- fmt.Sprintf("new version %s is available\n", v.Info())
+			msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s \n", DDNS.RepoURLs())
 		}
 		// error checking version upgrade
+		msg <- ""
+		msg <- ""
 		return
 	}
 
 	if hasUpgrades {
-		_, _ = fmt.Fprintf(output, "new version %s is available\n", v.Info())
-		_, _ = fmt.Fprintln(output, "download url: ", url)
+		msg <- fmt.Sprintf("new version %s is available\n", v.Info())
+		msg <- fmt.Sprintf("download url: %s", url)
 	} else {
 		// "already the latest version")
 		return
