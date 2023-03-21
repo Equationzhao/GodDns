@@ -82,7 +82,7 @@ var (
 	logFlag = &cli.StringFlag{
 		Name:        "log",
 		Aliases:     []string{"l", "L"},
-		Value:       "info",
+		Value:       "Info",
 		Usage:       "Trace/Debug/Info/Warn/Error",
 		Destination: &log,
 	}
