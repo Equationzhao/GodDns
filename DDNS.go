@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/21 下午4:38
+ *     @last modified: 2023/3/21 下午4:34
  *
  *
  *
@@ -408,17 +408,19 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		status := ""
 		res := request.Status()
 		if res.Success == DDNS.Success {
+			logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 			status = "Success"
 		} else if res.Success == DDNS.Failed {
 			logrus.Errorf("error executing request, %s", err.Error())
 			status = "Failed"
+			logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
+			if retryAttempt != 0 {
+				logrus.Errorf("all retry failed, skip %s", request.GetName())
+			}
 		} else if res.Success == DDNS.NotExecute {
 			logrus.Fatal("request not executed")
 		}
-
-		logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 	}
-
 }
 
 func Retry(request DDNS.Request, i uint8) {
@@ -431,7 +433,6 @@ func Retry(request DDNS.Request, i uint8) {
 			return
 		}
 	}
-	logrus.Errorf("all retry failed, skip %s", request.GetName())
 }
 
 func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {

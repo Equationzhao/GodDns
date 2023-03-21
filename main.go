@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/21 下午4:38
+ *     @last modified: 2023/3/21 下午4:28
  *
  *
  *
@@ -33,6 +33,7 @@ import (
 var output = os.Stdout
 
 const MAXRETRY = 255
+const defaultRetryAttempt = 3
 
 var (
 	Time            uint64 = 0
@@ -41,7 +42,7 @@ var (
 	config                 = ""
 	defaultLocation        = ""
 	log                    = "Info"
-	cleanUp         func()
+	// cleanUp         func()
 )
 
 var (
@@ -68,7 +69,7 @@ var (
 
 	retryFlag = &cli.UintFlag{
 		Name:  "retry",
-		Value: 3,
+		Value: defaultRetryAttempt,
 		Usage: "retry `times`",
 		Action: func(context *cli.Context, u uint) error {
 			if u > MAXRETRY {
@@ -83,7 +84,7 @@ var (
 		Name:        "log",
 		Aliases:     []string{"l", "L"},
 		Value:       "Info",
-		Usage:       "Trace/Debug/Info/Warn/Error",
+		Usage:       "`level`: Trace/Debug/Info/Warn/Error",
 		Destination: &log,
 	}
 
@@ -134,12 +135,12 @@ func checkLog(l string) error {
 	case "Warn", "warn", "WARN":
 		fallthrough
 	case "Error", "error", "ERROR":
-		clean, err := InitLog("DDNS.log", 0666, l, output)
+		_, err := InitLog("DDNS.log", 0666, l, output)
 		if err != nil {
 			logrus.Errorf("failed to init log file: %s", err)
 			return err
 		}
-		cleanUp = clean
+		// cleanUp = clean
 		return nil
 	default:
 		return errors.New("invalid log level")
@@ -155,6 +156,10 @@ func InitLog(filename string, filePerm os.FileMode, loglevel string, output io.W
 
 	var level logrus.Level
 	switch loglevel {
+	// case "Panic", "panic", "PANIC":
+	// 	level = logrus.PanicLevel
+	// case "Fatal", "fatal", "FATAL":
+	// 	level = logrus.FatalLevel
 	case "Error", "error", "ERROR":
 		level = logrus.ErrorLevel
 	case "Warn", "warn", "WARN":
@@ -183,17 +188,19 @@ func InitLog(filename string, filePerm os.FileMode, loglevel string, output io.W
 		}
 	}
 
+	logrus.SetLevel(level)
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(&logrus.TextFormatter{
 		TimestampFormat: time.DateTime,
 		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
 			filename := path.Base(frame.File)
-			return frame.Function, filename
+			if level >= logrus.DebugLevel {
+				return frame.Function, filename
+			}
+			return "", ""
 		},
 	})
-	logrus.SetLevel(level)
 
-	_, _ = fmt.Fprintf(output, "init log file at %s\n", filename)
 	Log.To(logrus.StandardLogger(), file)
 
 	if output != nil {
@@ -202,7 +209,7 @@ func InitLog(filename string, filePerm os.FileMode, loglevel string, output io.W
 			logrus.AddHook(Log.NewLogrusOriginally2writer(output))
 		}
 	}
-
+	logrus.Infof("init log file at %s\n", filename)
 	_, err = file.Write([]byte(fmt.Sprintf("---------start at %s---------\n", time.Now().Format(time.DateTime))))
 	if err != nil {
 		return cleanUp, err
@@ -255,7 +262,27 @@ func main() {
 						return errors.New("")
 					}
 					parameters = parametersTemp
+
+					if !retryFlag.IsSet() {
+						retryAttempt = defaultRetryAttempt
+					}
+
 					return RunDDNS(parameters)
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "api",
+						Aliases: []string{"i", "I"},
+
+						Usage: "get ip address from provided `ApiName`, eg: ipify/identMe",
+
+						Destination: &ApiName,
+					},
+					TimeFlag,
+					retryFlag,
+					silentFlag,
+					logFlag,
+					configFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
@@ -284,7 +311,19 @@ func main() {
 							if err != nil {
 								return errors.New("")
 							}
+
+							if !retryFlag.IsSet() {
+								retryAttempt = defaultRetryAttempt
+							}
+
 							return RunAuto(GlobalDevice, parameters)
+						},
+						Flags: []cli.Flag{
+							TimeFlag,
+							retryFlag,
+							silentFlag,
+							logFlag,
+							configFlag,
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -320,33 +359,16 @@ func main() {
 									if err != nil {
 										return errors.New("")
 									}
+
+									if !retryFlag.IsSet() {
+										retryAttempt = defaultRetryAttempt
+									}
+
 									return RunOverride(GlobalDevice, parameters)
 								},
 							},
 						},
-						Flags: []cli.Flag{
-							TimeFlag,
-							retryFlag,
-							silentFlag,
-							logFlag,
-							configFlag,
-						},
 					},
-				},
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "api",
-						Aliases: []string{"i", "I"},
-
-						Usage: "get ip address from provided `ApiName`, eg: ipify/identMe",
-
-						Destination: &ApiName,
-					},
-					TimeFlag,
-					retryFlag,
-					silentFlag,
-					logFlag,
-					configFlag,
 				},
 			},
 			{

@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/21 下午4:38
+ *     @last modified: 2023/3/21 下午4:20
  *
  *
  *
@@ -162,7 +162,7 @@ func (r *Request) GetRecordId() (DDNS.Status, error) {
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(RecordListUrl)
 	logrus.Tracef("response: %v", response)
 	logrus.Debugf("result:%+v", s)
-	status := *code2msg(s.Status.Code).AppendMsg(s.Status)
+	status := *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
 	if err != nil {
 		return status, err
 	}
