@@ -55,7 +55,7 @@ func TestConfigFileGenerator(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = DDNS.ConfigureWriter("test.conf", os.O_CREATE|os.O_TRUNC, dnspod)
+	err = DDNS.ConfigureWriter("test.conf", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, dnspod)
 	if err != nil {
 		t.Error(err)
 	}

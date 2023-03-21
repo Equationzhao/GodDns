@@ -117,9 +117,13 @@ func TestAdd2APIMap(t *testing.T) {
 	})
 	t.Log(ApiMap)
 	s, err := ApiMap.GetApi("ipify")
-	s(4)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(s)
+	ip, err := s(4)
+
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(ip)
 }

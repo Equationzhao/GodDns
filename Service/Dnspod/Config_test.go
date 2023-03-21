@@ -14,9 +14,10 @@ package Dnspod
 
 import (
 	"GodDns/DDNS"
-	"gopkg.in/ini.v1"
 	"os"
 	"testing"
+
+	"gopkg.in/ini.v1"
 )
 
 func TestConfig_CreateDefaultConfig(t *testing.T) {
@@ -64,7 +65,7 @@ func TestConfig_ReadConfig(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	err := DDNS.SaveConfig("test.conf", os.O_CREATE|os.O_APPEND, &p)
+	err := DDNS.SaveConfig("test.conf", os.O_CREATE|os.O_APPEND|os.O_WRONLY, &p)
 	if err != nil {
 		t.Error(err)
 	}
