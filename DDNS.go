@@ -19,10 +19,11 @@ import (
 	"GodDns/Util"
 	"errors"
 	"fmt"
-	"github.com/robfig/cron/v3"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
+
+	"github.com/robfig/cron/v3"
+	"github.com/sirupsen/logrus"
 )
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
@@ -64,10 +65,9 @@ func ReadConfig(configs []DDNS.ConfigFactory) ([]DDNS.Parameters, error) {
 
 	if configErrs != nil {
 		logrus.Errorf("error reading config: %s", configErrs.Error())
-		_, _ = fmt.Fprintf(output, "error reading config: %s", configErrs.Error())
 	}
 
-	if len(parameters) <= 1 {
+	if len(parameters) < 1 {
 		logrus.Info("no service left to run")
 		return nil, errors.New("no service left to run")
 	}
@@ -227,18 +227,19 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 
 // GetGlobalDevice get the global device
 // if not found, fatal
-func GetGlobalDevice(parameters []DDNS.Parameters) Device.Device {
+func GetGlobalDevice(parameters []DDNS.Parameters) (Device.Device, error) {
 	deviceInterface, err := DDNS.Find(parameters, Device.ServiceName)
 	if err != nil {
-		logrus.Fatalf("Section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
+		logrus.Errorf("Section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
+		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
 	}
 
 	GlobalDevice, ok := deviceInterface.(Device.Device)
 	if !ok {
-		logrus.Fatalf("Section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
-
+		logrus.Errorf("Section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
+		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
 	}
-	return GlobalDevice
+	return GlobalDevice, nil
 }
 
 func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
@@ -471,7 +472,7 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 	if err != nil {
 		return err
 	}
-	logrus.Info("write default configure to", DDNS.GetConfigureLocation())
+	logrus.Info("write default configure to ", DDNS.GetConfigureLocation())
 	return nil
 }
 
@@ -497,7 +498,7 @@ func RunPerTime(Time uint64, requests []DDNS.Request) {
 }
 
 func SaveFromParameters(parameters ...DDNS.Parameters) error {
-	err := DDNS.SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_TRUNC, parameters...)
+	err := DDNS.SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
 		logrus.Errorf("error saving config: %s", err.Error())
 		return fmt.Errorf("error saving config: %w", err)

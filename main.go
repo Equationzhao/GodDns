@@ -18,13 +18,14 @@ import (
 	"GodDns/Log"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"io"
 	"os"
 	"path"
 	"runtime"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 
 	_ "GodDns/Service" // register all services
 )
@@ -34,14 +35,66 @@ var output = os.Stdout
 const MAXRETRY = 255
 
 var (
-	Time         uint64 = 0
-	ApiName             = ""
-	retryAttempt uint8  = 0
-	config              = ""
-	// todo proxy
-	defaultLocation = ""
-	log             = "Info"
+	Time            uint64 = 0
+	ApiName                = ""
+	retryAttempt    uint8  = 0
+	config                 = ""
+	defaultLocation        = ""
+	log                    = "Info"
 	cleanUp         func()
+)
+
+var (
+	silentFlag = &cli.BoolFlag{
+		Name:    "silent",
+		Aliases: []string{"s", "S"},
+		Value:   false,
+		Usage:   "no message output",
+		Action: func(context *cli.Context, silent bool) error {
+			// set output
+			if silent {
+				output = nil
+			}
+			return nil
+		},
+	}
+
+	TimeFlag = &cli.Uint64Flag{
+		Name:        "time",
+		Value:       0,
+		Usage:       "run ddns per time(`seconds`)",
+		Destination: &Time,
+	}
+
+	retryFlag = &cli.UintFlag{
+		Name:  "retry",
+		Value: 3,
+		Usage: "retry `times`",
+		Action: func(context *cli.Context, u uint) error {
+			if u > MAXRETRY {
+				return fmt.Errorf("too many retry times, should be less than %d", MAXRETRY)
+			}
+			retryAttempt = uint8(u)
+			return nil
+		},
+	}
+
+	logFlag = &cli.StringFlag{
+		Name:        "log",
+		Aliases:     []string{"l", "L"},
+		Value:       "info",
+		Usage:       "Trace/Debug/Info/Warn/Error",
+		Destination: &log,
+	}
+
+	configFlag = &cli.StringFlag{
+		Name:        "config",
+		Aliases:     []string{"c", "C"},
+		Value:       "",
+		DefaultText: defaultLocation,
+		Usage:       "set configuration `file`",
+		Destination: &config,
+	}
 )
 
 func init() {
@@ -158,60 +211,6 @@ func InitLog(filename string, filePerm os.FileMode, loglevel string, output io.W
 	return cleanUp, nil
 }
 
-var (
-	silentFlag = &cli.BoolFlag{
-		Name:    "silent",
-		Aliases: []string{"s", "S"},
-		Value:   false,
-		Usage:   "no message output",
-		Action: func(context *cli.Context, silent bool) error {
-			// set output
-			if silent {
-				output = nil
-			}
-			return nil
-		},
-	}
-
-	TimeFlag = &cli.Uint64Flag{
-		Name:        "time",
-		Value:       0,
-		Usage:       "run ddns per time(`seconds`)",
-		Destination: &Time,
-	}
-
-	retryFlag = &cli.UintFlag{
-		Name:  "retry",
-		Value: 3,
-		Usage: "retry `times`",
-		Action: func(context *cli.Context, u uint) error {
-			if u > MAXRETRY {
-				return fmt.Errorf("too many retry times, should be less than %d", MAXRETRY)
-			}
-			retryAttempt = uint8(u)
-			return nil
-		},
-	}
-
-	logFlag = &cli.StringFlag{
-		Name:        "log",
-		Aliases:     []string{"l", "L"},
-		Value:       "info",
-		Usage:       "Trace/Debug/Info/Warn/Error",
-		Destination: &log,
-	}
-
-	configFlag = &cli.StringFlag{
-		Name:        "config",
-		Aliases:     []string{"c", "C"},
-		Value:       "",
-		DefaultText: defaultLocation,
-		Usage:       "set configuration `file`",
-		Destination: &config,
-	}
-)
-
-// command line parameters
 // todo return non-zero value when error occurs
 // todo return config setting command `GodDns config -service=cloudflare`
 func main() {
@@ -226,7 +225,7 @@ func main() {
 		Version:  DDNS.NowVersion.Info(),
 		Compiled: time.Now(),
 		Authors: []*cli.Author{
-			&cli.Author{
+			{
 				Name:  DDNS.Author,
 				Email: DDNS.FeedbackEmail(),
 			},
@@ -253,7 +252,7 @@ func main() {
 
 					parametersTemp, err := ReadConfig(configFactoryList)
 					if err != nil {
-						return err
+						return errors.New("")
 					}
 					parameters = parametersTemp
 					return RunDDNS(parameters)
@@ -264,12 +263,7 @@ func main() {
 						Aliases: []string{"a", "A"},
 						Usage:   "run ddns, use ip address of interface set in Device Section automatically",
 						Action: func(context *cli.Context) error {
-							// if context.IsSet("log")){
-							// 	err := checkLog(context.String("log"))
-							// 	if err != nil {
-							// 		return err
-							// 	}
-							// }
+
 							err := checkLog(log)
 							if err != nil {
 								return err
@@ -283,10 +277,13 @@ func main() {
 
 							parametersTemp, err := ReadConfig(configFactoryList)
 							if err != nil {
-								return err
+								return errors.New("")
 							}
 							parameters = parametersTemp
-							GlobalDevice = GetGlobalDevice(parameters) // fatal if not found
+							GlobalDevice, err = GetGlobalDevice(parameters)
+							if err != nil {
+								return errors.New("")
+							}
 							return RunAuto(GlobalDevice, parameters)
 						},
 						Subcommands: []*cli.Command{
@@ -302,12 +299,7 @@ func main() {
 									configFlag,
 								},
 								Action: func(context *cli.Context) error {
-									// if context.IsSet("log") {
-									// 	err := checkLog(context.String("log"))
-									// 	if err != nil {
-									// 		return err
-									// 	}
-									// }
+
 									err := checkLog(log)
 									if err != nil {
 										return err
@@ -321,10 +313,13 @@ func main() {
 
 									parametersTemp, err := ReadConfig(configFactoryList)
 									if err != nil {
-										return err
+										return errors.New("")
 									}
 									parameters = parametersTemp
-									GlobalDevice = GetGlobalDevice(parameters) // fatal if not found
+									GlobalDevice, err = GetGlobalDevice(parameters)
+									if err != nil {
+										return errors.New("")
+									}
 									return RunOverride(GlobalDevice, parameters)
 								},
 							},
@@ -360,6 +355,11 @@ func main() {
 				Aliases: []string{"g", "G"},
 				Usage:   "generate a default configuration file",
 				Action: func(*cli.Context) error {
+					err := checkLog(log)
+					if err != nil {
+						return err
+					}
+
 					if config != "" {
 						DDNS.UpdateConfigureLocation(config)
 					} else {
@@ -375,9 +375,9 @@ func main() {
 			},
 		},
 		After: func(context *cli.Context) error {
-			if cleanUp != nil {
-				// bug cleanUp()
-			}
+			// if cleanUp != nil {
+			// 	// bug cleanUp()
+			// }
 			return nil
 		},
 	}

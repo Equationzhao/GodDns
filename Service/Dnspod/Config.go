@@ -16,8 +16,9 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Net"
 	"GodDns/Util"
-	"gopkg.in/ini.v1"
 	"strconv"
+
+	"gopkg.in/ini.v1"
 )
 
 type Config struct {

@@ -47,7 +47,7 @@ func defaultConfigurationLocation() func() (string, error) {
 	// get user config dir
 	defaultConfiguration, err := os.UserConfigDir()
 	// create sub directory
-	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+"DDNS-go", 0666))
+	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+"DDNS-go", 0777))
 
 	defaultConfiguration += sep + "DDNS-go" + sep + "DDNS.conf"
 
@@ -107,7 +107,7 @@ func GetConfigureLocation() string {
 func ConfigureWriter(Filename string, flag int, config ...ConfigStr) error { // option: append/w
 	logrus.Debugf("open file at %s", Filename)
 
-	configure, err := os.OpenFile(Filename, flag, 0666) // os.O_CREATE|os.O_WRONLY
+	configure, err := os.OpenFile(Filename, flag, 0777) // os.O_CREATE|os.O_WRONLY
 
 	if err != nil {
 		return err
@@ -161,7 +161,9 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	}
 
 	cfg.BlockMode = false // !make sure read only
-	defer func() { cfg.BlockMode = true }()
+	defer func() {
+		cfg.BlockMode = true
+	}()
 	ps = make([]Parameters, 0, 2*len(configs))
 	var errCount uint8 = 0
 	secs := cfg.Sections()
@@ -196,7 +198,6 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 				// exec.Command()
 			}
 		}
-
 	}
 
 	if ReadConfigErrs != nil {
