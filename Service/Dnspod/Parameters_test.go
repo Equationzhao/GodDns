@@ -3,8 +3,8 @@
  *     @file: Parameters_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -22,23 +22,17 @@ var p Parameters
 
 func init() {
 	p = Parameters{
-		PublicParameter: PublicParameter{
-
-			LoginToken:   "550W_MOSS",
-			Format:       "json",
-			Lang:         "en",
-			ErrorOnEmpty: "no",
-		},
-
-		ExternalParameter: ExternalParameter{
-			Domain:     "example.com",
-			RecordId:   2,
-			Subdomain:  "s1",
-			RecordLine: "默认",
-			Value:      "fe80::1",
-			TTL:        600,
-			Type:       "AAAA",
-		},
+		LoginToken:   "550W_MOSS",
+		Format:       "json",
+		Lang:         "en",
+		ErrorOnEmpty: "no",
+		Domain:       "example.com",
+		RecordId:     2,
+		Subdomain:    "s1",
+		RecordLine:   "默认",
+		Value:        "fe80::1",
+		TTL:          600,
+		Type:         "AAAA",
 	}
 }
 

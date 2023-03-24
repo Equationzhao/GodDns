@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/21 下午4:38
- *     @last modified: 2023/3/21 下午4:34
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -19,11 +19,11 @@ import (
 	"GodDns/Util"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
-
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
+	"os"
+	"strconv"
+	"time"
 )
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
@@ -51,7 +51,11 @@ func RunDDNS(parameters []DDNS.Parameters) error {
 	}
 
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
+
 	return SaveFromParameters(Parameters2Save...)
 }
 
@@ -84,24 +88,67 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 	var api Net.Api
 	api, err := Net.ApiMap.GetApi(ApiName)
 	if err != nil {
-		logrus.Errorf("error getting api %s", err)
+		logrus.Errorf("error getting api %s, %s", ApiName, err)
 		// todo suggestion "do you mean xxx"
-		return err
+		return errors.New("") // return error with no message to avoid print error message again
 	}
 
 	logrus.Debugf("-I is set, get ip address from %s", ApiName)
-	ip4, err1 := api(4)
-	if err1 != nil {
-		logrus.Errorf("error getting ipv4 ,%s", err1)
-	} else {
-		logrus.Infof("ipv4 from %s: %s", ApiName, ip4)
-	}
 
-	ip6, err2 := api(6)
-	if err2 != nil {
-		logrus.Errorf("error getting ipv4 ,%s", err2)
-	} else {
-		logrus.Infof("ipv6 from %s: %s", ApiName, ip6)
+	ip4Done := make(chan bool, 1)
+	ip6Done := make(chan bool, 1)
+	ip4 := ""
+	_ip4 := ""
+	ip6 := ""
+	_ip6 := ""
+
+	var err1 error
+	go func() {
+		_ip4, err1 = api.Get(4)
+		if err1 != nil {
+			ip4Done <- false
+		} else {
+			ip4 = _ip4
+			ip4Done <- true
+		}
+		close(ip4Done)
+	}()
+
+	var err2 error
+	go func() {
+
+		_ip6, err2 = api.Get(6)
+		if err2 != nil {
+
+			ip6Done <- false
+		} else {
+			ip6 = _ip6
+
+			ip6Done <- true
+		}
+		close(ip6Done)
+	}()
+
+	select {
+	case temp := <-ip4Done:
+		if temp {
+			logrus.Infof("ipv4 from %s: %s", ApiName, ip4)
+		} else {
+			logrus.Errorf("error getting ipv4, %s", err1)
+			return errors.New("quit")
+		}
+
+	case temp := <-ip6Done:
+		if temp {
+			logrus.Infof("ipv6 from %s: %s", ApiName, ip6)
+		} else {
+			logrus.Errorf("error getting ipv6, %s", err2)
+			return errors.New("quit")
+		}
+
+	case <-time.After(10 * time.Second):
+		logrus.Errorf("timeout getting ip address from %s", ApiName)
+		return errors.New("quit")
 	}
 
 	for _, parameter := range parameters {
@@ -131,7 +178,10 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
 	return SaveFromParameters(Parameters2Save...)
 }
 
@@ -160,8 +210,8 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 				logrus.Errorf("error getting ipv4 %s ,%s", device, err1)
 			} else {
 				logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
-				ip4s = ip4sTemp
-				ip4.Set(device, Net.DealWithIp(ip4s...))
+				ip4s, err1 = Net.HandleIp(ip4sTemp, Net.ReserveGlobalUnicastOnly)
+				ip4.Set(device, ip4s[0])
 
 			}
 		}
@@ -173,8 +223,8 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 				logrus.Errorf("error getting ipv6 %s ,%s", device, err2)
 			} else {
 				logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
-				ip6s = ip6sTemp
-				ip6.Set(device, Net.DealWithIp(ip6s...))
+				ip6s, err2 = Net.HandleIp(ip6sTemp, Net.ReserveGlobalUnicastOnly)
+				ip6.Set(device, ip6s[0])
 			}
 		}
 
@@ -220,7 +270,10 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
 	return SaveFromParameters(Parameters2Save...)
 
 }
@@ -318,7 +371,10 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
-	Parameters2Save = append(Parameters2Save, Requests2Parameters(requests)...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
 	return SaveFromParameters(Parameters2Save...)
 
 }
@@ -345,8 +401,12 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 					logrus.Errorf("error getting ipv4 %s ,%s", device, err)
 				} else {
 					logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
-					ips = ip4sTemp
-					ip.Set(device, Net.DealWithIp(ips...))
+					ips, errTemp = Net.HandleIp(ip4sTemp, Net.ReserveGlobalUnicastOnly)
+					if errTemp != nil {
+						err = errors.Join(err, errTemp)
+						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
+					}
+					ip.Set(device, ips[0])
 				}
 			}
 		}
@@ -360,8 +420,12 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 					logrus.Errorf("error getting ipv6 %s ,%s", device, err)
 				} else {
 					logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
-					ips = ip6sTemp
-					ip.Set(device, Net.DealWithIp(ips...))
+					ips, errTemp = Net.HandleIp(ip6sTemp, Net.ReserveGlobalUnicastOnly)
+					if errTemp != nil {
+						err = errors.Join(err, errTemp)
+						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
+					}
+					ip.Set(device, ips[0])
 				}
 			}
 		}
@@ -408,8 +472,8 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		status := ""
 		res := request.Status()
 		if res.Success == DDNS.Success {
-			logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 			status = "Success"
+			logrus.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
 		} else if res.Success == DDNS.Failed {
 			logrus.Errorf("error executing request, %s", err.Error())
 			status = "Failed"
@@ -499,6 +563,7 @@ func RunPerTime(Time uint64, requests []DDNS.Request) {
 }
 
 func SaveFromParameters(parameters ...DDNS.Parameters) error {
+	// todo Merge Parameters that differ only by subdomain
 	err := DDNS.SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
 		logrus.Errorf("error saving config: %s", err.Error())
@@ -508,6 +573,8 @@ func SaveFromParameters(parameters ...DDNS.Parameters) error {
 	return nil
 }
 
+// Requests2Parameters convert successful requests to parameters
+// ![deprecated]
 func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
 	Parameters2Save := make([]DDNS.Parameters, 0, len(requests))
 	for _, request := range requests {
@@ -518,23 +585,28 @@ func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
 	return Parameters2Save
 }
 
-func CheckVersionUpgrade() {
+func CheckVersionUpgrade(msg chan<- string) {
 	// start checking version upgrade
 	hasUpgrades, v, url, err := DDNS.CheckUpdate()
-
+	defer close(msg)
+	defer func() {
+		logrus.Tracef("check version upgrade finished")
+	}()
 	if err != nil {
 		if errors.Is(err, DDNS.NoCompatibleVersionError) {
 			// "no suitable version")
-			_, _ = fmt.Fprintf(output, "new version %s is available\n", v.Info())
-			_, _ = fmt.Fprintln(output, "no compatible release for your operating system, consider building from source: ", DDNS.RepoURLs())
+			msg <- fmt.Sprintf("new version %s is available\n", v.Info())
+			msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s \n", DDNS.RepoURLs())
 		}
 		// error checking version upgrade
+		msg <- ""
+		msg <- ""
 		return
 	}
 
 	if hasUpgrades {
-		_, _ = fmt.Fprintf(output, "new version %s is available\n", v.Info())
-		_, _ = fmt.Fprintln(output, "download url: ", url)
+		msg <- fmt.Sprintf("new version %s is available\n", v.Info())
+		msg <- fmt.Sprintf("download url: %s", url)
 	} else {
 		// "already the latest version")
 		return

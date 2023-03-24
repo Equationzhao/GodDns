@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/21 下午4:38
- *     @last modified: 2023/3/21 下午4:28
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -106,8 +106,20 @@ func init() {
 	}
 
 	cli.VersionPrinter = func(c *cli.Context) {
+		msg := make(chan string, 2)
+		go CheckVersionUpgrade(msg)
 		fmt.Println(DDNS.NowVersionInfo())
-		CheckVersionUpgrade()
+		for i := 0; i < 2; i++ {
+			select {
+			case s := <-msg:
+				if s != "" {
+					fmt.Println(s)
+				}
+			case <-time.After(2 * time.Second):
+				return
+			}
+		}
+
 	}
 
 	cli.HelpFlag = &cli.BoolFlag{
@@ -225,6 +237,24 @@ func main() {
 	var parameters []DDNS.Parameters
 	var GlobalDevice Device.Device
 	configFactoryList := DDNS.ConfigFactoryList
+
+	location, err := DDNS.GetProgramConfigLocation()
+	if err != nil {
+		_, _ = fmt.Fprintln(output, "error loading program config: ", err, " use default config")
+	} else {
+		programConfig, fatal, other := DDNS.LoadProgramConfig(location)
+		if fatal != nil {
+			// skip setup
+			_, _ = fmt.Fprintln(output, fatal)
+
+		} else {
+			if other != nil {
+				_, _ = fmt.Fprintln(output, other)
+			}
+			programConfig.Setup()
+		}
+
+	}
 
 	app := &cli.App{
 		Name:     DDNS.FullName,

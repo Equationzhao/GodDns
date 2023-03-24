@@ -3,8 +3,8 @@
  *     @file: Util.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -49,20 +49,19 @@ type ConvertableKeyValue interface {
 // else use the field name as key
 // example:
 //
-//	type A struct {
-//		Device     string `KeyValue:"device,device name" json:"device"`
-//		IP         string `json:"ip,omitempty"`
-//		Type       string
-//		unexported string
-//	}
-//	a := A{Device: "device", IP: "ip", Type: "type"}
-//	fmt.Println(Convert2KeyValue("%s: %s", a))
-//	output:
-//	device: device # device name
-//	ip: ip
-//	Type: type
-//
-// todo formatter
+//		type A struct {
+//			Device     string `KeyValue:"device,device name" json:"device"`
+//			IP         string `json:"ip,omitempty"`
+//			Type       string
+//			unexported string
+//		}
+//		a := A{Device: "device", IP: "ip", Type: "type"}
+//		fmt.Println(Convert2KeyValue("%s: %s", a))
+//		output:
+//	 # device name
+//		device: device
+//		ip: ip
+//		Type: type
 func Convert2KeyValue(format string, i any) string {
 
 	if _, ok := i.(ConvertableKeyValue); ok {
@@ -72,6 +71,11 @@ func Convert2KeyValue(format string, i any) string {
 	var content string
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
+	if v.Kind() == reflect.Pointer {
+		v = v.Elem()
+		t = t.Elem()
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		if !t.Field(i).IsExported() {
 			continue
@@ -95,7 +99,7 @@ func Convert2KeyValue(format string, i any) string {
 		}
 
 		if comments != "" {
-			content += fmt.Sprintf(format, name, v.Field(i).Interface()) + fmt.Sprintf(" # %s", comments) + "\n"
+			content += fmt.Sprintf(" # %s", comments) + "\n" + fmt.Sprintf(format, name, v.Field(i).Interface()) + "\n"
 		} else {
 			content += fmt.Sprintf(format, name, v.Field(i).Interface()) + "\n"
 		}
@@ -137,6 +141,11 @@ func Convert2XWWWFormUrlencoded(i any) string {
 
 	var content string
 	t := reflect.TypeOf(i)
+	if v.Kind() == reflect.Pointer {
+		v = v.Elem()
+		t = t.Elem()
+	}
+
 	n := t.NumField()
 	for i := 0; i < n; i++ {
 		if !t.Field(i).IsExported() {
@@ -279,15 +288,4 @@ func SetVariable(ptr2i any, name string, value any) error {
 //	[]string
 func GetTypeName(variable any) string {
 	return reflect.TypeOf(variable).String()
-}
-
-// Pair is a struct that contains two variables
-type Pair[T, U any] struct {
-	First  T
-	Second U
-}
-
-func (receiver *Pair[T, U]) Set(first T, second U) {
-	receiver.First = first
-	receiver.Second = second
 }

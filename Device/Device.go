@@ -3,8 +3,8 @@
  *     @file: Device.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -66,7 +66,7 @@ func (d Device) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 // ReadConfig reads the config of Device
 // returns a Device which contains the config and nil
 // if section [Device] has no value named "device", return nil and an error
-func (d Device) ReadConfig(sec ini.Section) (DDNS.Parameters, error) { // todo
+func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
 	deviceList, err := sec.GetKey("device")
 	if err != nil {
 		return nil, err
@@ -74,8 +74,10 @@ func (d Device) ReadConfig(sec ini.Section) (DDNS.Parameters, error) { // todo
 
 	// convert to []string
 	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> split " " -> []string
-	d.Devices = strings.Split(strings.Trim(strings.Replace(deviceList.String(), ",", " ", -1), "[]"), " ") // remove [] and remove " "
-	return d, nil
+	d.Devices = strings.Split(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]"), " ") // remove [] and remove " "
+
+	ps := []DDNS.Parameters{d}
+	return ps, nil
 }
 
 // GenerateConfigInfo generates the config of Device

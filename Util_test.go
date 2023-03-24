@@ -3,14 +3,14 @@
  *     @file: Util_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
  */
 
-package Util_test
+package main_test
 
 import (
 	"GodDns/DDNS"
@@ -27,23 +27,17 @@ var p Dnspod.Parameters
 
 func init() {
 	p = Dnspod.Parameters{
-		PublicParameter: Dnspod.PublicParameter{
-
-			LoginToken:   "550W_MOSS",
-			Format:       "json",
-			Lang:         "en",
-			ErrorOnEmpty: "no",
-		},
-
-		ExternalParameter: Dnspod.ExternalParameter{
-			Domain:     "example.com",
-			RecordId:   2,
-			Subdomain:  "s1",
-			RecordLine: "默认",
-			Value:      "fe80::ad29:79b2:f25b:aec4%36",
-			TTL:        600,
-			Type:       "AAAA",
-		},
+		LoginToken:   "550W_MOSS",
+		Format:       "json",
+		Lang:         "en",
+		ErrorOnEmpty: "no",
+		Domain:       "example.com",
+		RecordId:     2,
+		Subdomain:    "s1",
+		RecordLine:   "默认",
+		Value:        "fe80::ad29:79b2:f25b:aec4%36",
+		TTL:          600,
+		Type:         "AAAA",
 	}
 
 }

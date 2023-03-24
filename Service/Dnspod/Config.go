@@ -3,8 +3,8 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/20 下午11:29
- *     @last modified: 2023/3/20 下午11:27
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -17,15 +17,17 @@ import (
 	"GodDns/Net"
 	"GodDns/Util"
 	"strconv"
+	"strings"
 
 	"gopkg.in/ini.v1"
 )
 
 type Config struct {
+	test bool
 }
 
 func init() {
-	DDNS.ConfigFactoryList = append(DDNS.ConfigFactoryList, ConfigFactoryInstance)
+	DDNS.Add2FactoryList(ConfigFactoryInstance)
 }
 
 // GetName Get name of service
@@ -45,7 +47,7 @@ func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 // Parameters: sec ini.Section
 // Return: DDNS.Parameters and error
 // if any error occurs, returned Parameters will be nil
-func (c Config) ReadConfig(sec ini.Section) (DDNS.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	var err error = nil
 
 	// if no error, err=nil
@@ -60,7 +62,8 @@ func (c Config) ReadConfig(sec ini.Section) (DDNS.Parameters, error) {
 	}
 
 	// sec.HasKey
-	//  todo sec.Key("login_token").Validate(func(key string) error {
+	// todo sec.Key("login_token").Validate(func(key string) error {
+	// use MissingKeyErr
 
 	loginToken := Unpack(sec, "login_token", &err)
 	if err != nil {
@@ -96,11 +99,6 @@ func (c Config) ReadConfig(sec ini.Section) (DDNS.Parameters, error) {
 		return nil, err
 	}
 
-	subdomain := Unpack(sec, "sub_domain", &err)
-	if err != nil {
-		return nil, err
-	}
-
 	recordLine := Unpack(sec, "record_line", &err)
 	if err != nil {
 		return nil, err
@@ -130,31 +128,50 @@ func (c Config) ReadConfig(sec ini.Section) (DDNS.Parameters, error) {
 		Type = Net.Type2Str(sec.Key("type").String())
 	}
 
-	d := new(Parameters)
-	*d = Parameters{
-		PublicParameter: PublicParameter{
+	// todo multi-subdomain eg. sub1,sub2
+	// 1. remove ','
+	// 2. split by ' '
+	// 3. remove empty string
+	// 4. remove duplicate subdomain
+	// 5. copy other parameters and modify subdomains
+	subdomain := Unpack(sec, "sub_domain", &err)
+	if err != nil {
+		return nil, err
+	}
+
+	subdomains := strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
+	Util.RemoveDuplicate(&subdomains)
+
+	ps := make([]DDNS.Parameters, 0, len(subdomains))
+
+	for _, s := range subdomains {
+		if s == "" {
+			continue
+		}
+		d := &Parameters{
 			LoginToken:   loginToken,
 			Format:       format,
 			Lang:         lang,
 			ErrorOnEmpty: errorOnEmpty,
-		},
-		ExternalParameter: ExternalParameter{
-			Domain:     domain,
-			RecordId:   uint32(recordId),
-			Subdomain:  subdomain,
-			RecordLine: recordLine,
-			Value:      value,
-			TTL:        uint16(ttl),
-			Type:       Type,
-		},
-		device: device,
+			Domain:       domain,
+			RecordId:     uint32(recordId),
+			Subdomain:    s,
+			RecordLine:   recordLine,
+			Value:        value,
+			TTL:          uint16(ttl),
+			Type:         Type,
+			device:       device,
+		}
+		ps = append(ps, d)
 	}
 
-	return d, nil
+	return ps, nil
 }
 
 // ConfigFactoryInstance a Factory instance to make dnspod config
 var ConfigFactoryInstance ConfigFactory
+
+var configInstance Config
 
 // ConfigFactory is a factory that create a new Config
 type ConfigFactory struct {
@@ -165,9 +182,9 @@ func (c ConfigFactory) GetName() string {
 	return serviceName
 }
 
-// Get return a new Config
+// Get return a singleton Config
 func (c ConfigFactory) Get() DDNS.Config {
-	return &Config{}
+	return &configInstance
 }
 
 // New return a new Config
