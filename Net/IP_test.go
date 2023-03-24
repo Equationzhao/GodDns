@@ -3,8 +3,8 @@
  *     @file: IP_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/22 上午6:29
- *     @last modified: 2023/3/22 上午6:21
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:44
  *
  *
  *
@@ -112,15 +112,15 @@ func TestTypeEqual(t *testing.T) {
 
 func TestAdd2APIMap(t *testing.T) {
 	t.Log(ApiMap)
-	ApiMap.Add2Apis("Test", func(u uint8) (string, error) {
+	ApiMap.Add2Apis("Test", Api{Get: func(u uint8) (string, error) {
 		return "Test", nil
-	})
+	}})
 	t.Log(ApiMap)
 	s, err := ApiMap.GetApi("ipify")
 	if err != nil {
 		t.Error(err)
 	}
-	ip, err := s(4)
+	ip, err := s.Get(4)
 
 	if err != nil {
 		t.Error(err)

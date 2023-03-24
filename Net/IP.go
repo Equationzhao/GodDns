@@ -3,8 +3,8 @@
  *     @file: IP.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/22 上午6:29
- *     @last modified: 2023/3/22 上午6:21
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -19,28 +19,39 @@ import (
 	"github.com/rdegges/go-ipify"
 	"net" // todo replace with net ip
 	"net/netip"
+	"regexp"
 )
 
-const (
-	A              uint8 = 4
-	AAAA           uint8 = 6
-	DefaultTypeStr       = "A"
-	DefaultType          = A
-)
+const ipv4Regex = `^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})`
+const ipv6Regex = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$`
+
+var Ipv4Pattern = regexp.MustCompile(ipv4Regex)
+var Ipv6Pattern = regexp.MustCompile(ipv6Regex)
+var IpPattern = regexp.MustCompile(ipv4Regex + "|" + ipv6Regex)
 
 // Api is a type = function that return a string and an error
-type Api = func(uint8) (string, error)
+type Api struct {
+	Get func(Type) (string, error)
+}
 
 // Apis contains a map of apis
 type Apis struct {
-	a map[string]func(uint8) (string, error)
+	a map[string]Api
+}
+
+var getIPFromIdentMeApi = Api{
+	Get: getIPFromIdentMe,
+}
+
+var getIPFromIpifyApi = Api{
+	Get: getIPFromIpify,
 }
 
 // ApiMap is a default Apis, contains a map of apis
 var ApiMap = Apis{
-	a: map[string]func(uint8) (string, error){
-		"ipify":   getIPFromIpify,
-		"identMe": getIPFromIdentMe,
+	a: map[string]Api{
+		"ipify":   getIPFromIpifyApi,
+		"identMe": getIPFromIdentMeApi,
 	},
 }
 
@@ -53,10 +64,6 @@ func (a *Apis) GetApiName() []string {
 	return res
 }
 
-func CreateApiFromURL(URL string) {
-
-}
-
 // Add2Apis add api to Map
 func (a *Apis) Add2Apis(name string, f Api) {
 	a.a[name] = f
@@ -66,7 +73,7 @@ func (a *Apis) Add2Apis(name string, f Api) {
 func (a *Apis) GetApi(name string) (Api, error) {
 	api, ok := a.a[name]
 	if !ok {
-		return nil, errors.New("not found")
+		return Api{}, errors.New("not found")
 	}
 	return api, nil
 }
@@ -75,6 +82,47 @@ func (a *Apis) GetApi(name string) (Api, error) {
 func (a *Apis) GetMap() map[string]Api {
 	return a.a
 }
+
+// getIPFromIpify get ip from ipify
+func getIPFromIpify(Type uint8) (string, error) {
+
+	switch Type {
+	case 6:
+		ipify.API_URI = "https://api6.ipify.org"
+	case 4:
+		ipify.API_URI = "https://api.ipify.org"
+	default:
+		return "", NewUnknownType(Type)
+	}
+	ip, err := ipify.GetIp()
+	if err != nil {
+		return "", err
+	}
+	return ip, nil
+}
+
+// getIPFromIdentMe get ip from ident.me
+func getIPFromIdentMe(Type uint8) (string, error) {
+	ApiUri := ""
+
+	switch Type {
+	case 6:
+		ApiUri = "https://v6.ident.me"
+	case 4:
+		ApiUri = "https://v4.ident.me"
+	default:
+		return "", NewUnknownType(Type)
+	}
+	r := resty.New()
+	res, err := r.R().Get(ApiUri)
+	if err != nil || res.String() == "" {
+		return "", err
+	}
+
+	return res.String(), nil
+}
+
+// -------------------------------------------------------- //
 
 // GetIp return Ip list of corresponding interface and nil error when error occurs, return nil and error
 func GetIp(NameToMatch string) ([]string, error) {
@@ -93,35 +141,12 @@ func GetIp(NameToMatch string) ([]string, error) {
 				return nil, err
 			}
 			for _, addr := range address {
-				// ? how
 				ips = append(ips, addr.(*net.IPNet).IP.String())
-				// switch v := addr.(type) {
-				// case *net.IPNet:
-				//	ips = append(ips, v.IP.String())
-				// }
 			}
 			return ips, nil
 		}
 	}
 	return nil, fmt.Errorf("not found")
-}
-
-// WhichType get the type of ip
-// parameter: ip
-// if ip is an ipv4 address return 4, if it's an ipv6 address return 6, else return 0
-func WhichType(ip string) uint8 {
-
-	addr, err := netip.ParseAddr(ip)
-	if err != nil {
-		return 0
-	}
-	if netip.Addr.Is4(addr) {
-		return 4
-	} else if netip.Addr.Is6(addr) {
-		return 6
-	}
-
-	return 0
 }
 
 // GetIpByType get specific type ip of corresponding interface
@@ -150,43 +175,45 @@ func GetIpByType(NameToMatch string, Type uint8) ([]string, error) {
 	}
 }
 
-// getIPFromIpify get ip from ipify
-func getIPFromIpify(Type uint8) (string, error) {
+// ---------------------------------------------------------- //
 
-	switch Type {
-	case 6:
-		ipify.API_URI = "https://api6.ipify.org"
-	case 4:
-		ipify.API_URI = "https://api.ipify.org"
-	default:
-		return "", fmt.Errorf("invalid type: %d", Type)
-	}
-	ip, err := ipify.GetIp()
-	if err != nil {
-		return "", err
-	}
-	return ip, nil
+const (
+	A              uint8 = 4
+	AAAA           uint8 = 6
+	DefaultTypeStr       = "A"
+	DefaultType          = A
+)
+
+type Type = uint8
+
+type UnknownType struct {
+	Type uint8
 }
 
-// getIPFromIdentMe get ip from ident.me
-func getIPFromIdentMe(Type uint8) (string, error) {
-	ApiUri := ""
+func NewUnknownType(Type uint8) *UnknownType {
+	return &UnknownType{Type: Type}
+}
 
-	switch Type {
-	case 6:
-		ApiUri = "https://v6.ident.me"
-	case 4:
-		ApiUri = "https://v4.ident.me"
-	default:
-		return "", fmt.Errorf("invalid type: %d", Type)
+func (u UnknownType) Error() string {
+	return fmt.Sprintf("unknown type: %d", u.Type)
+}
+
+// WhichType get the type of ip
+// parameter: ip
+// if ip is an ipv4 address return 4, if it's an ipv6 address return 6, else return 0
+func WhichType(ip string) uint8 {
+
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return 0
 	}
-	r := resty.New()
-	res, err := r.R().Get(ApiUri)
-	if err != nil || res.String() == "" {
-		return "", err
+	if netip.Addr.Is4(addr) {
+		return 4
+	} else if netip.Addr.Is6(addr) {
+		return 6
 	}
 
-	return res.String(), nil
+	return 0
 }
 
 type IntegerNumeric interface {
@@ -376,12 +403,171 @@ func IsTypeValid(Type string) bool {
 	default:
 		return false
 	}
-
 }
 
-// DealWithIp deal with ip
-// like get specific ip ?
-func DealWithIp(ip ...string) string {
-	// todo deal with ip like getting specific ip
-	return ip[0]
+func IsIpValid(ip string) bool {
+	return net.ParseIP(ip) != nil
+}
+
+// ----------------------------------------------------------- //
+
+// basicHandler is a basic handler
+// if CaseA or CaseAAAA is nil, return error
+// if ip is invalid, return error
+// if ip is valid but can't match any type, panic
+func basicHandler(ip string, CaseA IpHandler, CaseAAAA IpHandler) (string, error) {
+	if CaseA == nil {
+		return "", errors.New("bad handler for ipv4")
+	}
+	if CaseAAAA == nil {
+		return "", errors.New("bad handler for ipv6") // todo add handler info in error message
+	}
+
+	switch WhichType(ip) {
+	case A:
+		return CaseA(ip)
+	case AAAA:
+		return CaseAAAA(ip)
+	default:
+		if IsIpValid(ip) {
+			panic("ip is valid but can't match any type")
+		}
+		return "", fmt.Errorf("ip  %s is invalid", ip)
+	}
+}
+
+// IpHandler is a handler
+// if ip is invalid, should return "" and error
+type IpHandler func(ip string) (string, error)
+
+// loopback operate on ip
+// if act is false, remove loopback ip
+// if act is true, keep loopback ip, remove other ip
+func loopback(act bool) IpHandler {
+	return func(ip string) (string, error) {
+		addr := net.ParseIP(ip)
+		if addr.IsLoopback() {
+			if act {
+				// keep loopback
+				return ip, nil
+			} else {
+				// remove loopback
+				return "", nil
+			}
+		} else {
+			// not loopback
+			if act {
+				// remove other
+				return "", nil
+			} else {
+				// keep other
+				return ip, nil
+			}
+		}
+	}
+}
+
+// ReserveLoopbackOnly reserve loopback ip, remove other ip
+var ReserveLoopbackOnly IpHandler = func(ip string) (string, error) {
+	r := loopback(true)
+	return basicHandler(ip, r, r)
+}
+
+// RemoveLoopback remove loopback ip, keep other ip
+var RemoveLoopback IpHandler = func(ip string) (string, error) {
+	r := loopback(false)
+	return basicHandler(ip, r, r)
+}
+
+// globalUnicast operate on ip
+// if act is false, remove globalUnicast ip
+// if act is true, keep globalUnicast ip, remove other ip
+func globalUnicast(act bool) IpHandler {
+	return func(ip string) (string, error) {
+		addr := net.ParseIP(ip)
+		if addr.IsGlobalUnicast() {
+			if act {
+				// keep globalUnicast
+				return ip, nil
+			} else {
+				// remove globalUnicast
+				return "", nil
+			}
+		} else {
+			// not globalUnicast
+			if act {
+				// remove other
+				return "", nil
+			} else {
+				// keep other
+				return ip, nil
+			}
+		}
+	}
+}
+
+// ReserveGlobalUnicastOnly reserve globalUnicast ip and remove other ip
+var ReserveGlobalUnicastOnly IpHandler = func(ip string) (string, error) {
+	r := globalUnicast(true)
+	return basicHandler(ip, func(ip string) (string, error) {
+		return "", nil
+	}, r)
+}
+
+// RemoveGlobalUnicast remove globalUnicast ip
+var RemoveGlobalUnicast IpHandler = func(ip string) (string, error) {
+	r := globalUnicast(false)
+	return basicHandler(ip, func(ip string) (string, error) {
+		return "", nil
+	}, r)
+}
+
+type selector struct {
+}
+
+func (s selector) Select(no int) IpHandler {
+	count := 0
+	hasPick := false
+	return func(ip string) (string, error) {
+		if hasPick {
+			return "", nil
+		} else {
+			if count == no {
+				hasPick = true
+				return ip, nil
+			} else {
+				count++
+				return "", nil
+			}
+		}
+	}
+}
+
+func NewSelector(no int) IpHandler {
+	return selector{}.Select(no)
+}
+
+var SelectorFirst IpHandler = func(ip string) (string, error) {
+	s := NewSelector(0)
+	return basicHandler(ip, s, s)
+}
+
+// HandleIp ip
+// handle ip with handlers
+// join errors together when error handling
+func HandleIp(ips []string, handlers ...IpHandler) ([]string, error) {
+	var errs error
+	var res []string = nil
+	for _, ip := range ips {
+		for _, ipHandler := range handlers {
+			After, err := ipHandler(ip)
+			if err != nil {
+				errs = errors.Join(errs, err)
+			} else {
+				res = append(res, After)
+			}
+		}
+	}
+
+	return res, errs
 }

@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/22 上午6:29
- *     @last modified: 2023/3/22 上午6:21
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -198,7 +198,7 @@ func (r *Request) GetRecordId(done chan<- bool) (DDNS.Status, error) {
 		return status, fmt.Errorf("status code is not 1, code:%s", s.Status.Code)
 	}
 
-	id, err := strconv.Atoi(s.Records[0].Id)
+	id, err := strconv.Atoi(s.Records[0].Id) // todo what if s.Records is empty
 
 	if err != nil {
 		return status, err

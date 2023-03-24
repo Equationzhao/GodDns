@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/22 上午6:29
- *     @last modified: 2023/3/22 上午6:21
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -101,46 +101,6 @@ type PublicParameter struct {
 
 type ExternalParameter struct {
 }
-
-// // MarshalJSON rewrite Parameters marshal function
-// func (p *Parameters) MarshalJSON() ([]byte, error) {
-// 	return json.Marshal(struct {
-// 		LoginToken   string
-// 		Format       string
-// 		Lang         string
-// 		ErrorOnEmpty string
-// 		UserId       uint32
-// 		Domain       string
-// 		RecordId     uint32
-// 		Subdomain    string
-// 		RecordLine   string
-// 		Value        string
-// 		TTL          uint16
-// 		Type         string
-// 	}{
-// 		LoginToken:   p.LoginToken,
-// 		Format:       p.Format,
-// 		Lang:         p.Lang,
-// 		ErrorOnEmpty: p.ErrorOnEmpty,
-// 		Domain:       p.Domain,
-// 		RecordId:     p.RecordId,
-// 		Subdomain:    p.Subdomain,
-// 		RecordLine:   p.RecordLine,
-// 		Value:        p.Value,
-// 		TTL:          p.TTL,
-// 		Type:         p.Type,
-// 	})
-// }
-
-// // Convert2XWWWFormUrlencoded rewrite Parameters Convert2XWWWFormUrlencoded function
-// func (p *Parameters) Convert2XWWWFormUrlencoded() string {
-// 	return Util.Convert2XWWWFormUrlencoded(p.PublicParameter) + "&" + Util.Convert2XWWWFormUrlencoded(p.ExternalParameter)
-// }
-
-// Convert2KeyValue rewrite Parameters Convert2KeyValue function
-// func (p *Parameters) Convert2KeyValue(format string) string {
-// 	return Util.Convert2KeyValue(format, p.PublicParameter) + Util.Convert2KeyValue(format, p.ExternalParameter)
-// }
 
 // ToRequest Convert to DDNS.Request
 func (p *Parameters) ToRequest() (DDNS.Request, error) {

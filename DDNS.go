@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/22 上午6:29
- *     @last modified: 2023/3/22 上午6:21
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -19,11 +19,11 @@ import (
 	"GodDns/Util"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
-
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
+	"os"
+	"strconv"
+	"time"
 )
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
@@ -88,24 +88,67 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 	var api Net.Api
 	api, err := Net.ApiMap.GetApi(ApiName)
 	if err != nil {
-		logrus.Errorf("error getting api %s", err)
+		logrus.Errorf("error getting api %s, %s", ApiName, err)
 		// todo suggestion "do you mean xxx"
-		return err
+		return errors.New("") // return error with no message to avoid print error message again
 	}
 
 	logrus.Debugf("-I is set, get ip address from %s", ApiName)
-	ip4, err1 := api(4)
-	if err1 != nil {
-		logrus.Errorf("error getting ipv4 ,%s", err1)
-	} else {
-		logrus.Infof("ipv4 from %s: %s", ApiName, ip4)
-	}
 
-	ip6, err2 := api(6)
-	if err2 != nil {
-		logrus.Errorf("error getting ipv4 ,%s", err2)
-	} else {
-		logrus.Infof("ipv6 from %s: %s", ApiName, ip6)
+	ip4Done := make(chan bool, 1)
+	ip6Done := make(chan bool, 1)
+	ip4 := ""
+	_ip4 := ""
+	ip6 := ""
+	_ip6 := ""
+
+	var err1 error
+	go func() {
+		_ip4, err1 = api.Get(4)
+		if err1 != nil {
+			ip4Done <- false
+		} else {
+			ip4 = _ip4
+			ip4Done <- true
+		}
+		close(ip4Done)
+	}()
+
+	var err2 error
+	go func() {
+
+		_ip6, err2 = api.Get(6)
+		if err2 != nil {
+
+			ip6Done <- false
+		} else {
+			ip6 = _ip6
+
+			ip6Done <- true
+		}
+		close(ip6Done)
+	}()
+
+	select {
+	case temp := <-ip4Done:
+		if temp {
+			logrus.Infof("ipv4 from %s: %s", ApiName, ip4)
+		} else {
+			logrus.Errorf("error getting ipv4, %s", err1)
+			return errors.New("quit")
+		}
+
+	case temp := <-ip6Done:
+		if temp {
+			logrus.Infof("ipv6 from %s: %s", ApiName, ip6)
+		} else {
+			logrus.Errorf("error getting ipv6, %s", err2)
+			return errors.New("quit")
+		}
+
+	case <-time.After(10 * time.Second):
+		logrus.Errorf("timeout getting ip address from %s", ApiName)
+		return errors.New("quit")
 	}
 
 	for _, parameter := range parameters {
@@ -167,8 +210,8 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 				logrus.Errorf("error getting ipv4 %s ,%s", device, err1)
 			} else {
 				logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
-				ip4s = ip4sTemp
-				ip4.Set(device, Net.DealWithIp(ip4s...))
+				ip4s, err1 = Net.HandleIp(ip4sTemp, Net.ReserveGlobalUnicastOnly)
+				ip4.Set(device, ip4s[0])
 
 			}
 		}
@@ -180,8 +223,8 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 				logrus.Errorf("error getting ipv6 %s ,%s", device, err2)
 			} else {
 				logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
-				ip6s = ip6sTemp
-				ip6.Set(device, Net.DealWithIp(ip6s...))
+				ip6s, err2 = Net.HandleIp(ip6sTemp, Net.ReserveGlobalUnicastOnly)
+				ip6.Set(device, ip6s[0])
 			}
 		}
 
@@ -358,8 +401,12 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 					logrus.Errorf("error getting ipv4 %s ,%s", device, err)
 				} else {
 					logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
-					ips = ip4sTemp
-					ip.Set(device, Net.DealWithIp(ips...))
+					ips, errTemp = Net.HandleIp(ip4sTemp, Net.ReserveGlobalUnicastOnly)
+					if errTemp != nil {
+						err = errors.Join(err, errTemp)
+						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
+					}
+					ip.Set(device, ips[0])
 				}
 			}
 		}
@@ -373,8 +420,12 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 					logrus.Errorf("error getting ipv6 %s ,%s", device, err)
 				} else {
 					logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
-					ips = ip6sTemp
-					ip.Set(device, Net.DealWithIp(ips...))
+					ips, errTemp = Net.HandleIp(ip6sTemp, Net.ReserveGlobalUnicastOnly)
+					if errTemp != nil {
+						err = errors.Join(err, errTemp)
+						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
+					}
+					ip.Set(device, ips[0])
 				}
 			}
 		}

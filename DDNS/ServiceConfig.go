@@ -1,10 +1,10 @@
 /*
  *     @Copyright
- *     @file: Config.go
+ *     @file: ServiceConfig.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/22 上午6:29
- *     @last modified: 2023/3/22 上午6:28
+ *     @time: 2023/3/25 上午1:46
+ *     @last modified: 2023/3/25 上午1:45
  *
  *
  *
@@ -17,17 +17,17 @@ package DDNS
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
-
-	"github.com/sirupsen/logrus"
-	"gopkg.in/ini.v1"
 )
 
 // Format define the key=value format of config file
 const Format = "%s=%v"
+const ConfigName = "DDNS.conf"
 
 var configFileLocation string
 
@@ -48,17 +48,28 @@ var GetDefaultConfigurationLocation = defaultConfigurationLocation()
 
 func defaultConfigurationLocation() func() (string, error) {
 
-	sep := string(filepath.Separator) // get system separator
-	// get user config dir
-	defaultConfiguration, err := os.UserConfigDir()
-	// create sub directory
-	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+"DDNS-go", 0777))
+	defaultConfiguration, err := defaultConfigurationDirectory()
+	if err != nil {
+		return func() (string, error) {
+			return "", err
+		}
+	}
 
-	defaultConfiguration += sep + "DDNS-go" + sep + "DDNS.conf"
+	sep := string(filepath.Separator) // get system separator
+	defaultConfiguration += sep + ConfigName
 
 	return func() (string, error) {
 		return defaultConfiguration, err
 	}
+}
+
+// defaultConfigurationDirectory get default configuration directory like /home/user/.config/GodDns
+// make dir if not exist
+func defaultConfigurationDirectory() (string, error) {
+	sep := string(filepath.Separator)                                            // get system separator
+	defaultConfiguration, err := os.UserConfigDir()                              // get user config dir
+	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+FullName, 0777)) // create sub directory
+	return defaultConfiguration + sep + FullName, err
 }
 
 // UpdateConfigureLocation update config file location
@@ -106,18 +117,32 @@ func GetConfigureLocation() string {
 
 // MissingKeyErr presents a key is not found in config file
 type MissingKeyErr struct {
-	Name        string
-	ServiceName string
+	KeyName     string
+	SectionName string
+}
+
+type UnknownKeyErr struct {
+	KeyName     string
+	SectionName string
+}
+
+func (u UnknownKeyErr) Error() string {
+	return fmt.Sprintf("unknown key %s in %s", u.KeyName, u.SectionName)
+}
+
+// NewUnknownKeyErr create a new UnknownKeyErr
+func NewUnknownKeyErr(keyName string, sectionName string) *UnknownKeyErr {
+	return &UnknownKeyErr{KeyName: keyName, SectionName: sectionName}
 }
 
 // NewMissKeyErr create a new MissingKeyErr
-func NewMissKeyErr(name string, serviceName string) *MissingKeyErr {
-	return &MissingKeyErr{Name: name, ServiceName: serviceName}
+func NewMissKeyErr(keyName string, sectionName string) *MissingKeyErr {
+	return &MissingKeyErr{KeyName: keyName, SectionName: sectionName}
 }
 
 // Error return error message
 func (m MissingKeyErr) Error() string {
-	return fmt.Sprintf("miss key %s", m.Name)
+	return fmt.Sprintf("miss key %s in %s", m.KeyName, m.SectionName)
 }
 
 // ConfigureWriter Create key style config file
@@ -201,7 +226,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 			// Read corresponding service
 			if match {
 				logrus.Debugf("read config for %s", c.GetName())
-				temp, err := c.Get().ReadConfig(*sec)
+				temp, err := c.Get().ReadConfig(*sec) // todo read comments: sec.Key("name").Comment
 				logrus.Debug(temp)
 				if err != nil {
 					errCount++
@@ -238,7 +263,7 @@ func IsConfigureExist() bool {
 func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
 	var err error
 	n := make(map[string]uint)
-	ConStrs := make([]ConfigStr, 0, len(parameters))
+	ConfigStrings := make([]ConfigStr, 0, len(parameters))
 	for _, parameter := range parameters {
 		var no uint
 		if parameter.GetName() == "Device" { // todo refactor do not use hard code "Device"
@@ -252,10 +277,10 @@ func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
 		if err_ != nil {
 			err = errors.Join(err, err_)
 		} else {
-			ConStrs = append(ConStrs, ConStr)
+			ConfigStrings = append(ConfigStrings, ConStr)
 		}
 	}
-	err = errors.Join(err, ConfigureWriter(FileName, flag, ConStrs...))
+	err = errors.Join(err, ConfigureWriter(FileName, flag, ConfigStrings...))
 	return err
 }
 
@@ -269,20 +294,4 @@ func ConfigHead(parameters Parameters, No uint) (head string) { // todo head com
 		head = "[" + parameters.GetName() + "]" + "\n"
 	}
 	return
-}
-
-// ProgramConfig  config for program
-type ProgramConfig struct {
-	// todo add config for program
-	// 1. proxy
-	// 2. custom apis
-	// 3. custom services Vscode-like
-	// ...
-}
-
-// LoadApiFromConfig load api from config, add to Net.ApiMap
-func LoadApiFromConfig() {
-	// todo load api from config
-	// URLPattern := regexp.MustCompile(`^http(s)?://[a-z0-9-]+(.[a-z0-9-]+)*(:[0-9]+)?(/.*)?$`)
-	// isURL, _ := regexp.Match(URLPattern.String(), []byte(ApiName))
 }
