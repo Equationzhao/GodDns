@@ -3,8 +3,8 @@
  *     @file: Config_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 上午1:46
  *
  *
  *
@@ -166,7 +166,7 @@ func TestProgramConfigGenerateConfiguration(t *testing.T) {
 			},
 			{
 				apiName:  "MyApi2",
-				method:   "POST",
+				method:   "GET",
 				a:        "https://ip.3322.net",
 				aaaa:     "https://speed.neu6.edu.cn/getIP.php",
 				response: "JSON",

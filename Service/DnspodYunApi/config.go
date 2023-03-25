@@ -3,8 +3,8 @@
  *     @file: config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:20
  *
  *
  *
@@ -22,13 +22,13 @@ import (
 )
 
 func init() {
-	DDNS.Add2FactoryList(FactoryInstance)
+	DDNS.Add2FactoryList(factoryInstance)
 }
 
 const serviceName = "DnspodYun"
 
-var FactoryInstance Factory
-var ConfigInstance Config
+var factoryInstance Factory
+var configInstance Config
 
 type Factory struct {
 }
@@ -38,7 +38,7 @@ func (f Factory) GetName() string {
 }
 
 func (f Factory) Get() DDNS.Config {
-	return &ConfigInstance
+	return &configInstance
 }
 
 func (f Factory) New() *DDNS.Config {

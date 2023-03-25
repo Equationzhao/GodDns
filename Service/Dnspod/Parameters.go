@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:19
  *
  *
  *
@@ -66,7 +66,7 @@ func (p *Parameters) GetType() string {
 
 // SaveConfig return DDNS.ConfigStr
 func (p *Parameters) SaveConfig(No uint) (DDNS.ConfigStr, error) {
-	return Config{}.GenerateConfigInfo(p, No)
+	return configInstance.GenerateConfigInfo(p, No)
 }
 
 // GetName return "Dnspod"

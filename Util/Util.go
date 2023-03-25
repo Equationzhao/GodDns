@@ -3,8 +3,8 @@
  *     @file: Util.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:41
  *
  *
  *
@@ -14,6 +14,7 @@ package Util
 
 import (
 	"fmt"
+	"net/url"
 	"reflect"
 	"runtime"
 	"strings"
@@ -49,19 +50,26 @@ type ConvertableKeyValue interface {
 // else use the field name as key
 // example:
 //
-//		type A struct {
-//			Device     string `KeyValue:"device,device name" json:"device"`
-//			IP         string `json:"ip,omitempty"`
-//			Type       string
-//			unexported string
-//		}
-//		a := A{Device: "device", IP: "ip", Type: "type"}
+//	type B struct {
+//		X string
+//		x string
+//	}
+//
+//	type A struct {
+//		Device     string `KeyValue:"device,device name" json:"device"`
+//		IP         string `json:"ip,omitempty,string"`
+//		Type       string
+//		unexported string
+//		B          B
+//	}
+//		a := A{Device: "device", IP: "ip", Type: "type", B: B{X: "123", x: "321"}}
 //		fmt.Println(Convert2KeyValue("%s: %s", a))
 //		output:
 //	 # device name
 //		device: device
 //		ip: ip
 //		Type: type
+//		B: {123 321}
 func Convert2KeyValue(format string, i any) string {
 
 	if _, ok := i.(ConvertableKeyValue); ok {
@@ -131,6 +139,8 @@ type ConvertableXWWWFormUrlencoded interface {
 //		fmt.Println(Convert2XWWWFormUrlencoded(a))
 //		output:
 //		device=device&ip=ip&Type=type
+//
+// [need test&debug]
 func Convert2XWWWFormUrlencoded(i any) string {
 
 	if _, ok := i.(ConvertableXWWWFormUrlencoded); ok {
@@ -146,30 +156,62 @@ func Convert2XWWWFormUrlencoded(i any) string {
 		t = t.Elem()
 	}
 
-	n := t.NumField()
-	for i := 0; i < n; i++ {
-		if !t.Field(i).IsExported() {
-			if i == n-1 && content != "" {
-				content = content[:len(content)-1]
+	switch t.Kind() {
+	case reflect.String:
+		return "=" + url.QueryEscape(v.String())
+	case reflect.Map:
+		iter := v.MapRange()
+		for iter.Next() {
+			v := reflect.ValueOf(iter.Value())
+			t := reflect.TypeOf(iter.Value())
+			if t.Kind() == reflect.Pointer {
+				v = v.Elem()
+				t = t.Elem()
 			}
-
-			continue
+			// if v is not struct/map/pointer
+			switch t.Kind() {
+			case reflect.Struct:
+				fallthrough
+			case reflect.Map:
+				content += Convert2XWWWFormUrlencoded(iter.Value().Interface())
+			default:
+				content += fmt.Sprintf("%s=%s", iter.Key(), url.QueryEscape(v.String()))
+			}
 		}
-		name := t.Field(i).Tag.Get("xwwwformurlencoded")
-		if name == "" {
-			// if there's no "xwwwformurlencoded" Tag, use "json" instead
-			name = t.Field(i).Tag.Get("json")
-			// if there's no "json" Tag, use field name instead
-			// ? how to deal with json include string "omitempty"
+	case reflect.Struct:
+		n := t.NumField()
+		for i := 0; i < n; i++ {
+			if !t.Field(i).IsExported() {
+				// not exported
+				if i == n-1 && content != "" {
+					// if it's the last element, remove the "&" add before
+					content = content[:len(content)-1]
+				}
+				continue
+			}
+			name := t.Field(i).Tag.Get("xwwwformurlencoded")
 			if name == "" {
-				name = t.Field(i).Name
+				// if there's no "xwwwformurlencoded" Tag, use "json" instead
+				name = t.Field(i).Tag.Get("json")
+				// if there's no "json" Tag, use field name instead
+				if name == "" {
+					name = t.Field(i).Name
+				}
 			}
-		}
-		content += fmt.Sprintf("%+v", name) + "=" + fmt.Sprintf("%v", v.Field(i).Interface())
-		if i != n-1 {
-			content += "&"
-		}
 
+			content += fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface())))
+			if i != n-1 {
+				content += "&"
+			}
+
+		}
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			content += Convert2XWWWFormUrlencoded(v.Index(i).Interface()) + "&"
+		}
+		if strings.HasSuffix(content, "&") {
+			content = content[:len(content)-1]
+		}
 	}
 
 	return content
@@ -268,7 +310,7 @@ func SetVariable(ptr2i any, name string, value any) error {
 //	  	s := DDNS.Status{
 //			Name:    "Test",
 //			Msg:     "Hello",
-//			Success: DDNS.Success,
+//			Status: DDNS.Status,
 //	 	}
 //
 //		fmt.(Util.GetTypeName(s))
