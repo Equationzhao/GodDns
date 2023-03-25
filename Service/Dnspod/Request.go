@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午4:40
  *
  *
  *
@@ -49,9 +49,9 @@ func (r *Request) Status() DDNS.Status {
 
 func newStatus() *DDNS.Status {
 	return &DDNS.Status{
-		Name:    serviceName,
-		Msg:     "",
-		Success: DDNS.NotExecute,
+		Name:   serviceName,
+		Msg:    "",
+		Status: DDNS.NotExecute,
 	}
 }
 
@@ -63,7 +63,7 @@ func (r *Request) ToParameters() DDNS.Parameters {
 // Run implements Cron.Job
 func (r *Request) Run() {
 	err := r.MakeRequest()
-	logrus.Debugf("status:%+v,err:%s", r.Status(), err)
+	logrus.Infof("status:%+v,err:%s", r.Status(), err)
 }
 
 // GetName return "dnspod"
@@ -103,14 +103,14 @@ func (r *Request) MakeRequest() error {
 	content := ""
 	select {
 	case <-done:
-		if err != nil || status.Success != DDNS.Success {
-			r.status.Success = DDNS.Success
+		if err != nil || status.Status != DDNS.Success {
+			r.status.Status = DDNS.Success
 			r.status.Msg = status.Msg
 			return err
 		}
 		content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
 	case <-time.After(time.Second * 20):
-		r.status.Success = DDNS.Timeout
+		r.status.Status = DDNS.Timeout
 		r.status.Msg = "GetRecordId timeout"
 		return errors.New("GetRecordId timeout")
 	}
@@ -186,7 +186,7 @@ func (r *Request) GetRecordId(done chan<- bool) (DDNS.Status, error) {
 
 	// make request to "https://dnsapi.cn/Record.List" to get record id
 	client := resty.New()
-	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(RecordListUrl)
+	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
 	logrus.Tracef("response: %v", response)
 	logrus.Debugf("result:%+v", s)
 	status := *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())

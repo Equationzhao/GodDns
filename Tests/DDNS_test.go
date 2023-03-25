@@ -3,14 +3,14 @@
  *     @file: DDNS_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午4:40
  *
  *
  *
  */
 
-package main_test
+package Tests_test
 
 import (
 	"GodDns/DDNS"
@@ -36,23 +36,27 @@ func TestCreateDefaultConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = DDNS.ConfigureWriter(location, os.O_CREATE, config)
+	_, err = os.Stat(location)
 	if err != nil {
-		t.Error(err)
+		err = DDNS.ConfigureWriter(location, os.O_CREATE, config)
+		if err != nil {
+			t.Error(err)
+		}
 	}
+
 }
 
 func TestStatus_AppendMsg(t *testing.T) {
 	s := &DDNS.Status{
-		Name:    "test",
-		Msg:     "hello",
-		Success: DDNS.Success,
+		Name:   "test",
+		Msg:    "hello",
+		Status: DDNS.Success,
 	}
 
 	s2 := &DDNS.Status{
-		Name:    "test",
-		Msg:     "!",
-		Success: DDNS.Success,
+		Name:   "test",
+		Msg:    "!",
+		Status: DDNS.Success,
 	}
 
 	s.AppendMsg(" ", "world", s2.Msg)
@@ -65,15 +69,15 @@ func TestStatus_AppendMsg(t *testing.T) {
 
 func TestStatus_AppendMsgF(t *testing.T) {
 	s := &DDNS.Status{
-		Name:    "test",
-		Msg:     "hello",
-		Success: DDNS.Success,
+		Name:   "test",
+		Msg:    "hello",
+		Status: DDNS.Success,
 	}
 
 	s2 := &DDNS.Status{
-		Name:    "test",
-		Msg:     "!",
-		Success: DDNS.Success,
+		Name:   "test",
+		Msg:    "!",
+		Status: DDNS.Success,
 	}
 	s.AppendMsgF(" %s%s", "world", s2.Msg)
 

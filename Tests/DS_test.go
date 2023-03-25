@@ -3,14 +3,14 @@
  *     @file: DS_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午1:44
  *
  *
  *
  */
 
-package main
+package Tests
 
 import (
 	"GodDns/Util"

@@ -3,8 +3,8 @@
  *     @file: Parameters.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:20
  *
  *
  *
@@ -40,7 +40,7 @@ func (s *DnspodYun) IsDeviceSet() bool {
 }
 
 func (s *DnspodYun) SaveConfig(No uint) (DDNS.ConfigStr, error) {
-	return Config{}.GenerateConfigInfo(s, No)
+	return configInstance.GenerateConfigInfo(s, No)
 }
 
 func (s *DnspodYun) ToRequest() (DDNS.Request, error) {

@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午4:40
  *
  *
  *
@@ -464,24 +464,24 @@ func ExecuteRequests(requests ...DDNS.Request) {
 	for _, request := range requests {
 		logrus.Tracef("request: %s", request.GetName())
 		err := DDNS.ExecuteRequest(request)
-		if err != nil || request.Status().Success != DDNS.Success {
+		if err != nil || request.Status().Status != DDNS.Success {
 			logrus.Errorf("error executing request, %s", err.Error())
 			Retry(request, retryAttempt)
 		}
 
 		status := ""
 		res := request.Status()
-		if res.Success == DDNS.Success {
+		if res.Status == DDNS.Success {
 			status = "Success"
 			logrus.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
-		} else if res.Success == DDNS.Failed {
+		} else if res.Status == DDNS.Failed {
 			logrus.Errorf("error executing request, %s", err.Error())
 			status = "Failed"
 			logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 			if retryAttempt != 0 {
 				logrus.Errorf("all retry failed, skip %s", request.GetName())
 			}
-		} else if res.Success == DDNS.NotExecute {
+		} else if res.Status == DDNS.NotExecute {
 			logrus.Fatal("request not executed")
 		}
 	}
@@ -578,7 +578,7 @@ func SaveFromParameters(parameters ...DDNS.Parameters) error {
 func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
 	Parameters2Save := make([]DDNS.Parameters, 0, len(requests))
 	for _, request := range requests {
-		if request.Status().Success == DDNS.Success {
+		if request.Status().Status == DDNS.Success {
 			Parameters2Save = append(Parameters2Save, request.ToParameters())
 		}
 	}

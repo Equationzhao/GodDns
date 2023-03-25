@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午4:40
  *
  *
  *
@@ -37,9 +37,9 @@ type Request interface {
 }
 
 type Status struct {
-	Name    string
-	Msg     string
-	Success int
+	Name   string
+	Msg    string
+	Status int
 }
 
 // const Success = "success"

@@ -3,8 +3,8 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:31
  *
  *
  *
@@ -33,9 +33,9 @@ type Request struct {
 
 func newStatus() *DDNS.Status {
 	return &DDNS.Status{
-		Name:    serviceName,
-		Msg:     "",
-		Success: DDNS.NotExecute,
+		Name:   serviceName,
+		Msg:    "",
+		Status: DDNS.NotExecute,
 	}
 }
 
@@ -45,7 +45,7 @@ func (r *Request) Init(yun DnspodYun) {
 
 func (r *Request) Run() {
 	err := r.MakeRequest()
-	logrus.Debugf("status:%+v,err:%s", r.Status(), err)
+	logrus.Infof("status:%+v,err:%s", r.Status(), err)
 }
 
 func (r *Request) ToParameters() DDNS.Parameters {
@@ -79,7 +79,7 @@ func (r *Request) MakeRequest() error {
 	responseRecordId, err := client.DescribeRecordList(requestRecord)
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
 		logrus.Debugf("an API error has returned: %s", err.Error())
-		r.status.Success = DDNS.Failed
+		r.status.Status = DDNS.Failed
 		r.status.Msg = err.(*errors.TencentCloudSDKError).Message
 		return fmt.Errorf("an API error has returned: %w", err)
 	} else if err != nil {
@@ -106,7 +106,7 @@ func (r *Request) MakeRequest() error {
 	responseDDNS, err := client.ModifyDynamicDNS(requestDDNS)
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
 		logrus.Debugf("an API error has returned: %s", err.Error())
-		r.status.Success = DDNS.Failed
+		r.status.Status = DDNS.Failed
 		r.status.Msg = err.(*errors.TencentCloudSDKError).Message
 		return fmt.Errorf("an API error has returned: %w", err)
 	} else if err != nil {
@@ -117,13 +117,13 @@ func (r *Request) MakeRequest() error {
 	err = json.Unmarshal([]byte(responseDDNS.ToJsonString()), &res)
 	if err != nil {
 		logrus.Debugf("error umarshaling response %v: %s", responseDDNS.ToJsonString(), err.Error())
-		r.status.Success = DDNS.Failed
+		r.status.Status = DDNS.Failed
 
 		return fmt.Errorf("error umarshaling response %v: %w", responseDDNS.ToJsonString(), err)
 	}
 
 	// set status
-	r.status.Success = DDNS.Success
+	r.status.Status = DDNS.Success
 	r.status.Msg = "operation success"
 	r.status.AppendMsg(fmt.Sprintf(" %s %s", r.Parameters.getTotalDomain(), r.Parameters.Value))
 	return nil

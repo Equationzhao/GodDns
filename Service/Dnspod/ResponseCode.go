@@ -3,8 +3,8 @@
  *     @file: ResponseCode.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午4:40
  *
  *
  *
@@ -47,7 +47,7 @@ const (
 )
 
 // code2msg
-// convert the code to message and set status.Success
+// convert the code to message and set status.Status
 func code2msg(code string) *DDNS.Status {
 	var msg = newStatus()
 	switch code {
@@ -109,9 +109,9 @@ func code2msg(code string) *DDNS.Status {
 	}
 
 	if code == "1" {
-		msg.Success = DDNS.Success
+		msg.Status = DDNS.Success
 	} else {
-		msg.Success = DDNS.Failed
+		msg.Status = DDNS.Failed
 	}
 
 	return msg

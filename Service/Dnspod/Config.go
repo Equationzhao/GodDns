@@ -3,8 +3,8 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:16
  *
  *
  *
@@ -27,7 +27,7 @@ type Config struct {
 }
 
 func init() {
-	DDNS.Add2FactoryList(ConfigFactoryInstance)
+	DDNS.Add2FactoryList(configFactoryInstance)
 }
 
 // GetName Get name of service
@@ -168,8 +168,8 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	return ps, nil
 }
 
-// ConfigFactoryInstance a Factory instance to make dnspod config
-var ConfigFactoryInstance ConfigFactory
+// configFactoryInstance a Factory instance to make dnspod config
+var configFactoryInstance ConfigFactory
 
 var configInstance Config
 
@@ -202,10 +202,8 @@ func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.Co
 
 	tail := "\n\n"
 
-	content := head + body + tail
-
 	return DDNS.ConfigStr{
 		Name:    "Dnspod",
-		Content: content,
+		Content: head + body + tail,
 	}, nil
 }

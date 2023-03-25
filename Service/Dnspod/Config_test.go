@@ -3,8 +3,8 @@
  *     @file: Config_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:16
  *
  *
  *
@@ -74,8 +74,8 @@ func TestSave(t *testing.T) {
 }
 
 func TestConfigFactory_Get(t *testing.T) {
-	a := ConfigFactoryInstance.Get()
-	b := ConfigFactoryInstance.Get()
+	a := configFactoryInstance.Get()
+	b := configFactoryInstance.Get()
 	a.(*Config).test = true
 	t.Log(a.(*Config).test)
 	b.(*Config).test = false

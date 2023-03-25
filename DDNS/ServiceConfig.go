@@ -3,8 +3,8 @@
  *     @file: ServiceConfig.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 上午1:46
- *     @last modified: 2023/3/25 上午1:45
+ *     @time: 2023/3/25 下午5:41
+ *     @last modified: 2023/3/25 下午5:24
  *
  *
  *
@@ -25,6 +25,10 @@ import (
 	"strconv"
 )
 
+func init() {
+	ini.PrettyFormat = false // config style key=value without space
+}
+
 // Format define the key=value format of config file
 const Format = "%s=%v"
 const ConfigName = "DDNS.conf"
@@ -37,10 +41,6 @@ var ConfigFactoryList []ConfigFactory
 // Add2FactoryList add ConfigFactory to ConfigFactoryList
 func Add2FactoryList(factory ...ConfigFactory) {
 	ConfigFactoryList = append(ConfigFactoryList, factory...)
-}
-
-func init() {
-	ini.PrettyFormat = false // config style key=value without space
 }
 
 // GetDefaultConfigurationLocation get default configuration location
