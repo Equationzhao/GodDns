@@ -3,8 +3,8 @@
  *     @file: Util.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午5:41
+ *     @time: 2023/3/26 上午3:48
+ *     @last modified: 2023/3/26 上午3:48
  *
  *
  *
@@ -99,9 +99,10 @@ func Convert2KeyValue(format string, i any) string {
 		if name == "" {
 			name = t.Field(i).Tag.Get("json")
 			if strings.Contains(name, ",") {
-				name = strings.SplitN(name, ",", 2)[0] // get name
+				name = strings.SplitN(name, ",", 2)[0] // get name, remove ",omitempty"
 			}
 		}
+
 		if name == "" {
 			name = t.Field(i).Name
 		}
@@ -127,21 +128,54 @@ type ConvertableXWWWFormUrlencoded interface {
 // if the type has a field named "xwwwformurlencoded", use it as key
 // else if the type has a field named "json", use it as key
 // else use the field name as key
-// example:
+//
+// // example:
 //
 //		type A struct {
 //			Device string `xwwwformurlencoded:"device" json:"device"`
 //			IP     string `json:"ip"`
 //		 	Type   string
-//	     	unexported string
+//		    	unexported string
 //		}
 //		a := A{Device: "device", IP: "ip", Type: "type"}
 //		fmt.Println(Convert2XWWWFormUrlencoded(a))
+//
+//			output:device=device&ip=ip&Type=typ
+//
+//		type B struct {
+//		        X string
+//		        x string
+//		}
+//
+//		ab:=struct {
+//			A
+//			B
+//		}{A: a, B: B{X: "123", x: "321"}}
+//
+//		fmt.Println(Convert2XWWWFormUrlencoded(ab))
+//
+//
+//	 	output:device=device&ip=ip&Type=type&X=123
+//
+//		m := map[string]string{"device": "device", "ip": "ip", "Type": "type"}
+//		fmt.Println(Convert2XWWWFormUrlencoded(m))
 //		output:
 //		device=device&ip=ip&Type=type
 //
-// [need test&debug]
+//		s := []string{"device", "ip", "type"}
+//		fmt.Println(Convert2XWWWFormUrlencoded(s))
+//
+//	   	output:=device&=ip&=type
+//
+// ! [need test]
 func Convert2XWWWFormUrlencoded(i any) string {
+	return convert2xwwwformurlencoded(i, true)
+}
+
+func convert2xwwwformurlencoded(i any, isTheLast bool) string {
+	if i == nil {
+		return ""
+	}
 
 	if _, ok := i.(ConvertableXWWWFormUrlencoded); ok {
 		return i.(ConvertableXWWWFormUrlencoded).Convert2XWWWFormUrlencoded()
@@ -158,60 +192,109 @@ func Convert2XWWWFormUrlencoded(i any) string {
 
 	switch t.Kind() {
 	case reflect.String:
-		return "=" + url.QueryEscape(v.String())
+
+		if isTheLast {
+			return "=" + url.QueryEscape(v.String())
+		} else {
+			// not the last element
+			return "=" + url.QueryEscape(v.String()) + "&"
+		}
 	case reflect.Map:
 		iter := v.MapRange()
+		l := v.Len()
 		for iter.Next() {
-			v := reflect.ValueOf(iter.Value())
-			t := reflect.TypeOf(iter.Value())
-			if t.Kind() == reflect.Pointer {
+			l--
+			v := iter.Value()
+			t := v.Kind()
+			if t == reflect.Pointer {
 				v = v.Elem()
-				t = t.Elem()
+				t = iter.Value().Elem().Kind()
 			}
 			// if v is not struct/map/pointer
-			switch t.Kind() {
+			switch t {
 			case reflect.Struct:
 				fallthrough
 			case reflect.Map:
-				content += Convert2XWWWFormUrlencoded(iter.Value().Interface())
+				if l > 0 {
+					// not the last element
+					content += convert2xwwwformurlencoded(iter.Value(), false)
+				} else {
+					content += convert2xwwwformurlencoded(iter.Value(), true)
+				}
+			case reflect.Interface:
+				k := iter.Key()
+				switch v.Interface().(type) {
+				// basic type
+				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128, bool, []byte, []rune, uintptr, nil:
+					if l > 0 {
+						// not the last element
+						content += fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v)))
+					} else {
+						content += fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v)))
+					}
+				default:
+					if l > 0 {
+						// not the last element
+						content += convert2xwwwformurlencoded(v.Interface(), false)
+					} else {
+						content += convert2xwwwformurlencoded(v.Interface(), true)
+					}
+				}
 			default:
-				content += fmt.Sprintf("%s=%s", iter.Key(), url.QueryEscape(v.String()))
+				k := iter.Key()
+				if l > 0 {
+					// not the last element
+					content += fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v)))
+				} else {
+					content += fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v)))
+				}
 			}
 		}
 	case reflect.Struct:
 		n := t.NumField()
+		pieces := make([]string, 0, n)
 		for i := 0; i < n; i++ {
 			if !t.Field(i).IsExported() {
-				// not exported
-				if i == n-1 && content != "" {
-					// if it's the last element, remove the "&" add before
-					content = content[:len(content)-1]
-				}
 				continue
 			}
+			fieldType := t.Field(i).Type
+			if fieldType.Kind() == reflect.Struct {
+				pieces = append(pieces, convert2xwwwformurlencoded(v.Field(i).Interface(), true))
+				continue
+			}
+
 			name := t.Field(i).Tag.Get("xwwwformurlencoded")
 			if name == "" {
 				// if there's no "xwwwformurlencoded" Tag, use "json" instead
 				name = t.Field(i).Tag.Get("json")
+
+				if strings.Contains(name, ",") {
+					name = strings.SplitN(name, ",", 2)[0] // remove ",omitempty"
+				}
 				// if there's no "json" Tag, use field name instead
 				if name == "" {
 					name = t.Field(i).Name
 				}
 			}
-
-			content += fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface())))
-			if i != n-1 {
-				content += "&"
-			}
-
+			pieces = append(pieces, fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface()))))
 		}
+		content = strings.Join(pieces, "&")
+		if !isTheLast && content != "" {
+			content += "&"
+		}
+
 	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			content += Convert2XWWWFormUrlencoded(v.Index(i).Interface()) + "&"
+		// if the slice is empty, return ""
+		l := v.Len()
+		if l == 0 {
+			return ""
 		}
-		if strings.HasSuffix(content, "&") {
-			content = content[:len(content)-1]
+
+		for i := 0; i < l-1; i++ {
+			content += convert2xwwwformurlencoded(v.Index(i).Interface(), false)
 		}
+		content += convert2xwwwformurlencoded(v.Index(l-1).Interface(), isTheLast)
+
 	}
 
 	return content
