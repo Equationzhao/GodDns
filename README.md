@@ -24,6 +24,8 @@
 
 a DDNS tool written in go
 
+## 
+
 ## usage
 ```bash
 USAGE:
@@ -79,11 +81,8 @@ key=value # key and value of the Service (start with lower case)
 ## TODO
 
 * [ ] add more service
-* [ ] check flag validation
 * [x] add support to write comment to configuration
 * [ ] to fix RunPerTime at main.go:664
-* [ ] refactor see DDNS.Config.go:211
-* [ ] todo replace net with netip
 * [ ] todo refactor do not use hard code "Devices" at DDNS.Config:211
 * [ ] new feature support multi-device for each service(like Device does)
 * [ ] ? refactor Dnspod.Config.ReadConfig:62

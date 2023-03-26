@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午4:40
+ *     @time: 2023/3/26 下午11:18
+ *     @last modified: 2023/3/26 下午11:18
  *
  *
  *
@@ -210,7 +210,7 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 				logrus.Errorf("error getting ipv4 %s ,%s", device, err1)
 			} else {
 				logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
-				ip4s, err1 = Net.HandleIp(ip4sTemp, Net.ReserveGlobalUnicastOnly)
+				ip4s, err1 = Net.HandleIp(ip4sTemp, Net.RemoveLoopback)
 				ip4.Set(device, ip4s[0])
 
 			}
@@ -223,7 +223,7 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 				logrus.Errorf("error getting ipv6 %s ,%s", device, err2)
 			} else {
 				logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
-				ip6s, err2 = Net.HandleIp(ip6sTemp, Net.ReserveGlobalUnicastOnly)
+				ip6s, err2 = Net.HandleIp(ip6sTemp, Net.RemoveLoopback)
 				ip6.Set(device, ip6s[0])
 			}
 		}
@@ -401,7 +401,7 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 					logrus.Errorf("error getting ipv4 %s ,%s", device, err)
 				} else {
 					logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
-					ips, errTemp = Net.HandleIp(ip4sTemp, Net.ReserveGlobalUnicastOnly)
+					ips, errTemp = Net.HandleIp(ip4sTemp, Net.RemoveLoopback)
 					if errTemp != nil {
 						err = errors.Join(err, errTemp)
 						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
@@ -420,7 +420,7 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 					logrus.Errorf("error getting ipv6 %s ,%s", device, err)
 				} else {
 					logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
-					ips, errTemp = Net.HandleIp(ip6sTemp, Net.ReserveGlobalUnicastOnly)
+					ips, errTemp = Net.HandleIp(ip6sTemp, Net.RemoveLoopback)
 					if errTemp != nil {
 						err = errors.Join(err, errTemp)
 						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
