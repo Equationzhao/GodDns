@@ -3,8 +3,8 @@
  *     @file: Hook.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 上午1:46
+ *     @time: 2023/3/26 下午11:18
+ *     @last modified: 2023/3/26 下午11:18
  *
  *
  *
@@ -23,6 +23,7 @@ import (
 // LogrusOriginally2writer
 // implements the logrus.Hook interface
 // It is used to write the original message to the writer
+// if writers is nil, panic raises when firing the hook.
 type LogrusOriginally2writer struct {
 	writers []io.Writer
 }
@@ -34,6 +35,7 @@ func (l LogrusOriginally2writer) Levels() []logrus.Level {
 
 // Fire writes the original message to the writer
 // It is used by LogrusOriginally2writer
+// if writers is nil, panic raises when firing the hook.
 func (l LogrusOriginally2writer) Fire(entry *logrus.Entry) error {
 	line := entry.Message
 	var err error

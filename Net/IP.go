@@ -3,8 +3,8 @@
  *     @file: IP.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 上午1:46
+ *     @time: 2023/3/26 下午11:18
+ *     @last modified: 2023/3/26 下午11:18
  *
  *
  *
@@ -440,6 +440,48 @@ func basicHandler(ip string, CaseA IpHandler, CaseAAAA IpHandler) (string, error
 // if ip is invalid, should return "" and error
 type IpHandler func(ip string) (string, error)
 
+func (i IpHandler) Msg() string {
+	return "IpHandler"
+}
+
+func private(act bool) IpHandler {
+	return func(ip string) (string, error) {
+		addr, err := netip.ParseAddr(ip)
+		if err != nil {
+			return "", err
+		}
+
+		if addr.IsPrivate() {
+			if act {
+				// keep private
+				return ip, nil
+			} else {
+				// remove private
+				return "", nil
+			}
+		} else {
+			// not private
+			if act {
+				// remove other
+				return "", nil
+			} else {
+				// keep other
+				return ip, nil
+			}
+		}
+	}
+}
+
+var ReservePrivateOnly IpHandler = func(ip string) (string, error) {
+	r := private(true)
+	return basicHandler(ip, r, r)
+}
+
+var RemovePrivate IpHandler = func(ip string) (string, error) {
+	r := private(false)
+	return basicHandler(ip, r, r)
+}
+
 // loopback operate on ip
 // if act is false, remove loopback ip
 // if act is true, keep loopback ip, remove other ip
@@ -510,7 +552,7 @@ func globalUnicast(act bool) IpHandler {
 var ReserveGlobalUnicastOnly IpHandler = func(ip string) (string, error) {
 	r := globalUnicast(true)
 	return basicHandler(ip, func(ip string) (string, error) {
-		return "", nil
+		return "", nil // return "" and error because GlobalUnicast ip is ipv6
 	}, r)
 }
 
@@ -518,15 +560,24 @@ var ReserveGlobalUnicastOnly IpHandler = func(ip string) (string, error) {
 var RemoveGlobalUnicast IpHandler = func(ip string) (string, error) {
 	r := globalUnicast(false)
 	return basicHandler(ip, func(ip string) (string, error) {
-		return "", nil
+		return ip, nil
 	}, r)
+}
+
+// RemoveInvalid remove invalid string
+var RemoveInvalid IpHandler = func(ip string) (string, error) {
+	if IsIpValid(ip) {
+		return ip, nil
+	} else {
+		return "", nil
+	}
 }
 
 type selector struct {
 }
 
-func (s selector) Select(no int) IpHandler {
-	count := 0
+func (s selector) _select(no uint64) IpHandler {
+	count := uint64(0)
 	hasPick := false
 	return func(ip string) (string, error) {
 		if hasPick {
@@ -543,13 +594,10 @@ func (s selector) Select(no int) IpHandler {
 	}
 }
 
-func NewSelector(no int) IpHandler {
-	return selector{}.Select(no)
-}
-
-var SelectorFirst IpHandler = func(ip string) (string, error) {
-	s := NewSelector(0)
-	return basicHandler(ip, s, s)
+// NewSelector return a selector
+// select the no-th ip (start from 0)
+func NewSelector(no uint64) IpHandler {
+	return selector{}._select(no)
 }
 
 // HandleIp ip
@@ -557,17 +605,21 @@ var SelectorFirst IpHandler = func(ip string) (string, error) {
 // join errors together when error handling
 func HandleIp(ips []string, handlers ...IpHandler) ([]string, error) {
 	var errs error
-	var res []string = nil
-	for _, ip := range ips {
-		for _, ipHandler := range handlers {
+
+	for _, ipHandler := range handlers {
+		var temp []string = nil
+		for _, ip := range ips {
 			After, err := ipHandler(ip)
 			if err != nil {
 				errs = errors.Join(errs, err)
 			} else {
-				res = append(res, After)
+				if After != "" {
+					temp = append(temp, After)
+				}
 			}
 		}
+		ips = temp
 	}
 
-	return res, errs
+	return ips, errs
 }
