@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/26 下午11:18
- *     @last modified: 2023/3/26 下午11:18
+ *     @time: 2023/3/27 下午11:19
+ *     @last modified: 2023/3/27 下午10:43
  *
  *
  *
@@ -193,8 +193,8 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 
 	devices := GlobalDevice.GetDevices()
 
-	ip4 := Util.Pair[string, string]{} // First is device, second is ip
-	ip6 := Util.Pair[string, string]{} // First is device, second is ip
+	ip4 := Util.MakePair[string, string]() // First is device, second is ip
+	ip6 := Util.MakePair[string, string]() // First is device, second is ip
 
 	var (
 		err1, err2 error
