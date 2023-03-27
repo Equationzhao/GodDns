@@ -3,8 +3,8 @@
  *     @file: DS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 上午1:46
+ *     @time: 2023/3/27 下午11:19
+ *     @last modified: 2023/3/27 下午10:49
  *
  *
  *
@@ -12,15 +12,45 @@
 
 package Util
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Pair is a struct that contains two variables
 type Pair[T, U any] struct {
 	First  T
 	Second U
 }
 
-func (receiver *Pair[T, U]) Set(first T, second U) {
-	receiver.First = first
-	receiver.Second = second
+// NewPair return a new Pair Ptr
+func NewPair[T, U any](first T, second U) *Pair[T, U] {
+	return &Pair[T, U]{
+		First:  first,
+		Second: second,
+	}
+}
+
+// MakePair return a new Pair
+func MakePair[T, U any](in ...any) Pair[T, U] {
+	if len(in) == 0 {
+		return Pair[T, U]{}
+	}
+
+	if len(in) != 2 {
+		panic("invalid len")
+	}
+
+	// panic if input
+	return Pair[T, U]{
+		First:  in[0].(T),
+		Second: in[1].(U),
+	}
+}
+
+func (p *Pair[T, U]) Set(first T, second U) {
+	p.First = first
+	p.Second = second
 }
 
 func ExchangePairs[T, U any](a, b *Pair[T, U]) {
@@ -28,8 +58,8 @@ func ExchangePairs[T, U any](a, b *Pair[T, U]) {
 }
 
 // Clear the pair
-func (receiver *Pair[T, U]) Clear() {
-	*receiver = Pair[T, U]{}
+func (p *Pair[T, U]) Clear() {
+	*p = Pair[T, U]{}
 }
 
 // --------------------------------------------------------------//
@@ -40,6 +70,30 @@ var empty emptyType
 
 type Set[T comparable] struct {
 	m map[T]emptyType
+}
+
+func (s *Set[T]) Pop() (v T, ok bool) {
+	for t := range s.m {
+		delete(s.m, t)
+		return t, true
+	}
+	return v, false
+}
+
+func (s *Set[T]) Clone() *Set[T] {
+	cloned := Set[T]{m: make(map[T]emptyType, len(s.m))}
+	for t := range s.m {
+		cloned.m[t] = empty
+	}
+	return &cloned
+}
+
+func (s *Set[T]) String() string {
+	v := make([]string, 0, len(s.m))
+	for t, _ := range s.m {
+		v = append(v, fmt.Sprint(t))
+	}
+	return "set[" + strings.Join(v, " ") + "]"
 }
 
 // NewSet create a new set
@@ -69,6 +123,15 @@ func (s *Set[T]) Contains(val T) bool {
 	return ok
 }
 
+func (s *Set[T]) ContainsAll(val ...T) bool {
+	for _, v := range val {
+		if !s.Contains(v) {
+			return false
+		}
+	}
+	return true
+}
+
 // Len return the length of set
 func (s *Set[T]) Len() int {
 	return len(s.m)
@@ -79,13 +142,29 @@ func (s *Set[T]) Clear() {
 	s.m = make(map[T]emptyType)
 }
 
-// Items return all items in set
+// Items return all items in Slice
 func (s *Set[T]) Items() []T {
-	item := make([]T, 0)
+	item := make([]T, 0, len(s.m))
 	for k := range s.m {
 		item = append(item, k)
 	}
 	return item
+}
+
+// ToSlice return all items in Slice
+func (s *Set[T]) ToSlice() []T {
+	return s.Items()
+}
+
+// Diff return the difference of two sets
+func (s *Set[T]) Diff(other *Set[T]) *Set[T] {
+	diff := make(map[T]emptyType, len(s.m))
+	for k := range s.m {
+		if _, ok := other.m[k]; !ok {
+			diff[k] = empty
+		}
+	}
+	return &Set[T]{m: diff}
 }
 
 // Equals check if two sets are equal
@@ -130,8 +209,8 @@ func (s *Set[T]) IsSuperOf(other *Set[T]) bool {
 	return true
 }
 
-// IsTrueSubOf check if s is a true subset of other
-func (s *Set[T]) IsTrueSubOf(other *Set[T]) bool {
+// IsProperSubOf check if s is a true subset of other
+func (s *Set[T]) IsProperSubOf(other *Set[T]) bool {
 	if other == nil || s.Len() >= other.Len() {
 		return false
 	}
@@ -144,8 +223,8 @@ func (s *Set[T]) IsTrueSubOf(other *Set[T]) bool {
 	return true
 }
 
-// IsTrueSuperOf check if s is a true super set of other
-func (s *Set[T]) IsTrueSuperOf(other *Set[T]) bool {
+// IsProperSuperOf check if s is a true super set of other
+func (s *Set[T]) IsProperSuperOf(other *Set[T]) bool {
 	if other == nil || s.Len() <= other.Len() {
 		return false
 	}

@@ -18,7 +18,7 @@ get the type of ip
 ```go
 ipv4 := "1.1.1.1"
 ipv6 := "fe80::1111:2222:3333:4444"
-fmt.Println(Net.Which(ipv4),", ",Net.Which(ipv6))
+fmt.Println(Net.WhichType(ipv4),", ",Net.Which(ipv6))
 output:
 4
 ```
@@ -36,8 +36,8 @@ output:
 6
 4
 6
-       // empty string
-	   // 
+// empty string 
+// 
 
 ```
 
@@ -54,8 +54,8 @@ A
 AAAA
 A
 AAAA
-       // empty string
-       // 
+// empty string
+// 
 
 ```
 convert string type to uint8 type

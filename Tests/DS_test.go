@@ -3,8 +3,8 @@
  *     @file: DS_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午1:44
+ *     @time: 2023/3/27 下午11:19
+ *     @last modified: 2023/3/27 下午10:57
  *
  *
  *
@@ -14,6 +14,7 @@ package Tests
 
 import (
 	"GodDns/Util"
+	"fmt"
 	"math/rand"
 	"testing"
 )
@@ -70,4 +71,32 @@ func TestPair(t *testing.T) {
 		t.Error("Pair set error")
 	}
 
+	p = Util.MakePair[int, string](3, "d")
+	if p.First != 3 || p.Second != "d" {
+		t.Error("Make error")
+	}
+
+}
+
+func TestSet(t *testing.T) {
+	sub := Util.NewSet[int]()
+	sub.Add(1)
+	sub.Add(2)
+	sub.Add(3)
+
+	sup := sub.Clone()
+
+	fmt.Println("s is subset of sup:", sub.IsSubOf(sup))
+	fmt.Println("s is proper subset of sup:", sub.IsProperSubOf(sup))
+	sup.Add(4)
+	fmt.Println("s is subset of sup:", sub.IsSubOf(sup))
+	fmt.Println("s is proper subset of sup:", sub.IsProperSubOf(sup))
+
+	fmt.Println("to slice:", sub.ToSlice())
+	fmt.Println("items:", sub.Items())
+
+	fmt.Println("sup contains sub:", sup.ContainsAll(sub.Items()...))
+	fmt.Println("sub contains sup:", sub.ContainsAll(sup.Items()...))
+
+	fmt.Println("diff:", sup.Diff(sub))
 }

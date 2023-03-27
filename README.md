@@ -24,9 +24,22 @@
 
 a DDNS tool written in go
 
-## 
+## Intro
+use ip set in config
+```bash
+GodDns run
+```
+use ip address of interface set in config
+```bash
+GodDns run auto 
+```
+get ip address from api
+```bash
+GodDns run --api ipify/identMe/others
+```
 
-## usage
+
+## Usage
 ```bash
 USAGE:
    GodDns [global options] command [command options] [arguments...]
@@ -68,15 +81,9 @@ GLOBAL OPTIONS:
 
 ## Configuration
 
-\[Device] # required
+[Program Config](DDNS/README.md)
+[Service Config](Service/README.md)
 
-device=\[$YourDeviceName1$,$YourDeviceName2$,...]
-
-\[Name#No] # Name of the Service (start with Upper case) followed by #No
-
-key=value # key and value of the Service (start with lower case)
-
-...
 
 ## TODO
 
