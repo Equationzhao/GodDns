@@ -1,10 +1,22 @@
 /*
- *     @Copyright
+ *
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/27 下午11:19
- *     @last modified: 2023/3/27 下午10:43
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: DDNS.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/28 下午3:58
+ *     @last modified: 2023/3/28 下午3:56
  *
  *
  *
@@ -15,12 +27,12 @@ package main
 import (
 	"GodDns/DDNS"
 	"GodDns/Device"
+	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util"
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strconv"
 	"time"
@@ -29,7 +41,7 @@ import (
 // -----------------------------------------------------------------------------------------------------------------------------------------//
 
 func RunDDNS(parameters []DDNS.Parameters) error {
-	logrus.Debugf("run ddns")
+	log.Debugf("run ddns")
 	// run ddns here
 
 	// get from api
@@ -62,17 +74,17 @@ func RunDDNS(parameters []DDNS.Parameters) error {
 func ReadConfig(configs []DDNS.ConfigFactory) ([]DDNS.Parameters, error) {
 	parameters, fileErr, configErrs := DDNS.ConfigureReader(DDNS.GetConfigureLocation(), configs...)
 	if fileErr != nil {
-		logrus.Errorf("error reading config: %s", fileErr.Error())
+		log.Errorf("error reading config: %s", fileErr.Error())
 
 		return nil, fmt.Errorf("error reading config: %w", fileErr)
 	}
 
 	if configErrs != nil {
-		logrus.Errorf("error reading config: %s", configErrs.Error())
+		log.Errorf("error reading config: %s", configErrs.Error())
 	}
 
 	if len(parameters) < 1 {
-		logrus.Info("no service left to run")
+		log.Info("no service left to run")
 		return nil, errors.New("no service left to run")
 	}
 	return parameters, nil
@@ -88,12 +100,12 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 	var api Net.Api
 	api, err := Net.ApiMap.GetApi(ApiName)
 	if err != nil {
-		logrus.Errorf("error getting api %s, %s", ApiName, err)
+		log.Errorf("error getting api %s, %s", ApiName, err)
 		// todo suggestion "do you mean xxx"
 		return errors.New("") // return error with no message to avoid print error message again
 	}
 
-	logrus.Debugf("-I is set, get ip address from %s", ApiName)
+	log.Debugf("-I is set, get ip address from %s", ApiName)
 
 	ip4Done := make(chan bool, 1)
 	ip6Done := make(chan bool, 1)
@@ -132,22 +144,22 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 	select {
 	case temp := <-ip4Done:
 		if temp {
-			logrus.Infof("ipv4 from %s: %s", ApiName, ip4)
+			log.Infof("ipv4 from %s: %s", ApiName, ip4)
 		} else {
-			logrus.Errorf("error getting ipv4, %s", err1)
+			log.Errorf("error getting ipv4, %s", err1)
 			return errors.New("quit")
 		}
 
 	case temp := <-ip6Done:
 		if temp {
-			logrus.Infof("ipv6 from %s: %s", ApiName, ip6)
+			log.Infof("ipv6 from %s: %s", ApiName, ip6)
 		} else {
-			logrus.Errorf("error getting ipv6, %s", err2)
+			log.Errorf("error getting ipv6, %s", err2)
 			return errors.New("quit")
 		}
 
 	case <-time.After(10 * time.Second):
-		logrus.Errorf("timeout getting ip address from %s", ApiName)
+		log.Errorf("timeout getting ip address from %s", ApiName)
 		return errors.New("quit")
 	}
 
@@ -160,7 +172,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 					} else if Net.TypeEqual(d.GetType(), Net.AAAA) {
 						d.SetValue(ip6)
 					} else {
-						logrus.Errorf("unknown type %s", d.GetType())
+						log.Errorf("unknown type %s", d.GetType())
 					}
 				}
 			}
@@ -186,7 +198,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 }
 
 func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
-	logrus.Info("get ip address automatically")
+	log.Info("get ip address automatically")
 	// get ip addr automatically
 
 	/*------------------------------------------------------------------------------------------*/
@@ -207,9 +219,9 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 			ip4sTemp, err1Temp := Net.GetIpByType(device, Net.A)
 			if err1Temp != nil {
 				err1 = errors.Join(err1, err1Temp)
-				logrus.Errorf("error getting ipv4 %s ,%s", device, err1)
+				log.Errorf("error getting ipv4 %s ,%s", device, err1)
 			} else {
-				logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
+				log.Infof("ipv4 from %s: %s", device, ip4sTemp)
 				ip4s, err1 = Net.HandleIp(ip4sTemp, Net.RemoveLoopback)
 				ip4.Set(device, ip4s[0])
 
@@ -220,9 +232,9 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 			ip6sTemp, err2Temp := Net.GetIpByType(device, Net.AAAA)
 			if err2Temp != nil {
 				err2 = errors.Join(err2, err2Temp)
-				logrus.Errorf("error getting ipv6 %s ,%s", device, err2)
+				log.Errorf("error getting ipv6 %s ,%s", device, err2)
 			} else {
-				logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
+				log.Infof("ipv6 from %s: %s", device, ip6sTemp)
 				ip6s, err2 = Net.HandleIp(ip6sTemp, Net.RemoveLoopback)
 				ip6.Set(device, ip6s[0])
 			}
@@ -252,7 +264,7 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 			// if parameter implements DeviceOverridable interface, set the ip address
 			err := set(parameter)
 			if err != nil {
-				logrus.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
+				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
 				parameters = append(parameters[:i], parameters[i+1:]...) // ? may be bugs
 
 			}
@@ -283,13 +295,13 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 func GetGlobalDevice(parameters []DDNS.Parameters) (Device.Device, error) {
 	deviceInterface, err := DDNS.Find(parameters, Device.ServiceName)
 	if err != nil {
-		logrus.Errorf("Section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
+		log.Errorf("Section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
 		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
 	}
 
 	GlobalDevice, ok := deviceInterface.(Device.Device)
 	if !ok {
-		logrus.Errorf("Section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
+		log.Errorf("Section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
 		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
 	}
 	return GlobalDevice, nil
@@ -298,7 +310,7 @@ func GetGlobalDevice(parameters []DDNS.Parameters) (Device.Device, error) {
 func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 	// override the ip address here
 	// use the Key `Devices` and `Type` of the Service if exist
-	logrus.Info("-O is set, override the ip address")
+	log.Info("-O is set, override the ip address")
 	var errCount uint16
 
 	for i, parameter := range parameters {
@@ -306,7 +318,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 		if parameter.GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
 			if d, ok := parameter.(DDNS.DeviceOverridable); ok {
-				logrus.Debugf("Parameter %s implements DeviceOverridable interface", parameter.GetName())
+				log.Debugf("Parameter %s implements DeviceOverridable interface", parameter.GetName())
 
 				var tempDeviceName string
 
@@ -314,20 +326,20 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				if !d.IsDeviceSet() {
 					err := set(GlobalDevice, parameter)
 					if err != nil {
-						logrus.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
+						log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
 						errCount++
 						parameters = append(parameters[:i], parameters[i+1:]...)
 						continue
 					}
 
-					logrus.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(DDNS.DeviceOverridable).GetIP())
+					log.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(DDNS.DeviceOverridable).GetIP())
 					continue // skip
 				}
 
 				if !d.IsTypeSet() {
 					errCount++
 					parameters = append(parameters[:i], parameters[i+1:]...)
-					logrus.Errorf("error setting ip address: unknown type, skip service:%s", parameter.GetName())
+					log.Errorf("error setting ip address: unknown type, skip service:%s", parameter.GetName())
 					continue
 				}
 
@@ -337,12 +349,12 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				if err != nil {
 					errCount++
 					parameters = append(parameters[:i], parameters[i+1:]...)
-					logrus.Errorf("error getting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
+					log.Errorf("error getting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
 					continue
 				}
 				//
 
-				logrus.Infof("override %s with %s", parameter.GetName(), ips[0])
+				log.Infof("override %s with %s", parameter.GetName(), ips[0])
 				parameter.(DDNS.DeviceOverridable).SetValue(ips[0])
 			} else {
 				// Service is not DeviceOverridable, use ip got from Devices Section
@@ -352,13 +364,13 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 					parameters = append(parameters[:i], parameters[i+1:]...)
 					continue
 				}
-				logrus.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.ServiceParameters).GetIP())
+				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.ServiceParameters).GetIP())
 			}
 
 		}
 	} // loop ends
 
-	logrus.Infof("finish overriding ip with %d error(s)", errCount)
+	log.Infof("finish overriding ip with %d error(s)", errCount)
 
 	requests := GenerateRequests(parameters)
 
@@ -398,13 +410,13 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 				ip4sTemp, errTemp := Net.GetIpByType(device, Net.A)
 				if errTemp != nil {
 					err = errors.Join(err, errTemp)
-					logrus.Errorf("error getting ipv4 %s ,%s", device, err)
+					log.Errorf("error getting ipv4 %s ,%s", device, err)
 				} else {
-					logrus.Infof("ipv4 from %s: %s", device, ip4sTemp)
+					log.Infof("ipv4 from %s: %s", device, ip4sTemp)
 					ips, errTemp = Net.HandleIp(ip4sTemp, Net.RemoveLoopback)
 					if errTemp != nil {
 						err = errors.Join(err, errTemp)
-						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
+						log.Errorf("error handling ipv4 %s ,%s", device, err)
 					}
 					ip.Set(device, ips[0])
 				}
@@ -417,13 +429,13 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 				ip6sTemp, errTemp := Net.GetIpByType(device, Net.AAAA)
 				if errTemp != nil {
 					err = errors.Join(err, errTemp)
-					logrus.Errorf("error getting ipv6 %s ,%s", device, err)
+					log.Errorf("error getting ipv6 %s ,%s", device, err)
 				} else {
-					logrus.Infof("ipv6 from %s: %s", device, ip6sTemp)
+					log.Infof("ipv6 from %s: %s", device, ip6sTemp)
 					ips, errTemp = Net.HandleIp(ip6sTemp, Net.RemoveLoopback)
 					if errTemp != nil {
 						err = errors.Join(err, errTemp)
-						logrus.Errorf("error handling ipv4 %s ,%s", device, err)
+						log.Errorf("error handling ipv4 %s ,%s", device, err)
 					}
 					ip.Set(device, ips[0])
 				}
@@ -445,27 +457,27 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 
 func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 	if DDNS.IsConfigureExist() {
-		logrus.Warnf("configure at %s already exist", DDNS.GetConfigureLocation())
+		log.Warnf("configure at %s already exist", DDNS.GetConfigureLocation())
 		return errors.New("configure already exist")
 	}
-	logrus.Debugf("start generating default configure")
+	log.Debugf("start generating default configure")
 	err := GenerateDefaultConfigure(configFactoryList...)
 	if err != nil {
-		logrus.Error(err.Error())
+		log.Error(err.Error())
 		return err
 	}
-	logrus.Info("generate a default config file at ", DDNS.GetConfigureLocation())
+	log.Info("generate a default config file at ", DDNS.GetConfigureLocation())
 	return nil
 }
 
 func ExecuteRequests(requests ...DDNS.Request) {
-	logrus.Info("start executing requests")
+	log.Info("start executing requests")
 
 	for _, request := range requests {
-		logrus.Tracef("request: %s", request.GetName())
+		log.Tracef("request: %s", request.GetName())
 		err := DDNS.ExecuteRequest(request)
 		if err != nil || request.Status().Status != DDNS.Success {
-			logrus.Errorf("error executing request, %s", err.Error())
+			log.Errorf("error executing request, %s", err.Error())
 			Retry(request, retryAttempt)
 		}
 
@@ -473,26 +485,26 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		res := request.Status()
 		if res.Status == DDNS.Success {
 			status = "Success"
-			logrus.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
+			log.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
 		} else if res.Status == DDNS.Failed {
-			logrus.Errorf("error executing request, %s", err.Error())
+			log.Errorf("error executing request, %s", err.Error())
 			status = "Failed"
-			logrus.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
+			log.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 			if retryAttempt != 0 {
-				logrus.Errorf("all retry failed, skip %s", request.GetName())
+				log.Errorf("all retry failed, skip %s", request.GetName())
 			}
 		} else if res.Status == DDNS.NotExecute {
-			logrus.Fatal("request not executed")
+			log.Fatal("request not executed")
 		}
 	}
 }
 
 func Retry(request DDNS.Request, i uint8) {
 	for j := uint8(1); j <= i; j++ {
-		logrus.Warnf("retrying %s %d time", request.GetName(), j)
+		log.Warnf("retrying %s %d time", request.GetName(), j)
 		err := DDNS.ExecuteRequest(request)
 		if err != nil {
-			logrus.Errorf("error: %s", err.Error())
+			log.Errorf("error: %s", err.Error())
 		} else {
 			return
 		}
@@ -500,7 +512,7 @@ func Retry(request DDNS.Request, i uint8) {
 }
 
 func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
-	logrus.Info("start generating requests")
+	log.Info("start generating requests")
 	var errCount uint8 = 0
 	requests := make([]DDNS.Request, 0, len(parameters))
 	for _, parameter := range parameters {
@@ -508,16 +520,16 @@ func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
 			continue // skip
 		}
 
-		logrus.Infof("service: %s", parameter.GetName())
+		log.Infof("service: %s", parameter.GetName())
 		request, err := parameter.(DDNS.ServiceParameters).ToRequest()
 		if err != nil {
 			errCount++
-			logrus.Errorf("error generating request for %s:%s ", parameter.GetName(), err.Error())
+			log.Errorf("error generating request for %s:%s ", parameter.GetName(), err.Error())
 			continue
 		}
 		requests = append(requests, request)
 	}
-	logrus.Infof("finish generating requests with %d error(s)", errCount)
+	log.Infof("finish generating requests with %d error(s)", errCount)
 	return requests
 }
 
@@ -526,7 +538,7 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 	var err error
 	for _, factory := range ConfigFactories {
 		info, errTemp := factory.Get().GenerateDefaultConfigInfo()
-		logrus.Tracef("config info: \n%s", info)
+		log.Tracef("config info: \n%s", info)
 		if errTemp != nil {
 			err = errors.Join(err, errTemp)
 		}
@@ -537,7 +549,7 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 	if err != nil {
 		return err
 	}
-	logrus.Info("write default configure to ", DDNS.GetConfigureLocation())
+	log.Info("write default configure to ", DDNS.GetConfigureLocation())
 	return nil
 }
 
@@ -547,13 +559,13 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 // Actual   : --time-- run 1 --time-- run 2 --time-- run 3 ...
 func RunPerTime(Time uint64, requests []DDNS.Request) {
 
-	logrus.Infof("run ddns per %d seconds", Time)
+	log.Infof("run ddns per %d seconds", Time)
 
 	c := cron.New()
 	for _, request := range requests {
 		_, err := c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.DelayIfStillRunning(cron.DefaultLogger)).Then(request))
 		if err != nil {
-			logrus.Errorf("error adding job %s: %s", request.GetName(), err.Error())
+			log.Errorf("error adding job %s: %s", request.GetName(), err.Error())
 		}
 	}
 
@@ -566,10 +578,10 @@ func SaveFromParameters(parameters ...DDNS.Parameters) error {
 	// todo Merge Parameters that differ only by subdomain
 	err := DDNS.SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
-		logrus.Errorf("error saving config: %s", err.Error())
+		log.Errorf("error saving config: %s", err.Error())
 		return fmt.Errorf("error saving config: %w", err)
 	}
-	logrus.Info("save config to ", DDNS.GetConfigureLocation())
+	log.Infof("save config to %s", DDNS.GetConfigureLocation())
 	return nil
 }
 
@@ -590,7 +602,7 @@ func CheckVersionUpgrade(msg chan<- string) {
 	hasUpgrades, v, url, err := DDNS.CheckUpdate()
 	defer close(msg)
 	defer func() {
-		logrus.Tracef("check version upgrade finished")
+		log.Tracef("check version upgrade finished")
 	}()
 	if err != nil {
 		if errors.Is(err, DDNS.NoCompatibleVersionError) {

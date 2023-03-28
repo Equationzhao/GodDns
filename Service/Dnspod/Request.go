@@ -1,10 +1,22 @@
 /*
- *     @Copyright
+ *
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午4:40
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:58
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Request.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/28 下午3:58
+ *     @last modified: 2023/3/28 下午3:56
  *
  *
  *
@@ -20,8 +32,8 @@ import (
 	"strconv"
 	"time"
 
+	log "GodDns/Log"
 	"github.com/go-resty/resty/v2"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -63,7 +75,7 @@ func (r *Request) ToParameters() DDNS.Parameters {
 // Run implements Cron.Job
 func (r *Request) Run() {
 	err := r.MakeRequest()
-	logrus.Infof("status:%+v,err:%s", r.Status(), err)
+	log.Infof("status:%+v,err:%s", r.Status(), err)
 }
 
 // GetName return "dnspod"
@@ -115,11 +127,11 @@ func (r *Request) MakeRequest() error {
 		return errors.New("GetRecordId timeout")
 	}
 
-	logrus.Debug(content)
+	log.Debugf("content:%s", content)
 	client := resty.New()
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
-	logrus.Tracef("response: %v", response)
-	logrus.Debugf("result:%+v", s)
+	log.Tracef("response: %v", response)
+	log.Debugf("result:%+v", s)
 
 	// r.status = *code2msg(s.Status.Code).AppendMsg(" ", s.Status.Message, "at ", s.Status.CreatedAt, " ", r.parameters.getTotalDomain(), " ", s.Record.Value)
 	r.status = *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
@@ -182,13 +194,13 @@ func (r *Request) GetRecordId(done chan<- bool) (DDNS.Status, error) {
 	}
 
 	content := Util.Convert2XWWWFormUrlencoded(p)
-	logrus.Debug(content)
+	log.Debugf("content:%s", content)
 
 	// make request to "https://dnsapi.cn/Record.List" to get record id
 	client := resty.New()
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
-	logrus.Tracef("response: %v", response)
-	logrus.Debugf("result:%+v", s)
+	log.Tracef("response: %v", response)
+	log.Debugf("result:%+v", s)
 	status := *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
 	if err != nil {
 		return status, err

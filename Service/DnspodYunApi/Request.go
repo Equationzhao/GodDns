@@ -1,10 +1,22 @@
 /*
- *     @Copyright
+ *
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午5:31
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Request.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/28 下午3:58
+ *     @last modified: 2023/3/28 下午3:56
  *
  *
  *
@@ -14,9 +26,9 @@ package DnspodYunApi
 
 import (
 	"GodDns/DDNS"
+	log "GodDns/Log"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -45,7 +57,7 @@ func (r *Request) Init(yun DnspodYun) {
 
 func (r *Request) Run() {
 	err := r.MakeRequest()
-	logrus.Infof("status:%+v,err:%s", r.Status(), err)
+	log.Infof("status:%+v,err:%s", r.Status(), err)
 }
 
 func (r *Request) ToParameters() DDNS.Parameters {
@@ -78,7 +90,7 @@ func (r *Request) MakeRequest() error {
 	// 返回的resp是一个DescribeRecordListResponse的实例，与请求对象对应
 	responseRecordId, err := client.DescribeRecordList(requestRecord)
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
-		logrus.Debugf("an API error has returned: %s", err.Error())
+		log.Debugf("an API error has returned: %s", err.Error())
 		r.status.Status = DDNS.Failed
 		r.status.Msg = err.(*errors.TencentCloudSDKError).Message
 		return fmt.Errorf("an API error has returned: %w", err)
@@ -105,7 +117,7 @@ func (r *Request) MakeRequest() error {
 	// 返回的resp是一个ModifyDynamicDNSResponse的实例，与请求对象对应
 	responseDDNS, err := client.ModifyDynamicDNS(requestDDNS)
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
-		logrus.Debugf("an API error has returned: %s", err.Error())
+		log.Debugf("an API error has returned: %s", err.Error())
 		r.status.Status = DDNS.Failed
 		r.status.Msg = err.(*errors.TencentCloudSDKError).Message
 		return fmt.Errorf("an API error has returned: %w", err)
@@ -116,7 +128,7 @@ func (r *Request) MakeRequest() error {
 	res := res{}
 	err = json.Unmarshal([]byte(responseDDNS.ToJsonString()), &res)
 	if err != nil {
-		logrus.Debugf("error umarshaling response %v: %s", responseDDNS.ToJsonString(), err.Error())
+		log.Debugf("error umarshaling response %v: %s", responseDDNS.ToJsonString(), err.Error())
 		r.status.Status = DDNS.Failed
 
 		return fmt.Errorf("error umarshaling response %v: %w", responseDDNS.ToJsonString(), err)

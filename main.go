@@ -1,10 +1,22 @@
 /*
- *     @Copyright
+ *
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 上午1:46
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: main.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/28 下午3:58
+ *     @last modified: 2023/3/28 下午3:56
  *
  *
  *
@@ -15,16 +27,12 @@ package main
 import (
 	"GodDns/DDNS"
 	"GodDns/Device"
-	"GodDns/Log"
+	log "GodDns/Log"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path"
-	"runtime"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
 	_ "GodDns/Service" // register all services
@@ -41,7 +49,7 @@ var (
 	retryAttempt    uint8  = 0
 	config                 = ""
 	defaultLocation        = ""
-	log                    = "Info"
+	logLevel               = "Info"
 	// cleanUp         func()
 )
 
@@ -85,7 +93,7 @@ var (
 		Aliases:     []string{"l", "L"},
 		Value:       "Info",
 		Usage:       "`level`: Trace/Debug/Info/Warn/Error",
-		Destination: &log,
+		Destination: &logLevel,
 	}
 
 	configFlag = &cli.StringFlag{
@@ -147,9 +155,9 @@ func checkLog(l string) error {
 	case "Warn", "warn", "WARN":
 		fallthrough
 	case "Error", "error", "ERROR":
-		_, err := InitLog("DDNS.log", 0666, l, output)
+		_, err := log.InitLog("DDNS.log", 0666, l, output)
 		if err != nil {
-			logrus.Errorf("failed to init log file: %s", err)
+			log.Error("failed to init log file: %s", log.String("error", err.Error()))
 			return err
 		}
 		// cleanUp = clean
@@ -157,77 +165,6 @@ func checkLog(l string) error {
 	default:
 		return errors.New("invalid log level")
 	}
-}
-
-// InitLog
-// initialize the log file with fileMode and log level
-// print information to output
-// return a function to close the log file
-// if error occurs, return error
-func InitLog(filename string, filePerm os.FileMode, loglevel string, output io.Writer) (func(), error) {
-
-	var level logrus.Level
-	switch loglevel {
-	// case "Panic", "panic", "PANIC":
-	// 	level = logrus.PanicLevel
-	// case "Fatal", "fatal", "FATAL":
-	// 	level = logrus.FatalLevel
-	case "Error", "error", "ERROR":
-		level = logrus.ErrorLevel
-	case "Warn", "warn", "WARN":
-		level = logrus.WarnLevel
-	case "Info", "info", "INFO":
-		level = logrus.InfoLevel
-	case "Debug", "debug", "DEBUG":
-		level = logrus.DebugLevel
-	case "Trace", "trace", "TRACE":
-		level = logrus.TraceLevel
-	default:
-		logrus.Error("invalid log level")
-	}
-
-	// output to log file
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, filePerm)
-	if err != nil {
-		return nil, err
-	}
-
-	cleanUp := func() {
-		err := file.Close()
-		fmt.Println("close log file")
-		if err != nil {
-			logrus.Error("failed to close log file ", err)
-		}
-	}
-
-	logrus.SetLevel(level)
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		TimestampFormat: time.DateTime,
-		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
-			filename := path.Base(frame.File)
-			if level >= logrus.DebugLevel {
-				return frame.Function, filename
-			}
-			return "", ""
-		},
-	})
-
-	Log.To(logrus.StandardLogger(), file)
-
-	if output != nil {
-		if _, ok := output.(*os.File); !ok || output.(*os.File) != nil {
-			// output is not *os.File(nil)
-			logrus.AddHook(Log.NewLogrusOriginally2writer(output))
-		}
-	}
-	logrus.Infof("init log file at %s\n", filename)
-	_, err = file.Write([]byte(fmt.Sprintf("---------start at %s---------\n", time.Now().Format(time.DateTime))))
-	if err != nil {
-		return cleanUp, err
-	}
-
-	return cleanUp, nil
 }
 
 // todo return non-zero value when error occurs
@@ -276,7 +213,7 @@ func main() {
 				Usage:   "run the DDNS service",
 
 				Action: func(context *cli.Context) error {
-					err := checkLog(log)
+					err := checkLog(logLevel)
 					if err != nil {
 						return err
 					}
@@ -321,7 +258,7 @@ func main() {
 						Usage:   "run ddns, use ip address of interface set in Device Section automatically",
 						Action: func(context *cli.Context) error {
 
-							err := checkLog(log)
+							err := checkLog(logLevel)
 							if err != nil {
 								return err
 							}
@@ -369,7 +306,7 @@ func main() {
 								},
 								Action: func(context *cli.Context) error {
 
-									err := checkLog(log)
+									err := checkLog(logLevel)
 									if err != nil {
 										return err
 									}
@@ -407,7 +344,7 @@ func main() {
 				Aliases: []string{"g", "G"},
 				Usage:   "generate a default configuration file",
 				Action: func(*cli.Context) error {
-					err := checkLog(log)
+					err := checkLog(logLevel)
 					if err != nil {
 						return err
 					}
@@ -435,7 +372,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		logrus.Fatal(err)
+		log.Error("fatal: ", err)
 	}
 
 }

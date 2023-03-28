@@ -1,10 +1,22 @@
 /*
- *     @Copyright
+ *
  *     @file: exampleMeth.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午5:22
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: exampleMeth.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/28 下午3:58
+ *     @last modified: 2023/3/28 下午3:56
  *
  *
  *
@@ -15,9 +27,9 @@ package example
 
 import (
 	"GodDns/DDNS"
+	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"strings"
 )
@@ -60,7 +72,7 @@ func (p *Parameter) IsTypeSet() bool {
 // implements Cron.Job
 func (r *Request) Run() {
 	err := r.MakeRequest()
-	logrus.Infof("status:%+v,err:%s", r.Status(), err)
+	log.Infof("status:%+v,err:%s", r.Status(), err)
 }
 
 func (r *Request) ToParameters() DDNS.Parameters {
@@ -74,7 +86,7 @@ func (r *Request) MakeRequest() error {
 	// make ddns request
 	// update status.Status using DDNS.Status or DDNS.Fail or DDNS.NotExecute
 	// update status.Msg & status.Name
-	// logrus.Infof("relevant info...")
+	// log.Infof("relevant info...")
 
 	panic("implement me")
 }

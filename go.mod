@@ -15,6 +15,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.624
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.624
 	github.com/urfave/cli/v2 v2.25.0
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
 require (

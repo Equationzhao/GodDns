@@ -61,7 +61,7 @@ p2.Set(2, "b")
 Util.ExchangePairs(&p, &p2)
 
 if p.First != 2 || p.Second != "b" || p2.First != 0 || p2.Second != "" {
-    panic("Pair set error")
+    panic("Pairs exchange error")
 }
 
 p = Util.MakePair[int, string](3, "d")

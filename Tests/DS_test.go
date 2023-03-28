@@ -1,10 +1,22 @@
 /*
- *     @Copyright
+ *
  *     @file: DS_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/27 下午11:19
- *     @last modified: 2023/3/27 下午10:57
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: DS_test.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/28 下午3:58
+ *     @last modified: 2023/3/28 下午3:56
  *
  *
  *
@@ -68,7 +80,7 @@ func TestPair(t *testing.T) {
 	Util.ExchangePairs(&p, &p2)
 
 	if p.First != 2 || p.Second != "b" || p2.First != 0 || p2.Second != "" {
-		t.Error("Pair set error")
+		t.Error("Pairs exchange error")
 	}
 
 	p = Util.MakePair[int, string](3, "d")
