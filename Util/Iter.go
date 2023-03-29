@@ -10,17 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: Iter.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午2:50
- *     @last modified: 2023/3/29 下午2:50
- *
- *
- *
- */
 
 package Util
 

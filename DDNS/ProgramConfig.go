@@ -10,17 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: ProgramConfig.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/25 下午5:42
- *
- *
- *
- */
 
 package DDNS
 
@@ -184,7 +173,7 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 					res.ags = append(res.ags, api)
 				}
 			} else {
-				Other = errors.Join(Other, fmt.Errorf("unkown section: %s", section.Name()))
+				Other = errors.Join(Other, fmt.Errorf("unknown section: %s", section.Name()))
 			}
 
 		}

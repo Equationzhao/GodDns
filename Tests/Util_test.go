@@ -10,18 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: Util_test.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/27 下午10:54
- *
- *
- *
- */
-
 package Tests_test
 
 import (
@@ -339,7 +327,7 @@ func TestGetVariable(t *testing.T) {
 
 	// should return an error
 	// because the field name is unexported
-	v, err = Util.GetVariable(s, "name")
+	_, err = Util.GetVariable(s, "name")
 	if err == nil {
 		t.FailNow()
 	}

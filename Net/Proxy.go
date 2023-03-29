@@ -10,17 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: Proxy.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午5:44
- *     @last modified: 2023/3/28 下午5:44
- *
- *
- *
- */
 
 package Net
 

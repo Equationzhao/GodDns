@@ -10,17 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: exampleMeth.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/28 下午3:56
- *
- *
- *
- */
 
 // Package example is a template for creating new service
 package example

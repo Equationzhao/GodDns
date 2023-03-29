@@ -10,29 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: ServiceConfig.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:59
- *     @last modified: 2023/3/28 下午3:59
- *
- *
- *
- */
-
-/*
- *
- *     @file: ServiceConfig.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/28 下午3:56
- *
- *
- *
- */
 
 // Package DDNS
 // basic interfaces and tools for DDNS service

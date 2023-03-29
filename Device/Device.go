@@ -10,17 +10,6 @@
  *
  */
 
-/*
- *
- *     @file: Device.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/25 下午5:42
- *
- *
- *
- */
 
 // Package Device implements a Device which implements both Parameters and Config interface
 // And ConfigFactory to make a Config object of Device
