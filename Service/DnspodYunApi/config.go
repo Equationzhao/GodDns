@@ -1,10 +1,10 @@
 /*
- *     @Copyright
+ *
  *     @file: config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午5:20
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:09
  *
  *
  *
@@ -17,8 +17,10 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Net"
 	"GodDns/Util"
-	"gopkg.in/ini.v1"
+	"bytes"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 func init() {
@@ -83,7 +85,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 			switch name {
 			case "SubDomain":
 				subdomain := sec.Key(name).String()
-				subdomains = strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
+				subdomains = strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
 				Util.RemoveDuplicate(&subdomains)
 			case "TTL":
 				ttl, err := sec.Key(name).Uint64()
@@ -123,17 +125,13 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 }
 
 func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, u uint) (DDNS.ConfigStr, error) {
-	head := DDNS.ConfigHead(parameters, u)
-
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
-
-	tail := "\n\n"
-
-	content := head + body + tail
+	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, u))
+	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer.Write([]byte{'\n', '\n'})
 
 	return DDNS.ConfigStr{
 		Name:    "Dnspod_yun",
-		Content: content,
+		Content: buffer.String(),
 	}, nil
 
 }

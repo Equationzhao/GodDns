@@ -1,18 +1,20 @@
 /*
- *     @Copyright
+ *
  *     @file: Util.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/26 上午3:48
- *     @last modified: 2023/3/26 上午3:48
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:17
  *
  *
  *
  */
 
+
 package Util
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -183,7 +185,7 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 
 	v := reflect.ValueOf(i)
 
-	var content string
+	var content bytes.Buffer
 	t := reflect.TypeOf(i)
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
@@ -217,9 +219,9 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 			case reflect.Map:
 				if l > 0 {
 					// not the last element
-					content += convert2xwwwformurlencoded(iter.Value(), false)
+					content.WriteString(convert2xwwwformurlencoded(iter.Value(), false))
 				} else {
-					content += convert2xwwwformurlencoded(iter.Value(), true)
+					content.WriteString(convert2xwwwformurlencoded(iter.Value(), true))
 				}
 			case reflect.Interface:
 				k := iter.Key()
@@ -228,25 +230,25 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128, bool, []byte, []rune, uintptr, nil:
 					if l > 0 {
 						// not the last element
-						content += fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v)))
+						content.WriteString(fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v))))
 					} else {
-						content += fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v)))
+						content.WriteString(fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v))))
 					}
 				default:
 					if l > 0 {
 						// not the last element
-						content += convert2xwwwformurlencoded(v.Interface(), false)
+						content.WriteString(convert2xwwwformurlencoded(v.Interface(), false))
 					} else {
-						content += convert2xwwwformurlencoded(v.Interface(), true)
+						content.WriteString(convert2xwwwformurlencoded(v.Interface(), true))
 					}
 				}
 			default:
 				k := iter.Key()
 				if l > 0 {
 					// not the last element
-					content += fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v)))
+					content.WriteString(fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v))))
 				} else {
-					content += fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v)))
+					content.WriteString(fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v))))
 				}
 			}
 		}
@@ -278,9 +280,9 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 			}
 			pieces = append(pieces, fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface()))))
 		}
-		content = strings.Join(pieces, "&")
-		if !isTheLast && content != "" {
-			content += "&"
+		content.WriteString(strings.Join(pieces, "&"))
+		if !isTheLast && content.Len() != 0 {
+			content.WriteByte('&')
 		}
 
 	case reflect.Slice:
@@ -291,13 +293,13 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 		}
 
 		for i := 0; i < l-1; i++ {
-			content += convert2xwwwformurlencoded(v.Index(i).Interface(), false)
+			content.WriteString(convert2xwwwformurlencoded(v.Index(i).Interface(), false))
 		}
-		content += convert2xwwwformurlencoded(v.Index(l-1).Interface(), isTheLast)
+		content.WriteString(convert2xwwwformurlencoded(v.Index(l-1).Interface(), isTheLast))
 
 	}
 
-	return content
+	return content.String()
 }
 
 // HasVariable Check if struct has variable by name

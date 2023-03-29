@@ -1,10 +1,10 @@
 /*
- *     @Copyright
+ *
  *     @file: Device.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 上午1:46
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:06
  *
  *
  *
@@ -17,6 +17,7 @@ package Device
 import (
 	"GodDns/DDNS"
 	"GodDns/Util"
+	"bytes"
 	"strings"
 
 	"gopkg.in/ini.v1"
@@ -73,8 +74,8 @@ func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
 	}
 
 	// convert to []string
-	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> split " " -> []string
-	d.Devices = strings.Split(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]"), " ") // remove [] and remove " "
+	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> Fields " " -> []string
+	d.Devices = strings.Fields(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]")) // remove [] and remove " "
 
 	ps := []DDNS.Parameters{d}
 	return ps, nil
@@ -84,14 +85,12 @@ func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
 func (d Device) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
-	head := DDNS.ConfigHead(parameters, No)
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
-	tail := "\n\n"
-	content := head + body + tail
-
+	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer.Write([]byte{'\n', '\n'})
 	return DDNS.ConfigStr{
 		Name:    ServiceName,
-		Content: content,
+		Content: buffer.String(),
 	}, nil
 }
 

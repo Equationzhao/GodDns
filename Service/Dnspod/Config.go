@@ -1,14 +1,15 @@
 /*
- *     @Copyright
+ *
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午5:16
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:11
  *
  *
  *
  */
+
 
 package Dnspod
 
@@ -16,6 +17,7 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Net"
 	"GodDns/Util"
+	"bytes"
 	"strconv"
 	"strings"
 
@@ -139,7 +141,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 		return nil, err
 	}
 
-	subdomains := strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
+	subdomains := strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
 	Util.RemoveDuplicate(&subdomains)
 
 	ps := make([]DDNS.Parameters, 0, len(subdomains))
@@ -196,14 +198,13 @@ func (c ConfigFactory) New() *DDNS.Config {
 // GenerateConfigInfo
 // Generate KeyValue style config
 func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
-	head := DDNS.ConfigHead(parameters, No)
 
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
-
-	tail := "\n\n"
+	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer.Write([]byte{'\n', '\n'})
 
 	return DDNS.ConfigStr{
 		Name:    "Dnspod",
-		Content: head + body + tail,
+		Content: buffer.String(),
 	}, nil
 }

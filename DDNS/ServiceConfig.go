@@ -1,23 +1,24 @@
 /*
- *     @Copyright
+ *
  *     @file: ServiceConfig.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 下午5:24
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/28 下午5:38
  *
  *
  *
  */
+
 
 // Package DDNS
 // basic interfaces and tools for DDNS service
 package DDNS
 
 import (
+	log "GodDns/Log"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
@@ -151,25 +152,25 @@ func (m MissingKeyErr) Error() string {
 // Key -> Key=value
 // Any Service should use this function to create config file
 func ConfigureWriter(Filename string, flag int, config ...ConfigStr) error { // option: append/w
-	logrus.Debugf("open file at %s", Filename)
+	log.Debugf("open file at %s", Filename)
 
 	configure, err := os.OpenFile(Filename, flag, 0777) // os.O_CREATE|os.O_WRONLY
 
 	if err != nil {
 		return err
 	} else {
-		logrus.Trace("open config file at ", Filename)
+		log.Tracef("open config file at %s", Filename)
 		defer func(configure *os.File) {
 
 			err := configure.Close()
 			if err != nil {
-				logrus.Error("failed to close configure ", err)
+				log.Error("failed to close configure ", log.String("error", err.Error()))
 			}
 		}(configure)
 	}
 
 	for _, service := range config {
-		logrus.Trace("write config for ", service.Name)
+		log.Tracef("write config for %s", service.Name)
 		_, err = configure.WriteString(service.Content)
 		if err != nil {
 			return err
@@ -203,13 +204,11 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configure at %s: %w", Filename, err), nil
 	} else {
-		logrus.Info("load config file at ", Filename)
+		log.Infof("load config file at %s", Filename)
 	}
 
 	cfg.BlockMode = false // !make sure read only
-	defer func() {
-		cfg.BlockMode = true
-	}()
+
 	ps = make([]Parameters, 0, 5*len(configs))
 	var errCount uint8 = 0
 	secs := cfg.Sections()
@@ -225,17 +224,17 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 
 			// Read corresponding service
 			if match {
-				logrus.Debugf("read config for %s", c.GetName())
+				log.Debugf("read config for %s", c.GetName())
 				temp, err := c.Get().ReadConfig(*sec) // todo read comments: sec.Key("name").Comment
-				logrus.Debug(temp)
 				if err != nil {
 					errCount++
-					ReadConfigErrs = errors.Join(ReadConfigErrs, fmt.Errorf("failed to read config for %s : %s", c.GetName(), err.Error()))
-					logrus.Debugf("failed to read config for %s : %s , skip this service", c.GetName(), err.Error())
+					msg := fmt.Errorf("failed to read config for %s : %s", c.GetName(), err.Error())
+					ReadConfigErrs = errors.Join(ReadConfigErrs, msg)
+					log.Debug(msg)
 					continue // skip this service
 				}
-				logrus.Tracef("%s : %v", c.GetName(), temp)
-				logrus.Debugf("succeed to read config for %s", c.GetName())
+				log.Tracef("%s : %s", c.GetName(), temp)
+				log.Debugf("succeed to read config for %s", c.GetName())
 				ps = append(ps, temp...)
 			} else {
 				// unknown service
@@ -247,7 +246,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	}
 
 	if ReadConfigErrs != nil {
-		logrus.Errorf("finish with %d error(s)", errCount)
+		log.Errorf("finish with %d error(s)", errCount)
 	}
 	return ps, nil, ReadConfigErrs
 }

@@ -1,10 +1,10 @@
 /*
- *     @Copyright
+ *
  *     @file: IP.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/26 下午11:18
- *     @last modified: 2023/3/26 下午11:18
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
  *
  *
  *
@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/rdegges/go-ipify"
-	"net" // todo replace with net ip
+	"net"
 	"net/netip"
 	"regexp"
 )

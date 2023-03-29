@@ -2,7 +2,19 @@
 
 ## Description
 
-Log hook for logrus
-send original message to `io.Writer(s)`
+wrapper for [slog] 
 
-if io.Writer is nil, `Fire()` will panic when calling `logrus.info()` / `logrus.error()` /...
+## Usage
+
+```go
+log.Infof("hello %s", "world") -> time=2023-03-28T15:39:15.380+08:00 level=INFO msg="hello world"
+
+log.Info("hello", "toWhom" ,"world") -> time=2023-03-28T15:39:15.380+08:00 level=INFO msg="hello" toWhom="world"
+
+log.Info("hello", "toWhom" ,"world", "age", 18) -> time=2023-03-28T15:39:15.380+08:00 level=INFO msg="hello" toWhom="world" age=18
+
+log.Info("hello", log.String("toWhom", "world"), log.Int("age", 18), log.Bool("isMale", true)) -> time=2023-03-28T15:39:15.380+08:00 level=INFO msg="hello" toWhom="world" age=18 isMale=true
+
+// ......
+
+```

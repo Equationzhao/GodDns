@@ -1,10 +1,10 @@
 /*
- *     @Copyright
+ *
  *     @file: ProgramConfig.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/25 下午5:41
- *     @last modified: 2023/3/25 上午1:46
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午10:59
  *
  *
  *
@@ -15,17 +15,19 @@ package DDNS
 import (
 	"GodDns/Net"
 	"GodDns/Util"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"gopkg.in/ini.v1"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/go-resty/resty/v2"
+	"gopkg.in/ini.v1"
 )
 
 const URLPattern = `(http|https)://[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?`
@@ -71,13 +73,13 @@ type ProgramConfig struct {
 }
 
 func (p *ProgramConfig) Convert2KeyValue(format string) (content string) {
-	head := "[settings]\n"
-	setting := p.proxy.Convert2KeyValue(format) + "\n"
-	apis := ""
+	buffer := bytes.NewBufferString("[settings]\n")
+	buffer.WriteString(p.proxy.Convert2KeyValue(format))
+	buffer.WriteByte('\n')
 	for _, api := range p.ags {
-		apis += api.Convert2KeyValue(format)
+		buffer.WriteString(api.Convert2KeyValue(format))
 	}
-	return head + setting + apis
+	return buffer.String()
 
 }
 
@@ -95,7 +97,9 @@ func (p *ProgramConfig) ConfigStr() ConfigStr {
 // 3. ...
 func (p *ProgramConfig) Setup() {
 	// 1. set proxy
-
+	for _, p := range p.proxy {
+		Net.AddProxy(Net.GlobalProxys, p.String())
+	}
 	// 2. add apis
 	for _, ag := range p.ags {
 		// ? why there's a bug when ag has only pointer method, the api func add to map will be replaced by the last one
@@ -157,7 +161,6 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 			}
 		default:
 			// load apis
-
 			if strings.HasPrefix(section.Name(), "Api.") || strings.HasPrefix(section.Name(), "api.") || strings.HasPrefix(section.Name(), "API.") {
 				if len(section.Name()) == 4 {
 					Other = errors.Join(Other, fmt.Errorf("invalid api name: `%s`", section.Name()))
@@ -170,7 +173,7 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 					res.ags = append(res.ags, api)
 				}
 			} else {
-				Other = errors.Join(Other, fmt.Errorf("unkown section: %s", section.Name()))
+				Other = errors.Join(Other, fmt.Errorf("unknown section: %s", section.Name()))
 			}
 
 		}
@@ -182,7 +185,7 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 // LoadApiFromConfig load api from config
 // load string like "[http://localhost:10809 https://example.com:12345 socks5://127.0.0.1:10808 ]"
 func loadProxy(proxy string) (res []*url.URL, err error) {
-	split := strings.Split(strings.ReplaceAll(strings.Trim(proxy, "[]"), ",", " "), " ")
+	split := strings.Fields(strings.ReplaceAll(strings.Trim(proxy, "[]"), ",", " "))
 	// remove empty string
 	for _, s := range split {
 		if s != "" {
@@ -449,15 +452,15 @@ func LoadApiFromConfig(sec *ini.Section) (ApiGenerator, error) {
 		} else {
 			switch name {
 			case "A":
-				Ag.a = sec.Key(name).String()
+				Ag.a = sec.Key(name).Value()
 			case "AAAA":
-				Ag.aaaa = sec.Key(name).String()
+				Ag.aaaa = sec.Key(name).Value()
 			case "HTTPMethod":
-				Ag.method = sec.Key(name).String()
+				Ag.method = sec.Key(name).Value()
 			case "Response":
-				Ag.response = sec.Key(name).String()
+				Ag.response = sec.Key(name).Value()
 			case "Value":
-				Ag.resName = sec.Key(name).String()
+				Ag.resName = sec.Key(name).Value()
 			}
 		}
 	}
