@@ -45,27 +45,55 @@ diff: set[4]
 pair:
 
 ```go
-p := Util.Pair[int, string]{}
+p := Util.NewPair[int, string](0, "")
 p.Set(1, "a")
-if p.First != 1 || p.Second != "a" {
-	panic("Pair set error")
+if *p.First != 1 || *p.Second != "a" {
+    panic("Pair set error")
 }
 
 p.Clear()
-if p.First != 0 || p.Second != "" {
+if *p.First != 0 || *p.Second != "" {
     panic("Pair clear error")
 }
 
-p2 := Util.Pair[int, string]{}
+p2 := Util.NewPair[int, string](0, "")
 p2.Set(2, "b")
-Util.ExchangePairs(&p, &p2)
+Util.ExchangePairs(p, p2)
 
-if p.First != 2 || p.Second != "b" || p2.First != 0 || p2.Second != "" {
+if *p.First != 2 || *p.Second != "b" || *p2.First != 0 || *p2.Second != "" {
     panic("Pairs exchange error")
 }
 
-p = Util.MakePair[int, string](3, "d")
-if p.First != 3 || p.Second != "d" {
+p3 := Util.MakePair[int, string]()
+if *p3.First != 0 || *p3.Second != "" {
     panic("Make error")
 }
+
+*p = Util.MakePair[int, string](3, "d")
+if *p.First != 3 || *p.Second != "d" {
+    panic("Make error")
+}
+
+pDeepClone := p.Clone()
+fmt.Println("pDeepClone:", pDeepClone)
+fmt.Println("pDeepClone:", &pDeepClone)
+
+if *pDeepClone.First != 3 || *pDeepClone.Second != "d" || &pDeepClone == p {
+    panic("Clone error")
+}
+
+pCopy := p
+if pCopy.First != p.First || pCopy.Second != p.Second {
+    panic("Copy error")
+}
+
+a := 3
+b := "a"
+*p = Util.EmplacePair(&a, &b)
+a = 4
+b = "b"
+if &a != p.First || &b != p.Second {
+    panic("EmplacePair error")
+}
+
 ```

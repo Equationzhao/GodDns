@@ -3,6 +3,18 @@
  *     @file: ProgramConfig.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午10:59
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: ProgramConfig.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:58
  *     @last modified: 2023/3/25 下午5:42
  *
@@ -15,6 +27,7 @@ package DDNS
 import (
 	"GodDns/Net"
 	"GodDns/Util"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,13 +84,13 @@ type ProgramConfig struct {
 }
 
 func (p *ProgramConfig) Convert2KeyValue(format string) (content string) {
-	head := "[settings]\n"
-	setting := p.proxy.Convert2KeyValue(format) + "\n"
-	apis := ""
+	buffer := bytes.NewBufferString("[settings]\n")
+	buffer.WriteString(p.proxy.Convert2KeyValue(format))
+	buffer.WriteByte('\n')
 	for _, api := range p.ags {
-		apis += api.Convert2KeyValue(format)
+		buffer.WriteString(api.Convert2KeyValue(format))
 	}
-	return head + setting + apis
+	return buffer.String()
 
 }
 
@@ -95,7 +108,9 @@ func (p *ProgramConfig) ConfigStr() ConfigStr {
 // 3. ...
 func (p *ProgramConfig) Setup() {
 	// 1. set proxy
-
+	for _, p := range p.proxy {
+		Net.AddProxy(Net.GlobalProxys, p.String())
+	}
 	// 2. add apis
 	for _, ag := range p.ags {
 		// ? why there's a bug when ag has only pointer method, the api func add to map will be replaced by the last one
@@ -157,7 +172,6 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 			}
 		default:
 			// load apis
-
 			if strings.HasPrefix(section.Name(), "Api.") || strings.HasPrefix(section.Name(), "api.") || strings.HasPrefix(section.Name(), "API.") {
 				if len(section.Name()) == 4 {
 					Other = errors.Join(Other, fmt.Errorf("invalid api name: `%s`", section.Name()))
@@ -449,15 +463,15 @@ func LoadApiFromConfig(sec *ini.Section) (ApiGenerator, error) {
 		} else {
 			switch name {
 			case "A":
-				Ag.a = sec.Key(name).String()
+				Ag.a = sec.Key(name).Value()
 			case "AAAA":
-				Ag.aaaa = sec.Key(name).String()
+				Ag.aaaa = sec.Key(name).Value()
 			case "HTTPMethod":
-				Ag.method = sec.Key(name).String()
+				Ag.method = sec.Key(name).Value()
 			case "Response":
-				Ag.response = sec.Key(name).String()
+				Ag.response = sec.Key(name).Value()
 			case "Value":
-				Ag.resName = sec.Key(name).String()
+				Ag.resName = sec.Key(name).Value()
 			}
 		}
 	}

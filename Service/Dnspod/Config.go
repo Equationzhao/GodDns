@@ -3,6 +3,18 @@
  *     @file: Config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:11
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Config.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:58
  *     @last modified: 2023/3/27 下午8:23
  *
@@ -16,6 +28,7 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Net"
 	"GodDns/Util"
+	"bytes"
 	"strconv"
 	"strings"
 
@@ -196,14 +209,13 @@ func (c ConfigFactory) New() *DDNS.Config {
 // GenerateConfigInfo
 // Generate KeyValue style config
 func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
-	head := DDNS.ConfigHead(parameters, No)
 
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
-
-	tail := "\n\n"
+	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer.Write([]byte{'\n', '\n'})
 
 	return DDNS.ConfigStr{
 		Name:    "Dnspod",
-		Content: head + body + tail,
+		Content: buffer.String(),
 	}, nil
 }

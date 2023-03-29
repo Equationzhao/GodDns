@@ -3,6 +3,18 @@
  *     @file: Util_test.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:20
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Util_test.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:58
  *     @last modified: 2023/3/27 下午10:54
  *
@@ -144,7 +156,8 @@ func TestConvert2XWWWFormUrlencoded(t *testing.T) {
 					},
 				},
 			},
-			want: "name=test&age=18&name=test&age=18&nickname=test",
+
+			want: "name=test&age=18&name=test&age=18&nickname=test", // the order of the key-value pairs is not guaranteed
 		},
 		{
 			name: "struct",
@@ -266,7 +279,7 @@ func TestConvert2XWWWFormUrlencoded(t *testing.T) {
 					},
 				},
 			},
-			want: "device=d&ip=i&Type=aaa&=1233&=123&=123&=123&device=321&ip=4325&Type=trew&name=321",
+			want: "device=d&ip=i&Type=aaa&=1233&=123&=123&=123&device=321&ip=4325&Type=trew&name=321", // the order of the key-value pairs is not guaranteed
 		},
 		{
 			name: "map example",

@@ -3,6 +3,18 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/28 下午10:07
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Request.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:58
  *     @last modified: 2023/3/25 下午5:42
  *
@@ -34,6 +46,11 @@ type Request interface {
 	GetName() string    // return like "dnspod"
 	MakeRequest() error // MakeRequest will return error if exist
 	Status() Status
+}
+
+// ThroughProxy is an interface for service that can make request through a proxy
+type ThroughProxy interface {
+	RequestThroughProxy() error
 }
 
 type Status struct {

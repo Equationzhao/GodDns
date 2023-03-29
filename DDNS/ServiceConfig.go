@@ -3,6 +3,18 @@
  *     @file: ServiceConfig.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/28 下午5:38
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: ServiceConfig.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:59
  *     @last modified: 2023/3/28 下午3:59
  *
@@ -30,7 +42,6 @@ import (
 	log "GodDns/Log"
 	"errors"
 	"fmt"
-	// "golang.org/x/exp/slog"
 	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"

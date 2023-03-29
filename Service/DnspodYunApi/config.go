@@ -3,6 +3,18 @@
  *     @file: config.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:09
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: config.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:58
  *     @last modified: 2023/3/25 下午5:42
  *
@@ -17,6 +29,7 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Net"
 	"GodDns/Util"
+	"bytes"
 	"gopkg.in/ini.v1"
 	"strings"
 )
@@ -123,17 +136,13 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 }
 
 func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, u uint) (DDNS.ConfigStr, error) {
-	head := DDNS.ConfigHead(parameters, u)
-
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
-
-	tail := "\n\n"
-
-	content := head + body + tail
+	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, u))
+	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer.Write([]byte{'\n', '\n'})
 
 	return DDNS.ConfigStr{
 		Name:    "Dnspod_yun",
-		Content: content,
+		Content: buffer.String(),
 	}, nil
 
 }

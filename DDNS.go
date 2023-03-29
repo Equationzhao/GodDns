@@ -3,8 +3,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:59
- *     @last modified: 2023/3/28 下午3:59
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午8:47
  *
  *
  *
@@ -15,8 +15,8 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/28 下午3:56
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
  *
  *
  *
@@ -249,10 +249,10 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 	set := func(parameter DDNS.Parameters) error {
 		switch parameter.(DDNS.ServiceParameters).GetType() {
 		case "4":
-			parameter.(DDNS.ServiceParameters).SetValue(ip4.Second)
+			parameter.(DDNS.ServiceParameters).SetValue(ip4.GetSecond())
 			return err1
 		case "6":
-			parameter.(DDNS.ServiceParameters).SetValue(ip6.Second)
+			parameter.(DDNS.ServiceParameters).SetValue(ip6.GetSecond())
 			return err2
 		default:
 			return fmt.Errorf("unknown type %s", parameter.(DDNS.ServiceParameters).GetType())
@@ -446,8 +446,8 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 		return fmt.Errorf("unknown type %s", ParameterToSet.(DDNS.ServiceParameters).GetType())
 	}
 
-	if ip.First != "" && ip.Second != "" {
-		ParameterToSet.(DDNS.ServiceParameters).SetValue(ip.Second)
+	if ip.GetFirst() != "" && ip.GetSecond() != "" {
+		ParameterToSet.(DDNS.ServiceParameters).SetValue(ip.GetSecond())
 		return nil
 	} else {
 		return err
@@ -473,11 +473,9 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 func ExecuteRequests(requests ...DDNS.Request) {
 	log.Info("start executing requests")
 
-	for _, request := range requests {
-		log.Tracef("request: %s", request.GetName())
-		err := DDNS.ExecuteRequest(request)
+	deal := func(err error, request DDNS.Request) {
 		if err != nil || request.Status().Status != DDNS.Success {
-			log.Errorf("error executing request, %s", err.Error())
+			log.Errorf("error executing request, %s", err)
 			Retry(request, retryAttempt)
 		}
 
@@ -497,17 +495,56 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			log.Fatal("request not executed")
 		}
 	}
+
+	if proxyEnable {
+		for _, request := range requests {
+			var err error
+			log.Tracef("request: %s", request.GetName())
+			throughProxy, ok := request.(DDNS.ThroughProxy)
+			if ok {
+				err = throughProxy.RequestThroughProxy()
+			} else {
+				err = DDNS.ExecuteRequest(request)
+			}
+			deal(err, request)
+		}
+
+	} else {
+		for _, request := range requests {
+			log.Tracef("request: %s", request.GetName())
+			err := DDNS.ExecuteRequest(request)
+			if err != nil || request.Status().Status != DDNS.Success {
+				log.Errorf("error executing request, %s", err.Error())
+				Retry(request, retryAttempt)
+			}
+			deal(err, request)
+		}
+	}
 }
 
 func Retry(request DDNS.Request, i uint8) {
 	for j := uint8(1); j <= i; j++ {
 		log.Warnf("retrying %s %d time", request.GetName(), j)
-		err := DDNS.ExecuteRequest(request)
-		if err != nil {
-			log.Errorf("error: %s", err.Error())
+
+		if proxyEnable {
+			throughProxy, ok := request.(DDNS.ThroughProxy)
+			if ok {
+				err := throughProxy.RequestThroughProxy()
+				if err != nil {
+					log.Errorf("error: %s", err.Error())
+				} else {
+					return
+				}
+			}
 		} else {
-			return
+			err := DDNS.ExecuteRequest(request)
+			if err != nil {
+				log.Errorf("error: %s", err.Error())
+			} else {
+				return
+			}
 		}
+
 	}
 }
 

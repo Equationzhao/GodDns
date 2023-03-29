@@ -3,6 +3,18 @@
  *     @file: Device.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午11:06
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Device.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/28 下午3:58
  *     @last modified: 2023/3/25 下午5:42
  *
@@ -17,6 +29,7 @@ package Device
 import (
 	"GodDns/DDNS"
 	"GodDns/Util"
+	"bytes"
 	"strings"
 
 	"gopkg.in/ini.v1"
@@ -84,14 +97,12 @@ func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
 func (d Device) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
-	head := DDNS.ConfigHead(parameters, No)
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
-	tail := "\n\n"
-	content := head + body + tail
-
+	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer.Write([]byte{'\n', '\n'})
 	return DDNS.ConfigStr{
 		Name:    ServiceName,
-		Content: content,
+		Content: buffer.String(),
 	}, nil
 }
 

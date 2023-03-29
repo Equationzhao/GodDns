@@ -3,8 +3,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:59
- *     @last modified: 2023/3/28 下午3:59
+ *     @time: 2023/3/29 下午11:24
+ *     @last modified: 2023/3/29 下午10:15
  *
  *
  *
@@ -15,8 +15,8 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:58
- *     @last modified: 2023/3/28 下午3:56
+ *     @time: 2023/3/28 下午3:59
+ *     @last modified: 2023/3/28 下午3:59
  *
  *
  *
@@ -28,6 +28,7 @@ import (
 	"GodDns/DDNS"
 	"GodDns/Device"
 	log "GodDns/Log"
+	"GodDns/Net"
 	"errors"
 	"fmt"
 	"os"
@@ -50,6 +51,8 @@ var (
 	config                 = ""
 	defaultLocation        = ""
 	logLevel               = "Info"
+	proxy                  = ""
+	proxyEnable            = false
 	// cleanUp         func()
 )
 
@@ -103,6 +106,31 @@ var (
 		DefaultText: defaultLocation,
 		Usage:       "set configuration `file`",
 		Destination: &config,
+	}
+
+	proxyFlag = &cli.StringFlag{
+		Name:        "proxy",
+		Aliases:     []string{"p", "P"},
+		Value:       "",
+		Usage:       "set proxy `url`",
+		Destination: &proxy,
+		Action: func(context *cli.Context, s string) error {
+			if s != "" {
+				if s == "enable" {
+					proxyEnable = true
+					return nil
+				} else if s == "disable" {
+					return nil
+				} else if Net.IsProxyValid(s) {
+					proxyEnable = true
+					Net.AddProxy2Top(Net.GlobalProxys, s)
+					return nil
+				} else {
+					return errors.New("invalid proxy url")
+				}
+			}
+			return errors.New("empty proxy url")
+		},
 	}
 )
 
@@ -226,7 +254,7 @@ func main() {
 
 					parametersTemp, err := ReadConfig(configFactoryList)
 					if err != nil {
-						return errors.New("")
+						return err
 					}
 					parameters = parametersTemp
 
@@ -250,6 +278,7 @@ func main() {
 					silentFlag,
 					logFlag,
 					configFlag,
+					proxyFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
@@ -271,12 +300,12 @@ func main() {
 
 							parametersTemp, err := ReadConfig(configFactoryList)
 							if err != nil {
-								return errors.New("")
+								return err
 							}
 							parameters = parametersTemp
 							GlobalDevice, err = GetGlobalDevice(parameters)
 							if err != nil {
-								return errors.New("")
+								return err
 							}
 
 							if !retryFlag.IsSet() {
@@ -291,6 +320,7 @@ func main() {
 							silentFlag,
 							logFlag,
 							configFlag,
+							proxyFlag,
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -303,6 +333,7 @@ func main() {
 									silentFlag,
 									logFlag,
 									configFlag,
+									proxyFlag,
 								},
 								Action: func(context *cli.Context) error {
 
@@ -319,12 +350,12 @@ func main() {
 
 									parametersTemp, err := ReadConfig(configFactoryList)
 									if err != nil {
-										return errors.New("")
+										return err
 									}
 									parameters = parametersTemp
 									GlobalDevice, err = GetGlobalDevice(parameters)
 									if err != nil {
-										return errors.New("")
+										return err
 									}
 
 									if !retryFlag.IsSet() {
@@ -372,7 +403,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Error("fatal: ", err)
+		log.Errorf("fatal: %s", err)
 	}
 
 }
