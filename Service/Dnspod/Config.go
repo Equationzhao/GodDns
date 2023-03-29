@@ -141,7 +141,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 		return nil, err
 	}
 
-	subdomains := strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
+	subdomains := strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
 	Util.RemoveDuplicate(&subdomains)
 
 	ps := make([]DDNS.Parameters, 0, len(subdomains))

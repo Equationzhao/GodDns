@@ -10,7 +10,6 @@
  *
  */
 
-
 package DDNS
 
 import (
@@ -20,14 +19,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"gopkg.in/ini.v1"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/go-resty/resty/v2"
+	"gopkg.in/ini.v1"
 )
 
 const URLPattern = `(http|https)://[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?`
@@ -185,7 +185,7 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 // LoadApiFromConfig load api from config
 // load string like "[http://localhost:10809 https://example.com:12345 socks5://127.0.0.1:10808 ]"
 func loadProxy(proxy string) (res []*url.URL, err error) {
-	split := strings.Split(strings.ReplaceAll(strings.Trim(proxy, "[]"), ",", " "), " ")
+	split := strings.Fields(strings.ReplaceAll(strings.Trim(proxy, "[]"), ",", " "))
 	// remove empty string
 	for _, s := range split {
 		if s != "" {

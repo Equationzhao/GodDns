@@ -65,7 +65,7 @@ func TestDevice_ReadConfig(t *testing.T) {
 
 func TestConvert2StringSlice(t *testing.T) {
 	deviceList := "[eth0,eth1]"
-	s := strings.Split(strings.Trim(deviceList, "[]"), ",")
+	s := strings.Fields(strings.Trim(deviceList, "[]"))
 
 	if len(s) != 2 {
 		t.Error("wrong length")

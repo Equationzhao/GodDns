@@ -10,7 +10,6 @@
  *
  */
 
-
 // Package Device implements a Device which implements both Parameters and Config interface
 // And ConfigFactory to make a Config object of Device
 package Device
@@ -75,8 +74,8 @@ func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
 	}
 
 	// convert to []string
-	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> split " " -> []string
-	d.Devices = strings.Split(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]"), " ") // remove [] and remove " "
+	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> Fields " " -> []string
+	d.Devices = strings.Fields(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]")) // remove [] and remove " "
 
 	ps := []DDNS.Parameters{d}
 	return ps, nil

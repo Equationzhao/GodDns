@@ -10,7 +10,6 @@
  *
  */
 
-
 // Package DnspodYunApi use Tencent Cloud API to update DNS record
 package DnspodYunApi
 
@@ -19,8 +18,9 @@ import (
 	"GodDns/Net"
 	"GodDns/Util"
 	"bytes"
-	"gopkg.in/ini.v1"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 func init() {
@@ -85,7 +85,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 			switch name {
 			case "SubDomain":
 				subdomain := sec.Key(name).String()
-				subdomains = strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
+				subdomains = strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
 				Util.RemoveDuplicate(&subdomains)
 			case "TTL":
 				ttl, err := sec.Key(name).Uint64()
