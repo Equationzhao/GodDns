@@ -3,13 +3,12 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/29 下午8:47
+ *     @time: 2023/3/30 下午11:29
+ *     @last modified: 2023/3/30 下午11:20
  *
  *
  *
  */
-
 
 package main
 
@@ -130,26 +129,39 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 		close(ip6Done)
 	}()
 
-	select {
-	case temp := <-ip4Done:
-		if temp {
-			log.Infof("ipv4 from %s: %s", ApiName, ip4)
-		} else {
-			log.Errorf("error getting ipv4, %s", err1)
+	var ipv4Received, ipv6Received bool
+	for {
+		select {
+		case temp := <-ip4Done:
+			if !ipv4Received {
+				if temp {
+					log.Infof("ipv4 from %s: %s", ApiName, ip4)
+					ipv4Received = true
+				} else {
+					log.Errorf("error getting ipv4, %s", err1)
+					return errors.New("quit")
+				}
+			}
+
+		case temp := <-ip6Done:
+			if !ipv6Received {
+				if temp {
+					log.Infof("ipv6 from %s: %s", ApiName, ip6)
+					ipv6Received = true
+				} else {
+					log.Errorf("error getting ipv6, %s", err2)
+					return errors.New("quit")
+				}
+			}
+
+		case <-time.After(10 * time.Second):
+			log.Errorf("timeout getting ip address from %s", ApiName)
 			return errors.New("quit")
 		}
 
-	case temp := <-ip6Done:
-		if temp {
-			log.Infof("ipv6 from %s: %s", ApiName, ip6)
-		} else {
-			log.Errorf("error getting ipv6, %s", err2)
-			return errors.New("quit")
+		if ipv4Received && ipv6Received {
+			break
 		}
-
-	case <-time.After(10 * time.Second):
-		log.Errorf("timeout getting ip address from %s", ApiName)
-		return errors.New("quit")
 	}
 
 	for _, parameter := range parameters {
@@ -461,6 +473,7 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 
 func ExecuteRequests(requests ...DDNS.Request) {
 	log.Info("start executing requests")
+	done := make(chan bool, 2*len(requests))
 
 	deal := func(err error, request DDNS.Request) {
 		if err != nil || request.Status().Status != DDNS.Success {
@@ -483,32 +496,61 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		} else if res.Status == DDNS.NotExecute {
 			log.Fatal("request not executed")
 		}
+
+		done <- true
 	}
 
 	if proxyEnable {
 		for _, request := range requests {
-			var err error
-			log.Tracef("request: %s", request.GetName())
-			throughProxy, ok := request.(DDNS.ThroughProxy)
-			if ok {
-				err = throughProxy.RequestThroughProxy()
+			request := request
+			go func() {
+				var err error
+				log.Tracef("request: %s", request.GetName())
+				throughProxy, ok := request.(DDNS.ThroughProxy)
+				if ok {
+					err = throughProxy.RequestThroughProxy()
+				} else {
+					err = DDNS.ExecuteRequest(request)
+				}
+				deal(err, request)
+			}()
+			if parallelExecuting {
+				continue
 			} else {
-				err = DDNS.ExecuteRequest(request)
+				<-done
+				done <- true
 			}
-			deal(err, request)
 		}
 
 	} else {
 		for _, request := range requests {
-			log.Tracef("request: %s", request.GetName())
-			err := DDNS.ExecuteRequest(request)
-			if err != nil || request.Status().Status != DDNS.Success {
-				log.Errorf("error executing request, %s", err.Error())
-				Retry(request, retryAttempt)
+			request := request
+			go func() {
+				log.Tracef("request: %s", request.GetName())
+				err := DDNS.ExecuteRequest(request)
+				if err != nil || request.Status().Status != DDNS.Success {
+					log.Errorf("error executing request, %s", err.Error())
+					Retry(request, retryAttempt)
+				}
+				deal(err, request)
+			}()
+			if parallelExecuting {
+				continue
+			} else {
+				<-done
+				done <- true
 			}
-			deal(err, request)
+
 		}
 	}
+	count := 0
+	for count < len(requests) {
+		select {
+		case <-done:
+			count++
+		}
+	}
+	log.Info("all requests executed")
 }
 
 func Retry(request DDNS.Request, i uint8) {
