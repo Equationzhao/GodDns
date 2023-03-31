@@ -3,6 +3,18 @@
  *     @file: main.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/31 下午3:16
+ *     @last modified: 2023/3/31 下午2:03
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: main.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/30 下午11:29
  *     @last modified: 2023/3/30 下午4:32
  *
@@ -35,7 +47,7 @@ const defaultRetryAttempt = 3
 var (
 	Time              uint64 = 0
 	ApiName                  = ""
-	retryAttempt      uint8  = 0
+	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
 	defaultLocation          = ""
 	logLevel                 = "Info"
@@ -255,10 +267,6 @@ func main() {
 					}
 					parameters = parametersTemp
 
-					if !retryFlag.IsSet() {
-						retryAttempt = defaultRetryAttempt
-					}
-
 					return RunDDNS(parameters)
 				},
 				Flags: []cli.Flag{
@@ -304,10 +312,6 @@ func main() {
 							GlobalDevice, err = GetGlobalDevice(parameters)
 							if err != nil {
 								return err
-							}
-
-							if !retryFlag.IsSet() {
-								retryAttempt = defaultRetryAttempt
 							}
 
 							return RunAuto(GlobalDevice, parameters)
@@ -356,10 +360,6 @@ func main() {
 									GlobalDevice, err = GetGlobalDevice(parameters)
 									if err != nil {
 										return err
-									}
-
-									if !retryFlag.IsSet() {
-										retryAttempt = defaultRetryAttempt
 									}
 
 									return RunOverride(GlobalDevice, parameters)

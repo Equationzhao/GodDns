@@ -3,6 +3,18 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/31 下午3:16
+ *     @last modified: 2023/3/31 下午1:57
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Request.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/30 下午11:29
  *     @last modified: 2023/3/30 下午11:23
  *
@@ -42,6 +54,10 @@ const (
 type Request struct {
 	parameters Parameters
 	status     DDNS.Status
+}
+
+func (r *Request) Target() string {
+	return r.parameters.Subdomain + "." + r.parameters.Domain
 }
 
 // Status return DDNS.Status which contains execution result etc.
@@ -95,7 +111,8 @@ func (r *Request) RequestThroughProxy() error {
 	select {
 	case <-done:
 		if err != nil || status.Status != DDNS.Success {
-			r.status.Status = DDNS.Success
+			r.status.Name = serviceName
+			r.status.Status = DDNS.Failed
 			r.status.Msg = status.Msg
 			return err
 		}
@@ -110,6 +127,7 @@ func (r *Request) RequestThroughProxy() error {
 
 	iter := Net.GlobalProxys.GetProxyIter()
 	var response *resty.Response
+
 	for iter.NotLast() {
 		proxy := iter.Next()
 		pool, err := DDNS.MainPoolMap.GetOrCreate(proxy, func() (resty.Client, error) {
@@ -121,7 +139,7 @@ func (r *Request) RequestThroughProxy() error {
 			log.Error("error get client pool from map", log.String("error", err.Error()))
 		} else {
 			client := pool.Get()
-			response, err = client.First.R().SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
+			response, err = client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
 			log.Tracef("response: %v", response)
 			log.Debugf("result:%+v", s)
 			client.Release()
@@ -134,8 +152,6 @@ func (r *Request) RequestThroughProxy() error {
 		}
 
 	}
-
-	// r.status = *code2msg(s.Status.Code).AppendMsg(" ", s.Status.Message, "at ", s.Status.CreatedAt, " ", r.parameters.getTotalDomain(), " ", s.Record.Value)
 	r.status = *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 
 	if err != nil {
@@ -160,7 +176,8 @@ func (r *Request) MakeRequest() error {
 	select {
 	case <-done:
 		if err != nil || status.Status != DDNS.Success {
-			r.status.Status = DDNS.Success
+			r.status.Name = serviceName
+			r.status.Status = DDNS.Failed
 			r.status.Msg = status.Msg
 			return err
 		}
@@ -274,13 +291,16 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 			response, err := client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
 			log.Tracef("response: %v", response)
 			log.Debugf("result:%+v", s)
-			status = code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
+
 			if err != nil {
-				return *status, err
+				log.Errorf("error getting record id by proxy %s", proxy)
+				continue
+			} else {
+				break
 			}
 		}
 	}
-
+	status = code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
 	if s.Status.Code != "1" {
 		return *status, fmt.Errorf("status code is not 1, code:%s", s.Status.Code)
 	}
@@ -289,7 +309,7 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 		return *status, fmt.Errorf("no record found")
 	}
 
-	id, err := strconv.Atoi(s.Records[0].Id) // todo what if s.Records is empty
+	id, err := strconv.Atoi(s.Records[0].Id)
 
 	if err != nil {
 		return *status, err

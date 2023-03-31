@@ -3,6 +3,18 @@
  *     @file: Request.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/31 下午3:16
+ *     @last modified: 2023/3/31 下午1:41
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: Request.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/30 下午11:29
  *     @last modified: 2023/3/30 下午3:37
  *
@@ -29,6 +41,10 @@ const api = "dnspod.tencentcloudapi.com"
 type Request struct {
 	Parameters DnspodYun
 	status     DDNS.Status
+}
+
+func (r *Request) Target() string {
+	return r.Parameters.SubDomain + "." + r.Parameters.Domain
 }
 
 func newStatus() *DDNS.Status {

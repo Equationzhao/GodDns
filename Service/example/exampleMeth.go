@@ -3,6 +3,18 @@
  *     @file: exampleMeth.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/31 下午3:16
+ *     @last modified: 2023/3/31 下午1:42
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: exampleMeth.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/30 下午11:29
  *     @last modified: 2023/3/30 下午3:37
  *
@@ -37,6 +49,10 @@ func (p *Parameter) ToRequest() (DDNS.Request, error) {
 		Parameter: *p,
 	}
 	return &request, nil
+}
+
+func (r *Request) Target() string {
+	return r.SubDomain + "." + r.Domain
 }
 
 func (p *Parameter) SetValue(s string) {

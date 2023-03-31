@@ -3,6 +3,18 @@
  *     @file: DDNS.go
  *     @author: Equationzhao
  *     @email: equationzhao@foxmail.com
+ *     @time: 2023/3/31 下午3:16
+ *     @last modified: 2023/3/31 下午2:56
+ *
+ *
+ *
+ */
+
+/*
+ *
+ *     @file: DDNS.go
+ *     @author: Equationzhao
+ *     @email: equationzhao@foxmail.com
  *     @time: 2023/3/30 下午11:29
  *     @last modified: 2023/3/30 下午11:20
  *
@@ -397,7 +409,7 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 	toSet := ParameterToSet.(DDNS.ServiceParameters)
 	Type := toSet.GetType() // Type is "4" or "6" or ""
 
-	ip := Util.Pair[string, string]{} // First is device, second is ip
+	ip := Util.MakePair[string, string]() // First is device, second is ip
 
 	var err error
 	devices := GlobalDevice.GetDevices()
@@ -473,11 +485,12 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 
 func ExecuteRequests(requests ...DDNS.Request) {
 	log.Info("start executing requests")
-	done := make(chan bool, 2*len(requests))
+	done1 := make(chan bool, len(requests))
+	done2 := make(chan bool, len(requests))
 
 	deal := func(err error, request DDNS.Request) {
 		if err != nil || request.Status().Status != DDNS.Success {
-			log.Errorf("error executing request, %s", err)
+			log.Errorf("error executing request, %v", err)
 			Retry(request, retryAttempt)
 		}
 
@@ -487,17 +500,18 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			status = "Success"
 			log.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
 		} else if res.Status == DDNS.Failed {
-			log.Errorf("error executing request, %s", err.Error())
+			log.Errorf("error executing request, %v", err)
 			status = "Failed"
 			log.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
 			if retryAttempt != 0 {
-				log.Errorf("all retry failed, skip %s", request.GetName())
+				log.Errorf("all retry failed, skip %s:%s", request.GetName(), request.Target())
 			}
 		} else if res.Status == DDNS.NotExecute {
 			log.Fatal("request not executed")
 		}
 
-		done <- true
+		done1 <- true
+		done2 <- true
 	}
 
 	if proxyEnable {
@@ -517,8 +531,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			if parallelExecuting {
 				continue
 			} else {
-				<-done
-				done <- true
+				<-done1
 			}
 		}
 
@@ -529,7 +542,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 				log.Tracef("request: %s", request.GetName())
 				err := DDNS.ExecuteRequest(request)
 				if err != nil || request.Status().Status != DDNS.Success {
-					log.Errorf("error executing request, %s", err.Error())
+					log.Errorf("error executing request, %v", err)
 					Retry(request, retryAttempt)
 				}
 				deal(err, request)
@@ -537,8 +550,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			if parallelExecuting {
 				continue
 			} else {
-				<-done
-				done <- true
+				<-done1
 			}
 
 		}
@@ -546,16 +558,17 @@ func ExecuteRequests(requests ...DDNS.Request) {
 	count := 0
 	for count < len(requests) {
 		select {
-		case <-done:
+		case <-done2:
 			count++
 		}
 	}
-	log.Info("all requests executed")
+	log.Info("all requests finished")
 }
 
 func Retry(request DDNS.Request, i uint8) {
 	for j := uint8(1); j <= i; j++ {
-		log.Warnf("retrying %s %d time", request.GetName(), j)
+
+		log.Warnf("retrying %s:%s %d time", request.GetName(), request.Target(), j)
 
 		if proxyEnable {
 			throughProxy, ok := request.(DDNS.ThroughProxy)
