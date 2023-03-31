@@ -1,20 +1,6 @@
-/*
- *
- *     @file: Util.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/29 下午11:17
- *
- *
- *
- */
-
-
 package Util
 
 import (
-	"bytes"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -78,7 +64,7 @@ func Convert2KeyValue(format string, i any) string {
 		return i.(ConvertableKeyValue).Convert2KeyValue(format)
 	}
 
-	var content string
+	var content strings.Builder
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
 	if v.Kind() == reflect.Pointer {
@@ -110,13 +96,17 @@ func Convert2KeyValue(format string, i any) string {
 		}
 
 		if comments != "" {
-			content += fmt.Sprintf(" # %s", comments) + "\n" + fmt.Sprintf(format, name, v.Field(i).Interface()) + "\n"
+			content.WriteString(fmt.Sprintf(" # %s", comments))
+			content.WriteByte('\n')
+			content.WriteString(fmt.Sprintf(format, name, v.Field(i).Interface()))
+			content.WriteByte('\n')
 		} else {
-			content += fmt.Sprintf(format, name, v.Field(i).Interface()) + "\n"
+			content.WriteString(fmt.Sprintf(format, name, v.Field(i).Interface()))
+			content.WriteByte('\n')
 		}
 
 	}
-	return content
+	return content.String()
 }
 
 // ConvertableXWWWFormUrlencoded Convert any type to x-www-form-urlencoded format
@@ -179,14 +169,15 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 		return ""
 	}
 
-	if _, ok := i.(ConvertableXWWWFormUrlencoded); ok {
-		return i.(ConvertableXWWWFormUrlencoded).Convert2XWWWFormUrlencoded()
+	if c, ok := i.(ConvertableXWWWFormUrlencoded); ok {
+		return c.Convert2XWWWFormUrlencoded()
 	}
 
 	v := reflect.ValueOf(i)
-
-	var content bytes.Buffer
 	t := reflect.TypeOf(i)
+
+	var content strings.Builder
+
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 		t = t.Elem()
@@ -194,12 +185,17 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 
 	switch t.Kind() {
 	case reflect.String:
-
 		if isTheLast {
-			return "=" + url.QueryEscape(v.String())
+			// the last element
+			content.WriteByte('=')
+			content.WriteString(url.QueryEscape(v.String()))
+			return content.String()
 		} else {
 			// not the last element
-			return "=" + url.QueryEscape(v.String()) + "&"
+			content.WriteByte('=')
+			content.WriteString(url.QueryEscape(v.String()))
+			content.WriteByte('&')
+			return content.String()
 		}
 	case reflect.Map:
 		iter := v.MapRange()
@@ -230,9 +226,16 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128, bool, []byte, []rune, uintptr, nil:
 					if l > 0 {
 						// not the last element
-						content.WriteString(fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v))))
+						// content.WriteString(fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v))))
+						content.WriteString(k.String())
+						content.WriteByte('=')
+						content.WriteString(url.QueryEscape(fmt.Sprint(v)))
+						content.WriteByte('&')
 					} else {
-						content.WriteString(fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v))))
+						// content.WriteString(fmt.Sprintf("%s=%s", k, url.QueryEscape(fmt.Sprint(v))))
+						content.WriteString(k.String())
+						content.WriteByte('=')
+						content.WriteString(url.QueryEscape(fmt.Sprint(v)))
 					}
 				default:
 					if l > 0 {
@@ -281,11 +284,12 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 			pieces = append(pieces, fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface()))))
 		}
 		content.WriteString(strings.Join(pieces, "&"))
+
 		if !isTheLast && content.Len() != 0 {
 			content.WriteByte('&')
 		}
 
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		// if the slice is empty, return ""
 		l := v.Len()
 		if l == 0 {
@@ -296,7 +300,6 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 			content.WriteString(convert2xwwwformurlencoded(v.Index(i).Interface(), false))
 		}
 		content.WriteString(convert2xwwwformurlencoded(v.Index(l-1).Interface(), isTheLast))
-
 	}
 
 	return content.String()

@@ -1,15 +1,3 @@
-/*
- *
- *     @file: Util_test.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/29 下午11:20
- *
- *
- *
- */
-
 package Tests_test
 
 import (
@@ -19,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -435,52 +424,30 @@ func TestTemp(t *testing.T) {
 }
 
 func BenchmarkConvert2XWWWFORMURLENCODED(b *testing.B) {
-	type A struct {
-		Device     string `xwwwformurlencoded:"device" json:"device"`
-		IP         string `json:"ip"`
-		Type       string
-		unexported string
-	}
-
-	type B struct {
-		X string
-		x string
-	}
-	a := A{Device: "device", IP: "ip", Type: "type"}
-	ab := struct {
-		A
-		B
-	}{A: a, B: B{X: "123", x: "321"}}
 
 	for i := 0; i < b.N; i++ {
-		s := Util.Convert2XWWWFormUrlencoded(ab)
+		s := Util.Convert2XWWWFormUrlencoded(p)
 		_ = s
 	}
 }
 
 func BenchmarkURLEncode(b *testing.B) {
-	type A struct {
-		Device     string `xwwwformurlencoded:"device" json:"device"`
-		IP         string `json:"ip"`
-		Type       string
-		unexported string
-	}
 
-	type B struct {
-		X string
-		x string
-	}
-	a := A{Device: "device", IP: "ip", Type: "type"}
-	ab := struct {
-		A
-		B
-	}{A: a, B: B{X: "123", x: "321"}}
 	for i := 0; i < b.N; i++ {
 		v := url.Values{}
-		v.Add("device", ab.Device)
-		v.Add("ip", ab.IP)
-		v.Add("type", ab.Type)
-		v.Add("X", ab.X)
+		v.Add("login_token", p.LoginToken)
+		v.Add("format", p.Format)
+		v.Add("lang", p.Lang)
+		v.Add("error_on_empty", p.ErrorOnEmpty)
+		v.Add("domain", p.Domain)
+		v.Add("sub_domain", p.Subdomain)
+		id := strconv.Itoa(int(p.RecordId))
+		v.Add("record_id", id)
+		v.Add("record_line", p.RecordLine)
+		v.Add("value", p.Value)
+		ttl := strconv.Itoa(int(p.TTL))
+		v.Add("ttl", ttl)
+		v.Add("type", p.Type)
 		s := v.Encode()
 		_ = s
 	}

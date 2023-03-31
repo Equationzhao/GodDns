@@ -1,16 +1,3 @@
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/28 下午10:07
- *
- *
- *
- */
-
-
 // Package DDNS
 // basic interfaces and tools for DDNS service
 package DDNS
@@ -35,6 +22,7 @@ type Request interface {
 	GetName() string    // return like "dnspod"
 	MakeRequest() error // MakeRequest will return error if exist
 	Status() Status
+	Target() string
 }
 
 // ThroughProxy is an interface for service that can make request through a proxy

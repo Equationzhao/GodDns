@@ -1,16 +1,3 @@
-/*
- *
- *     @file: main.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/29 下午10:15
- *
- *
- *
- */
-
-
 package main
 
 import (
@@ -34,14 +21,15 @@ const MAXRETRY = 255
 const defaultRetryAttempt = 3
 
 var (
-	Time            uint64 = 0
-	ApiName                = ""
-	retryAttempt    uint8  = 0
-	config                 = ""
-	defaultLocation        = ""
-	logLevel               = "Info"
-	proxy                  = ""
-	proxyEnable            = false
+	Time              uint64 = 0
+	ApiName                  = ""
+	retryAttempt      uint8  = defaultRetryAttempt
+	config                   = ""
+	defaultLocation          = ""
+	logLevel                 = "Info"
+	proxy                    = ""
+	proxyEnable              = false
+	parallelExecuting        = false
 	// cleanUp         func()
 )
 
@@ -82,7 +70,7 @@ var (
 
 	logFlag = &cli.StringFlag{
 		Name:        "log",
-		Aliases:     []string{"l", "L"},
+		Aliases:     []string{"l", "L", "Log"},
 		Value:       "Info",
 		Usage:       "`level`: Trace/Debug/Info/Warn/Error",
 		Destination: &logLevel,
@@ -90,7 +78,7 @@ var (
 
 	configFlag = &cli.StringFlag{
 		Name:        "config",
-		Aliases:     []string{"c", "C"},
+		Aliases:     []string{"c", "C", "Config"},
 		Value:       "",
 		DefaultText: defaultLocation,
 		Usage:       "set configuration `file`",
@@ -99,7 +87,7 @@ var (
 
 	proxyFlag = &cli.StringFlag{
 		Name:        "proxy",
-		Aliases:     []string{"p", "P"},
+		Aliases:     []string{"p", "P", "Proxy"},
 		Value:       "",
 		Usage:       "set proxy `url`",
 		Destination: &proxy,
@@ -120,6 +108,14 @@ var (
 			}
 			return errors.New("empty proxy url")
 		},
+	}
+
+	parallelFlag = &cli.BoolFlag{
+		Name:        "parallel",
+		Aliases:     []string{"Parallel"},
+		Value:       false,
+		Usage:       "run ddns parallel",
+		Destination: &parallelExecuting,
 	}
 )
 
@@ -174,7 +170,7 @@ func checkLog(l string) error {
 	case "Error", "error", "ERROR":
 		_, err := log.InitLog("DDNS.log", 0666, l, output)
 		if err != nil {
-			log.Error("failed to init log file: %s", log.String("error", err.Error()))
+			log.Error("failed to init log file ", log.String("error", err.Error()))
 			return err
 		}
 		// cleanUp = clean
@@ -247,10 +243,6 @@ func main() {
 					}
 					parameters = parametersTemp
 
-					if !retryFlag.IsSet() {
-						retryAttempt = defaultRetryAttempt
-					}
-
 					return RunDDNS(parameters)
 				},
 				Flags: []cli.Flag{
@@ -262,6 +254,7 @@ func main() {
 
 						Destination: &ApiName,
 					},
+					parallelFlag,
 					TimeFlag,
 					retryFlag,
 					silentFlag,
@@ -297,13 +290,10 @@ func main() {
 								return err
 							}
 
-							if !retryFlag.IsSet() {
-								retryAttempt = defaultRetryAttempt
-							}
-
 							return RunAuto(GlobalDevice, parameters)
 						},
 						Flags: []cli.Flag{
+							parallelFlag,
 							TimeFlag,
 							retryFlag,
 							silentFlag,
@@ -317,6 +307,7 @@ func main() {
 								Aliases: []string{"o", "O"},
 								Usage:   "run ddns, override the ip address of interface set in each service Section",
 								Flags: []cli.Flag{
+									parallelFlag,
 									TimeFlag,
 									retryFlag,
 									silentFlag,
@@ -345,10 +336,6 @@ func main() {
 									GlobalDevice, err = GetGlobalDevice(parameters)
 									if err != nil {
 										return err
-									}
-
-									if !retryFlag.IsSet() {
-										retryAttempt = defaultRetryAttempt
 									}
 
 									return RunOverride(GlobalDevice, parameters)

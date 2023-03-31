@@ -1,18 +1,5 @@
-/*
- *
- *     @file: Info.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:28
- *     @last modified: 2023/3/29 下午11:26
- *
- *
- *
- */
-
-
 // Package DDNS
-// basic interfaces and tools for DDNS service
+// software version info
 package DDNS
 
 import (
@@ -37,7 +24,7 @@ const (
 	Author = "Equationzhao"
 )
 
-var gits = []string{"github.com", "gitea.equationzhao.space:3000"}
+var gits = []string{"github.com"}
 
 // Version contains the major, minor, and patch versions.
 type Version struct {

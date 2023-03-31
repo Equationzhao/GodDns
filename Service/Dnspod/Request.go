@@ -1,15 +1,3 @@
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/29 下午9:11
- *
- *
- *
- */
-
 package Dnspod
 
 import (
@@ -29,8 +17,8 @@ import (
 const (
 	// RecordListUrl url of getting Record list
 	RecordListUrl = "https://dnsapi.cn/Record.List"
-	// DDNSUrl  url of DDNS
-	DDNSUrl = "https://dnsapi.cn/Record.Ddns"
+	// DDNSURL  url of DDNS
+	DDNSURL = "https://dnsapi.cn/Record.Ddns"
 )
 
 // usage
@@ -42,6 +30,11 @@ const (
 type Request struct {
 	parameters Parameters
 	status     DDNS.Status
+}
+
+// Target return target domain
+func (r *Request) Target() string {
+	return r.parameters.Subdomain + "." + r.parameters.Domain
 }
 
 // Status return DDNS.Status which contains execution result etc.
@@ -81,7 +74,6 @@ func (r *Request) Init(parameters Parameters) error {
 }
 
 func (r *Request) RequestThroughProxy() error {
-	client := resty.New()
 
 	done := make(chan bool)
 	status := newStatus()
@@ -96,7 +88,8 @@ func (r *Request) RequestThroughProxy() error {
 	select {
 	case <-done:
 		if err != nil || status.Status != DDNS.Success {
-			r.status.Status = DDNS.Success
+			r.status.Name = serviceName
+			r.status.Status = DDNS.Failed
 			r.status.Msg = status.Msg
 			return err
 		}
@@ -111,21 +104,31 @@ func (r *Request) RequestThroughProxy() error {
 
 	iter := Net.GlobalProxys.GetProxyIter()
 	var response *resty.Response
-	for iter.NotLast() {
-		p := iter.Next()
-		client.SetProxy(p)
-		response, err = client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
-		log.Tracef("response: %v", response)
-		log.Debugf("result:%+v", s)
-		if err != nil {
-			log.Errorf("request error through proxy %s: %v", p, err)
-			continue
-		} else {
-			break
-		}
-	}
 
-	// r.status = *code2msg(s.Status.Code).AppendMsg(" ", s.Status.Message, "at ", s.Status.CreatedAt, " ", r.parameters.getTotalDomain(), " ", s.Record.Value)
+	for iter.NotLast() {
+		proxy := iter.Next()
+		pool, err := DDNS.MainPoolMap.GetOrCreate(proxy, func() (resty.Client, error) {
+			r := resty.New()
+			r.SetProxy(proxy)
+			return *r, nil
+		})
+		if err != nil {
+			log.Error("error get client pool from map", log.String("error", err.Error()))
+		} else {
+			client := pool.Get()
+			response, err = client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
+			log.Tracef("response: %v", response)
+			log.Debugf("result:%+v", s)
+			client.Release()
+			if err != nil {
+				log.Errorf("request error through proxy %s: %v", proxy, err)
+				continue
+			} else {
+				break
+			}
+		}
+
+	}
 	r.status = *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 
 	if err != nil {
@@ -150,7 +153,8 @@ func (r *Request) MakeRequest() error {
 	select {
 	case <-done:
 		if err != nil || status.Status != DDNS.Success {
-			r.status.Status = DDNS.Success
+			r.status.Name = serviceName
+			r.status.Status = DDNS.Failed
 			r.status.Msg = status.Msg
 			return err
 		}
@@ -163,7 +167,7 @@ func (r *Request) MakeRequest() error {
 
 	log.Debugf("content:%s", content)
 	client := resty.New()
-	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
+	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
 
@@ -249,20 +253,32 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 	status := newStatus()
 
 	// make request to "https://dnsapi.cn/Record.List" to get record id
-	client := resty.New()
 	iter := Net.GlobalProxys.GetProxyIter()
 	for iter.NotLast() {
-		p := iter.Next()
-		client.SetProxy(p)
-		response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
-		log.Tracef("response: %v", response)
-		log.Debugf("result:%+v", s)
-		status = code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
+		proxy := iter.Next()
+		pool, err := DDNS.MainPoolMap.GetOrCreate(proxy, func() (resty.Client, error) {
+			r := resty.New()
+			r.SetProxy(proxy)
+			return *r, nil
+		})
 		if err != nil {
-			return *status, err
+			log.Error("error get client pool from map", log.String("error", err.Error()))
+		} else {
+			client := pool.Get()
+			response, err := client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
+			log.Tracef("response: %v", response)
+			log.Debugf("result:%+v", s)
+
+			if err == nil {
+				break
+			}
+
+			log.Errorf("error getting record id by proxy %s", proxy)
+			continue
+
 		}
 	}
-
+	status = code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
 	if s.Status.Code != "1" {
 		return *status, fmt.Errorf("status code is not 1, code:%s", s.Status.Code)
 	}
@@ -271,7 +287,7 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 		return *status, fmt.Errorf("no record found")
 	}
 
-	id, err := strconv.Atoi(s.Records[0].Id) // todo what if s.Records is empty
+	id, err := strconv.Atoi(s.Records[0].Id)
 
 	if err != nil {
 		return *status, err

@@ -1,16 +1,3 @@
-/*
- *
- *     @file: exampleMeth.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:59
- *     @last modified: 2023/3/28 下午3:59
- *
- *
- *
- */
-
-
 // Package example is a template for creating new service
 package example
 
@@ -38,6 +25,10 @@ func (p *Parameter) ToRequest() (DDNS.Request, error) {
 		Parameter: *p,
 	}
 	return &request, nil
+}
+
+func (r *Request) Target() string {
+	return r.SubDomain + "." + r.Domain
 }
 
 func (p *Parameter) SetValue(s string) {

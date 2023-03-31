@@ -25,6 +25,11 @@
 a DDNS tool written in go
 
 ## Intro
+
+generate a default config file
+```bash
+GodDns generate
+```
 use ip set in config
 ```bash
 GodDns run
@@ -36,6 +41,16 @@ GodDns run auto
 get ip address from api
 ```bash
 GodDns run --api ipify/identMe/others
+```
+through proxy
+```bash
+GodDns run --proxy http://127.0.0.1:10809
+GodDns run --proxy enable
+GodDns run --proxy disable
+```
+parallel executing
+```bash
+GodDns run --parallel
 ```
 
 
@@ -61,6 +76,7 @@ OPTIONS:
    --silent, -s, -S                       no message output (default: false)
    --log value, -l value, -L value        Trace/Debug/Info/Warn/Error (default: "info")
    --config file, -c file, -C file        set configuration file
+   --proxy url, -p url, -P url            set proxy url
    --help, -h, -H                         show help (default: false)
 
 COMMANDS:
@@ -89,12 +105,10 @@ GLOBAL OPTIONS:
 ## TODO
 
 * [ ] add more service
-* [x] add support to write comment to configuration
 * [ ] to fix RunPerTime at main.go:664
 * [ ] todo refactor do not use hard code "Devices" at DDNS.Config:211
 * [ ] new feature support multi-device for each service(like Device does)
 * [ ] ? refactor Dnspod.Config.ReadConfig:62
-* [ ] deal ips at Net.Ip:375
 
 ## ISSUES
 

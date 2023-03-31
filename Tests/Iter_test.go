@@ -1,16 +1,3 @@
-/*
- *
- *     @file: Iter_test.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/29 下午11:24
- *     @last modified: 2023/3/29 下午6:16
- *
- *
- *
- */
-
-
 package Tests
 
 import (

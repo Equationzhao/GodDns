@@ -1,16 +1,3 @@
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/28 下午3:59
- *     @last modified: 2023/3/28 下午3:59
- *
- *
- *
- */
-
-
 package DnspodYunApi
 
 import (
@@ -30,6 +17,11 @@ const api = "dnspod.tencentcloudapi.com"
 type Request struct {
 	Parameters DnspodYun
 	status     DDNS.Status
+}
+
+// Target return target domain
+func (r *Request) Target() string {
+	return r.Parameters.SubDomain + "." + r.Parameters.Domain
 }
 
 func newStatus() *DDNS.Status {
