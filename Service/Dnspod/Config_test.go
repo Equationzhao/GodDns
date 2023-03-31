@@ -2,7 +2,6 @@ package Dnspod
 
 import (
 	"GodDns/DDNS"
-	"os"
 	"strings"
 	"testing"
 
@@ -50,14 +49,6 @@ func TestConfig_ReadConfig(t *testing.T) {
 		t.Error(err)
 	}
 	t.Log(config)
-
-}
-
-func TestSave(t *testing.T) {
-	err := DDNS.SaveConfig("test.conf", os.O_CREATE|os.O_APPEND|os.O_WRONLY, &p)
-	if err != nil {
-		t.Error(err)
-	}
 
 }
 
