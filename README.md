@@ -109,9 +109,6 @@ GLOBAL OPTIONS:
 * [ ] new feature support multi-device for each service(like Device does)
 * [ ] ? refactor Dnspod.Config.ReadConfig:62
 
-## ISSUES
-
-1. may be bug when deleting element in loop, see main.go:408
 
 ## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com) Structure
 

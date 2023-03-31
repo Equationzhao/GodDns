@@ -248,17 +248,18 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 		}
 	}
 
-	for i, parameter := range parameters {
+	var newParameters = make([]DDNS.Parameters, 0, len(parameters))
+	for _, parameter := range parameters {
 		if _, ok := parameter.(DDNS.DeviceOverridable); ok {
 			// if parameter implements DeviceOverridable interface, set the ip address
-			err := set(parameter)
-			if err != nil {
+			if err := set(parameter); err != nil {
 				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
-				parameters = append(parameters[:i], parameters[i+1:]...) // ? may be bugs
-
+				continue // skip
 			}
+			newParameters = append(newParameters, parameter)
 		}
 	}
+	parameters = newParameters
 
 	requests := GenerateRequests(parameters)
 
@@ -302,7 +303,8 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 	log.Info("-O is set, override the ip address")
 	var errCount uint16
 
-	for i, parameter := range parameters {
+	i := 0 // to avoid out of bound: add if not error, if remove from the slice, do not add
+	for _, parameter := range parameters {
 		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
@@ -320,12 +322,13 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 						parameters = append(parameters[:i], parameters[i+1:]...)
 						continue
 					}
-
+					i++
 					log.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(DDNS.DeviceOverridable).GetIP())
 					continue // skip
 				}
 
 				if !d.IsTypeSet() {
+					i++
 					errCount++
 					parameters = append(parameters[:i], parameters[i+1:]...)
 					log.Errorf("error setting ip address: unknown type, skip service:%s", parameter.GetName())
@@ -341,7 +344,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 					log.Errorf("error getting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
 					continue
 				}
-				//
+				i++
 
 				log.Infof("override %s with %s", parameter.GetName(), ips[0])
 				parameter.(DDNS.DeviceOverridable).SetValue(ips[0])
@@ -353,9 +356,12 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 					parameters = append(parameters[:i], parameters[i+1:]...)
 					continue
 				}
+				i++
 				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.ServiceParameters).GetIP())
 			}
 
+		} else {
+			i++
 		}
 	} // loop ends
 
@@ -661,18 +667,6 @@ func SaveFromParameters(parameters ...DDNS.Parameters) error {
 	}
 	log.Infof("save config to %s", DDNS.GetConfigureLocation())
 	return nil
-}
-
-// Requests2Parameters convert successful requests to parameters
-// ![deprecated]
-func Requests2Parameters(requests []DDNS.Request) []DDNS.Parameters {
-	Parameters2Save := make([]DDNS.Parameters, 0, len(requests))
-	for _, request := range requests {
-		if request.Status().Status == DDNS.Success {
-			Parameters2Save = append(Parameters2Save, request.ToParameters())
-		}
-	}
-	return Parameters2Save
 }
 
 func CheckVersionUpgrade(msg chan<- string) {
