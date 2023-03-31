@@ -40,13 +40,13 @@ GodDns run auto
 ```
 get ip address from api
 ```bash
-GodDns run --api ipify/identMe/others
+GodDns run --api=ipify/identMe/others
 ```
 through proxy
 ```bash
-GodDns run --proxy http://127.0.0.1:10809
-GodDns run --proxy enable
-GodDns run --proxy disable
+GodDns run --proxy=http://127.0.0.1:10809
+GodDns run --proxy=enable
+GodDns run --proxy=disable
 ```
 parallel executing
 ```bash
@@ -106,13 +106,9 @@ GLOBAL OPTIONS:
 
 * [ ] add more service
 * [ ] to fix RunPerTime at main.go:664
-* [ ] todo refactor do not use hard code "Devices" at DDNS.Config:211
 * [ ] new feature support multi-device for each service(like Device does)
 * [ ] ? refactor Dnspod.Config.ReadConfig:62
 
-## ISSUES
-
-1. may be bug when deleting element in loop, see main.go:408
 
 ## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com) Structure
 

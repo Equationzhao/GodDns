@@ -99,18 +99,20 @@ func (p *ProgramConfig) Setup() {
 
 }
 
-// generateConfigFile generate config file
+var DefaultConfig = ProgramConfig{
+	proxy: nil,
+	ags:   nil,
+}
+
+// GenerateConfigFile generate config file
 // if config file already exists, return error
-func (p *ProgramConfig) generateConfigFile() error {
+func (p *ProgramConfig) GenerateConfigFile() error {
 	location, err := GetProgramConfigLocation()
 	if err != nil {
 		return err
 	}
 
-	stat, _ := os.Stat(location)
-
-	// will not overwrite the config
-	if stat != nil {
+	if IsConfigExist(location) {
 		return errors.New("config file already exists")
 	}
 
@@ -119,6 +121,14 @@ func (p *ProgramConfig) generateConfigFile() error {
 	// }
 
 	return ConfigureWriter(location, os.O_CREATE|os.O_APPEND, p.ConfigStr())
+}
+
+func IsConfigExist(file string) bool {
+	_, err := os.Stat(file)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 // LoadProgramConfig load program config from file
