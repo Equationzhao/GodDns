@@ -303,7 +303,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 	log.Info("-O is set, override the ip address")
 	var errCount uint16
 
-	i := 0 // to avoid out of bound: add if not error, if remove from the slice, do not add
+	// i := 0 // to avoid out of bound: add if not error, if remove from the slice, do not add
 	for _, parameter := range parameters {
 		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
@@ -317,20 +317,18 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				if !d.IsDeviceSet() {
 					err := set(GlobalDevice, parameter)
 					if err != nil {
-						log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
+						log.Errorf("error setting ip address: %s, skip overriding service:%s", err.Error(), parameter.GetName())
 						errCount++
-						parameters = append(parameters[:i], parameters[i+1:]...)
+
 						continue
 					}
-					i++
 					log.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(DDNS.DeviceOverridable).GetIP())
 					continue // skip
 				}
 
 				if !d.IsTypeSet() {
-					i++
 					errCount++
-					parameters = append(parameters[:i], parameters[i+1:]...)
+
 					log.Errorf("error setting ip address: unknown type, skip service:%s", parameter.GetName())
 					continue
 				}
@@ -340,11 +338,10 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				ips, err := Net.GetIpByType(tempDeviceName, uint8(TypeInt))
 				if err != nil {
 					errCount++
-					parameters = append(parameters[:i], parameters[i+1:]...)
+
 					log.Errorf("error getting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
 					continue
 				}
-				i++
 
 				log.Infof("override %s with %s", parameter.GetName(), ips[0])
 				parameter.(DDNS.DeviceOverridable).SetValue(ips[0])
@@ -353,15 +350,12 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				err := set(GlobalDevice, parameter)
 				if err != nil {
 					errCount++
-					parameters = append(parameters[:i], parameters[i+1:]...)
+
 					continue
 				}
-				i++
 				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.ServiceParameters).GetIP())
 			}
 
-		} else {
-			i++
 		}
 	} // loop ends
 
