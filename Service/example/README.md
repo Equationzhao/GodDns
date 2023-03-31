@@ -1,6 +1,5 @@
-# Service
-
-This package contains all the DDNS services.
+# example
+example code
 
 ```go
 // in the init(), add configFactoryInstance to FactoryList
