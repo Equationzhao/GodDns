@@ -16,5 +16,5 @@ type Device struct {
 
 ```ini
 [Device]
-device=eth0 or device=eth0,eth1 or device=[eth0,eth1] or device=[eth0 eth1] # space and comma areboth ok
+device=eth0 or device=eth0,eth1 or device=[eth0,eth1] or device=[eth0 eth1] # space and comma are both ok
 ```
