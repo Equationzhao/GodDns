@@ -238,38 +238,6 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 	return ps, nil, ReadConfigErrs
 }
 
-// IsConfigureExist check if config file exist
-func IsConfigureExist() bool {
-	_, err := os.Stat(GetConfigureLocation())
-
-	return !errors.Is(err, os.ErrNotExist)
-}
-
-// SaveConfig save parameters to file with flag
-func SaveConfig(FileName string, flag int, parameters ...Parameters) error {
-	var err error
-	n := make(map[string]uint)
-	ConfigStrings := make([]ConfigStr, 0, len(parameters))
-	for _, parameter := range parameters {
-		var no uint
-		if parameter.GetName() == "Device" { // todo refactor do not use hard code "Device"
-			no = 0
-		} else {
-			n[parameter.GetName()]++
-			no = n[parameter.GetName()]
-		}
-		ConStr, err_ := parameter.SaveConfig(no)
-
-		if err_ != nil {
-			err = errors.Join(err, err_)
-		} else {
-			ConfigStrings = append(ConfigStrings, ConStr)
-		}
-	}
-	err = errors.Join(err, ConfigureWriter(FileName, flag, ConfigStrings...))
-	return err
-}
-
 // ConfigHead generate config head, the section name
 // [Name#No]
 // if No == 0, [Name]

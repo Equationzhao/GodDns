@@ -192,18 +192,30 @@ func main() {
 	if err != nil {
 		_, _ = fmt.Fprintln(output, "error loading program config: ", err, " use default config")
 	} else {
-		programConfig, fatal, other := DDNS.LoadProgramConfig(location)
-		if fatal != nil {
-			// skip setup
-			_, _ = fmt.Fprintln(output, fatal)
-
-		} else {
-			if other != nil {
-				_, _ = fmt.Fprintln(output, other)
+		if DDNS.IsConfigExist(location) {
+			programConfig, fatal, other := DDNS.LoadProgramConfig(location)
+			if fatal != nil {
+				// default setup
+				_, _ = fmt.Fprintln(output, "error loading program config: ", err, " use default config")
+				_, _ = fmt.Fprintln(output, fatal)
+				DDNS.DefaultConfig.Setup()
+			} else {
+				if other != nil {
+					_, _ = fmt.Fprintln(output, other)
+				}
+				programConfig.Setup()
 			}
-			programConfig.Setup()
+		} else {
+			// create Config here
+			_, _ = fmt.Fprintln(output, "no config at ", location, " try to generate a default config")
+			err := DDNS.DefaultConfig.GenerateConfigFile()
+			DDNS.DefaultConfig.Setup()
+			if err != nil {
+				_, _ = fmt.Fprintln(output, "failed to generate default program config at ", location)
+			} else {
+				_, _ = fmt.Fprintln(output, "generate default program config at ", location)
+			}
 		}
-
 	}
 
 	app := &cli.App{

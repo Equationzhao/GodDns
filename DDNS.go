@@ -445,7 +445,7 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 }
 
 func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
-	if DDNS.IsConfigureExist() {
+	if DDNS.IsConfigExist(DDNS.GetConfigureLocation()) {
 		log.Warnf("configure at %s already exist", DDNS.GetConfigureLocation())
 		return errors.New("configure already exist")
 	}
@@ -627,9 +627,34 @@ func RunPerTime(Time uint64, requests []DDNS.Request) {
 
 }
 
+// SaveConfig save parameters to file with flag
+func SaveConfig(FileName string, flag int, parameters ...DDNS.Parameters) error {
+	var err error
+	n := make(map[string]uint)
+	ConfigStrings := make([]DDNS.ConfigStr, 0, len(parameters))
+	for _, parameter := range parameters {
+		var no uint
+		if parameter.GetName() == Device.ServiceName {
+			no = 0
+		} else {
+			n[parameter.GetName()]++
+			no = n[parameter.GetName()]
+		}
+		ConStr, err_ := parameter.SaveConfig(no)
+
+		if err_ != nil {
+			err = errors.Join(err, err_)
+		} else {
+			ConfigStrings = append(ConfigStrings, ConStr)
+		}
+	}
+	err = errors.Join(err, DDNS.ConfigureWriter(FileName, flag, ConfigStrings...))
+	return err
+}
+
 func SaveFromParameters(parameters ...DDNS.Parameters) error {
 	// todo Merge Parameters that differ only by subdomain
-	err := DDNS.SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
+	err := SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
 		log.Errorf("error saving config: %s", err.Error())
 		return fmt.Errorf("error saving config: %w", err)

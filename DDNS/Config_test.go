@@ -118,6 +118,8 @@ func TestConfigStr(t *testing.T) {
 	}
 
 	t.Log(p.ConfigStr().Content)
+
+	t.Log(DefaultConfig.ConfigStr().Content)
 }
 
 func TestLoadProxy(t *testing.T) {
@@ -133,15 +135,13 @@ func TestLoadProxy(t *testing.T) {
 }
 
 func TestProgramConfigGenerateConfiguration(t *testing.T) {
-	u1, _ := url.Parse("https://myip.ipip.net/s")
-	u2, _ := url.Parse("https://speed.neu6.edu.cn/getIP.php")
-	u3, _ := url.Parse("https://ip.3322.net")
+	u1, _ := url.Parse("socks5://localhost:10808")
+	u2, _ := url.Parse("https://localhost:10809")
 
 	p := ProgramConfig{
 		proxy: []*url.URL{
 			u1,
 			u2,
-			u3,
 		},
 		ags: []ApiGenerator{
 			{
@@ -163,7 +163,7 @@ func TestProgramConfigGenerateConfiguration(t *testing.T) {
 		},
 	}
 
-	err := p.generateConfigFile()
+	err := p.GenerateConfigFile()
 	if err != nil {
 		t.Error(err)
 	}
