@@ -1,17 +1,5 @@
-/*
- *
- *     @file: Info.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午3:37
- *
- *
- *
- */
-
 // Package DDNS
-// basic interfaces and tools for DDNS service
+// software version info
 package DDNS
 
 import (

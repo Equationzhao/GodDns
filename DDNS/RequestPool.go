@@ -1,15 +1,5 @@
-/*
- *
- *     @file: RequestPool.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午10:51
- *
- *
- *
- */
-
+// Package DDNS
+// Define ClientPool and  ClientPoolMap to manage ClientPool
 package DDNS
 
 import (
@@ -22,14 +12,14 @@ import (
 
 var MainPoolMap ClientPoolMap
 
-const DEFAULTPOOLSIZE = 16
-const MAXPOOLSIZE = 10240
-const DEFAULTMAPSIZE = 16
-const MAXMAPSIZE = 10240
-const DEFAULTPOOLADDSTEP = 4
+const _DEFAULTPOOLSIZE = 16
+const _MAXPOOLSIZE = 10240
+const _DEFAULTMAPSIZE = 16
+const _MAXMAPSIZE = 10240
+const _DEFAULTPOOLADDSTEP = 4
 
 func init() {
-	mpm := make(nonLockCpm, DEFAULTMAPSIZE)
+	mpm := make(nonLockCpm, _DEFAULTMAPSIZE)
 	MainPoolMap = ClientPoolMap(Util.EmplacePair(&mpm, &sync.RWMutex{}))
 }
 
@@ -38,6 +28,8 @@ const (
 	idle    = true
 )
 
+// Client is a pair of resty.Client and atomic.Bool
+// after using the resty.Client, call Release() to set the Bool to idle
 type Client Util.Pair[resty.Client, atomic.Bool]
 
 func NewClient(prototype resty.Client) Client {
@@ -46,18 +38,24 @@ func NewClient(prototype resty.Client) Client {
 	return Client(Util.EmplacePair(&prototype, b))
 }
 
+// Engage set the Bool to engaged
+// which means the Client is in use
 func (c *Client) Engage() {
 	c.Second.Store(engaged)
 }
 
+// Valid check if the Client is valid
 func (c *Client) Valid() bool {
 	return c.First != nil && c.Second != nil
 }
 
+// Invalid check if the Client is invalid
 func (c *Client) Invalid() bool {
 	return c.First != nil || c.Second != nil
 }
 
+// Release set the Bool to idle
+// which means the Client is not in use
 func (c *Client) Release() {
 	c.Second.Store(idle)
 }
@@ -68,6 +66,7 @@ type ClientPool struct {
 	m         sync.RWMutex
 }
 
+// Available count the available Client
 func (c *ClientPool) Available() int {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -120,19 +119,20 @@ func (c *ClientPool) Len() int {
 	return len(c.pool)
 }
 
+// Add num=_DEFAULTPOOLADDSTEP Clients to pool
 func (c *ClientPool) Add() {
 	c.m.Lock()
 	defer c.m.Unlock()
-	for i := 0; i < DEFAULTPOOLADDSTEP; i++ {
+	for i := 0; i < _DEFAULTPOOLADDSTEP; i++ {
 		c.add()
 	}
 }
 
 // add a Client to pool and return the Client ptr
-// if reach the max size already, return nil
+// if reach the max size already, return Client contains nil and false
 func (c *ClientPool) add() (Client, bool) {
 	var res Client
-	ok := len(c.pool) < MAXPOOLSIZE-1
+	ok := len(c.pool) < _MAXPOOLSIZE-1
 	if ok {
 		res = NewClient(c.Prototype)
 		c.pool = append(c.pool, res)
@@ -172,26 +172,28 @@ func (c *ClientPool) Get() Client {
 		return r
 	} else {
 		var res Client
-		for i := 0; i < DEFAULTPOOLADDSTEP; i++ {
+
+		for i := 0; i < _DEFAULTPOOLADDSTEP; i++ {
 			r, ok := c.add()
-			if ok {
-				if !res.Valid() {
-					res = r
-				}
-				continue
-			} else {
+			if !ok {
 				break
+			}
+			if !res.Valid() {
+				res = r
 			}
 		}
 		return res
 	}
 }
 
+// NewClientPool create a new ClientPool with prototype
 func NewClientPool(prototype resty.Client) *ClientPool {
-	return &ClientPool{Prototype: prototype, pool: make([]Client, 0, DEFAULTPOOLSIZE)}
+	return &ClientPool{Prototype: prototype, pool: make([]Client, 0, _DEFAULTPOOLSIZE)}
 }
 
 type nonLockCpm map[string]*ClientPool
+
+// ClientPoolMap is a map of ClientPool with a RWMutex
 type ClientPoolMap Util.Pair[nonLockCpm, sync.RWMutex]
 
 func (m *ClientPoolMap) ForEach(f func(string, *ClientPool) bool) {
@@ -210,16 +212,23 @@ func (m *ClientPoolMap) Size() int {
 	return len(*m.First)
 }
 
+// Get a ClientPool from map
+// if not exist, return nil and false
 func (m *ClientPoolMap) Get(name string) (pool *ClientPool, ok bool) {
 	m.Second.RLock()
 	defer m.Second.RUnlock()
 	pool, ok = (*m.First)[name]
-	return
+	if ok {
+		return pool, true
+	}
+	return nil, false
 }
 
+// GetOrCreate Get a ClientPool from map, if not exist, create one using generatePrototype func
+// generatePrototype should return a new Client and nil if success, or nil and error if failed
 func (m *ClientPoolMap) GetOrCreate(name string, generatePrototype func() (resty.Client, error)) (*ClientPool, error) {
-	m.Second.RLock()
-	defer m.Second.RUnlock()
+	m.Second.Lock()
+	defer m.Second.Unlock()
 	pool, ok := (*m.First)[name]
 	if ok {
 		return pool, nil
@@ -229,22 +238,25 @@ func (m *ClientPoolMap) GetOrCreate(name string, generatePrototype func() (resty
 			return nil, err
 		}
 		pool = NewClientPool(c)
-		pool.Init(DEFAULTPOOLSIZE)
+		pool.Init(_DEFAULTPOOLSIZE)
 		(*m.First)[name] = pool
 		return pool, nil
 	}
 }
 
+// Add a ClientPool to map
+// if the map is full, return false
 func (m *ClientPoolMap) Add(name string, pool *ClientPool) (ok bool) {
 	m.Second.Lock()
 	defer m.Second.Unlock()
-	if len(*m.First) >= MAXMAPSIZE {
+	if len(*m.First) >= _MAXMAPSIZE {
 		return false
 	}
 	(*m.First)[name] = pool
 	return true
 }
 
+// Remove a ClientPool from map
 func (m *ClientPoolMap) Remove(name string) *ClientPoolMap {
 	m.Second.Lock()
 	defer m.Second.Unlock()

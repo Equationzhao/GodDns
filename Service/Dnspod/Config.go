@@ -1,15 +1,3 @@
-/*
- *
- *     @file: Config.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午3:37
- *
- *
- *
- */
-
 package Dnspod
 
 import (

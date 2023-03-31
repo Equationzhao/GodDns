@@ -1,15 +1,3 @@
-/*
- *
- *     @file: Util_test.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午3:38
- *
- *
- *
- */
-
 package Tests_test
 
 import (

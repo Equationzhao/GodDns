@@ -1,27 +1,3 @@
-/*
- *
- *     @file: DDNS.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/31 下午3:16
- *     @last modified: 2023/3/31 下午2:56
- *
- *
- *
- */
-
-/*
- *
- *     @file: DDNS.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午11:20
- *
- *
- *
- */
-
 package main
 
 import (
@@ -528,9 +504,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 				}
 				deal(err, request)
 			}()
-			if parallelExecuting {
-				continue
-			} else {
+			if !parallelExecuting {
 				<-done1
 			}
 		}
@@ -547,9 +521,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 				}
 				deal(err, request)
 			}()
-			if parallelExecuting {
-				continue
-			} else {
+			if !parallelExecuting {
 				<-done1
 			}
 

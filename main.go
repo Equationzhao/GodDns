@@ -1,27 +1,3 @@
-/*
- *
- *     @file: main.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/31 下午3:16
- *     @last modified: 2023/3/31 下午2:03
- *
- *
- *
- */
-
-/*
- *
- *     @file: main.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午4:32
- *
- *
- *
- */
-
 package main
 
 import (

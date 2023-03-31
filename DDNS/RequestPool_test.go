@@ -1,15 +1,3 @@
-/*
- *
- *     @file: RequestPool_test.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/31 下午3:16
- *     @last modified: 2023/3/30 下午10:55
- *
- *
- *
- */
-
 package DDNS
 
 import (

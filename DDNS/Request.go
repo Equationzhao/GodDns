@@ -1,27 +1,3 @@
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/31 下午3:16
- *     @last modified: 2023/3/31 下午1:40
- *
- *
- *
- */
-
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午3:37
- *
- *
- *
- */
-
 // Package DDNS
 // basic interfaces and tools for DDNS service
 package DDNS

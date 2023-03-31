@@ -1,27 +1,3 @@
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/31 下午3:16
- *     @last modified: 2023/3/31 下午1:57
- *
- *
- *
- */
-
-/*
- *
- *     @file: Request.go
- *     @author: Equationzhao
- *     @email: equationzhao@foxmail.com
- *     @time: 2023/3/30 下午11:29
- *     @last modified: 2023/3/30 下午11:23
- *
- *
- *
- */
-
 package Dnspod
 
 import (
@@ -41,8 +17,8 @@ import (
 const (
 	// RecordListUrl url of getting Record list
 	RecordListUrl = "https://dnsapi.cn/Record.List"
-	// DDNSUrl  url of DDNS
-	DDNSUrl = "https://dnsapi.cn/Record.Ddns"
+	// DDNSURL  url of DDNS
+	DDNSURL = "https://dnsapi.cn/Record.Ddns"
 )
 
 // usage
@@ -56,6 +32,7 @@ type Request struct {
 	status     DDNS.Status
 }
 
+// Target return target domain
 func (r *Request) Target() string {
 	return r.parameters.Subdomain + "." + r.parameters.Domain
 }
@@ -139,7 +116,7 @@ func (r *Request) RequestThroughProxy() error {
 			log.Error("error get client pool from map", log.String("error", err.Error()))
 		} else {
 			client := pool.Get()
-			response, err = client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
+			response, err = client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
 			log.Tracef("response: %v", response)
 			log.Debugf("result:%+v", s)
 			client.Release()
@@ -190,7 +167,7 @@ func (r *Request) MakeRequest() error {
 
 	log.Debugf("content:%s", content)
 	client := resty.New()
-	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSUrl)
+	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
 
@@ -292,12 +269,13 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 			log.Tracef("response: %v", response)
 			log.Debugf("result:%+v", s)
 
-			if err != nil {
-				log.Errorf("error getting record id by proxy %s", proxy)
-				continue
-			} else {
+			if err == nil {
 				break
 			}
+
+			log.Errorf("error getting record id by proxy %s", proxy)
+			continue
+
 		}
 	}
 	status = code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
