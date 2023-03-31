@@ -90,7 +90,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 3,
+	patch: 4,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub
@@ -217,7 +217,7 @@ func CheckUpdate() (hasUpgrades bool, v Version, url string, err error) {
 	latest, downloadURL, err := GetLatestVersionInfo()
 	if err != nil {
 		if errors.Is(err, NoCompatibleVersionError) {
-			return true, latest, "", err
+			return NowVersion.Compare(latest) < 0, latest, "", err
 		} else {
 			return false, v, "", err
 		}
