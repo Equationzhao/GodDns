@@ -38,7 +38,7 @@ var (
 	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
 	defaultLocation          = ""
-	logLevel                 = "Info"
+	logLevel                 = ""
 	proxy                    = ""
 	proxyEnable              = false
 	parallelExecuting        = false
@@ -50,8 +50,8 @@ var (
 // Flags
 var (
 	silentFlag = &cli.BoolFlag{
-		Name:    "silent",
-		Aliases: []string{"s", "S"},
+		Name:    "no-output",
+		Aliases: []string{"s", "S", "silent"},
 		Value:   false,
 		Usage:   "no message output",
 		Action: func(context *cli.Context, silent bool) error {
@@ -61,6 +61,7 @@ var (
 			}
 			return nil
 		},
+		Category: "OUTPUT",
 	}
 
 	timeFlag = &cli.Uint64Flag{
@@ -76,13 +77,15 @@ var (
 			}
 			return nil
 		},
+		Category: "TIME",
 	}
 
 	timeLimitationFlag = &cli.Uint64Flag{
 		Name:        "time-limitation",
 		Aliases:     []string{"tl", "TL"},
 		Value:       0,
-		Usage:       "run ddns per time(seconds) up to n `times`",
+		DefaultText: "infinity",
+		Usage:       "run ddns per time(seconds) up to `n` times",
 		Destination: &TimeLimitation,
 		Action: func(context *cli.Context, u uint64) error {
 			t := context.Uint64("time")
@@ -92,6 +95,7 @@ var (
 			}
 			return nil
 		},
+		Category: "TIME",
 	}
 
 	retryFlag = &cli.UintFlag{
@@ -105,6 +109,7 @@ var (
 			retryAttempt = uint8(u)
 			return nil
 		},
+		Category: "RUN",
 	}
 
 	logFlag = &cli.StringFlag{
@@ -120,6 +125,7 @@ var (
 		}(),
 		Usage:       "`level`: Trace/Debug/Info/Warn/Error",
 		Destination: &logLevel,
+		Category:    "OUTPUT",
 	}
 
 	configFlag = &cli.StringFlag{
@@ -129,6 +135,7 @@ var (
 		DefaultText: defaultLocation,
 		Usage:       "set configuration `file`",
 		Destination: &config,
+		Category:    "CONFIG",
 	}
 
 	proxyFlag = &cli.StringFlag{
@@ -157,6 +164,7 @@ var (
 			}
 			return errors.New("empty proxy url")
 		},
+		Category: "RUN",
 	}
 
 	parallelFlag = &cli.BoolFlag{
@@ -165,6 +173,7 @@ var (
 		Value:       false,
 		Usage:       "run ddns parallel",
 		Destination: &parallelExecuting,
+		Category:    "RUN",
 	}
 )
 
@@ -179,11 +188,22 @@ func init() {
 		msg := make(chan string, 2)
 		go CheckVersionUpgrade(msg)
 		fmt.Println(DDNS.NowVersionInfo())
+
+		fmt.Println(func() string {
+			{
+				info, err := os.Stat(os.Args[0])
+				if err != nil {
+					return ""
+				}
+				t := info.ModTime().Local()
+				return fmt.Sprintf("compiled at %s", t.Format(time.RFC3339))
+			}
+		}())
 		for i := 0; i < 2; i++ {
 			select {
 			case s := <-msg:
 				if s != "" {
-					fmt.Println(s)
+					_, _ = log.DebugPP.Println(s)
 				}
 			case <-time.After(2 * time.Second):
 				return
@@ -339,6 +359,8 @@ func main() {
 						Usage: "get ip address from provided `ApiName`, eg: ipify/identMe",
 
 						Destination: &ApiName,
+
+						Category: "RUN",
 					},
 					parallelFlag,
 					timeFlag,
@@ -473,15 +495,13 @@ func main() {
 				},
 			},
 		},
-		After: func(context *cli.Context) error {
-			// if cleanUp != nil {
-			// 	// bug cleanUp()
-			// }
-			return nil
-		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
+		if returnCode == 0 {
+			returnCode = 1
+		}
+
 		if isLogSet {
 			log.Errorf("fatal: %s", err)
 		} else {
