@@ -55,12 +55,6 @@ func (r *Request) ToParameters() DDNS.Parameters {
 	return &r.parameters
 }
 
-// Run implements Cron.Job
-func (r *Request) Run() {
-	err := r.MakeRequest()
-	log.Infof("status:%+v,err:%s", r.Status(), err)
-}
-
 // GetName return "dnspod"
 func (r *Request) GetName() string {
 	return serviceName
