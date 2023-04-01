@@ -26,25 +26,7 @@ func RunDDNS(parameters []DDNS.Parameters) error {
 	}
 
 	// -A is not set
-	requests := GenerateRequests(parameters)
-
-	if Time != 0 {
-		RunPerTime(Time, requests)
-	}
-
-	d, err := DDNS.Find(parameters, Device.ServiceName)
-	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
-	if err == nil {
-		Parameters2Save = append(Parameters2Save, d)
-	}
-
-	ExecuteRequests(requests...)
-	for _, request := range requests {
-		// update info from request.parameters
-		Parameters2Save = append(Parameters2Save, request.ToParameters())
-	}
-
-	return SaveFromParameters(Parameters2Save...)
+	return GenerateExecuteSave(parameters)
 }
 
 func ReadConfig(configs []DDNS.ConfigFactory) ([]DDNS.Parameters, error) {
@@ -168,22 +150,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 		}
 	}
 
-	requests := GenerateRequests(parameters)
-
-	if Time != 0 {
-		RunPerTime(Time, requests)
-	}
-	d, err := DDNS.Find(parameters, Device.ServiceName)
-	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
-	if err == nil {
-		Parameters2Save = append(Parameters2Save, d)
-	}
-	ExecuteRequests(requests...)
-	for _, request := range requests {
-		// update info from request.parameters
-		Parameters2Save = append(Parameters2Save, request.ToParameters())
-	}
-	return SaveFromParameters(Parameters2Save...)
+	return GenerateExecuteSave(parameters)
 }
 
 func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
@@ -248,35 +215,22 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 		}
 	}
 
-	var newParameters = make([]DDNS.Parameters, 0, len(parameters))
+	newParameters := make([]DDNS.Parameters, 0, len(parameters))
 	for _, parameter := range parameters {
-		if _, ok := parameter.(DDNS.DeviceOverridable); ok {
+		if deviceOverridable, ok := parameter.(DDNS.DeviceOverridable); ok {
 			// if parameter implements DeviceOverridable interface, set the ip address
 			if err := set(parameter); err != nil {
-				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
+				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), deviceOverridable.GetName())
 				continue // skip
 			}
+			newParameters = append(newParameters, deviceOverridable)
+		} else {
 			newParameters = append(newParameters, parameter)
 		}
 	}
 	parameters = newParameters
 
-	requests := GenerateRequests(parameters)
-
-	if Time != 0 {
-		RunPerTime(Time, requests)
-	}
-	d, err := DDNS.Find(parameters, Device.ServiceName)
-	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
-	if err == nil {
-		Parameters2Save = append(Parameters2Save, d)
-	}
-	ExecuteRequests(requests...)
-	for _, request := range requests {
-		// update info from request.parameters
-		Parameters2Save = append(Parameters2Save, request.ToParameters())
-	}
-	return SaveFromParameters(Parameters2Save...)
+	return GenerateExecuteSave(parameters)
 
 }
 
@@ -303,7 +257,6 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 	log.Info("-O is set, override the ip address")
 	var errCount uint16
 
-	// i := 0 // to avoid out of bound: add if not error, if remove from the slice, do not add
 	for _, parameter := range parameters {
 		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
@@ -350,7 +303,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				err := set(GlobalDevice, parameter)
 				if err != nil {
 					errCount++
-
+					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(DDNS.ServiceParameters).GetIP())
 					continue
 				}
 				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.ServiceParameters).GetIP())
@@ -361,22 +314,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 
 	log.Infof("finish overriding ip with %d error(s)", errCount)
 
-	requests := GenerateRequests(parameters)
-
-	if Time != 0 {
-		RunPerTime(Time, requests)
-	}
-	d, err := DDNS.Find(parameters, Device.ServiceName)
-	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
-	if err == nil {
-		Parameters2Save = append(Parameters2Save, d)
-	}
-	ExecuteRequests(requests...)
-	for _, request := range requests {
-		// update info from request.parameters
-		Parameters2Save = append(Parameters2Save, request.ToParameters())
-	}
-	return SaveFromParameters(Parameters2Save...)
+	return GenerateExecuteSave(parameters)
 
 }
 
@@ -442,6 +380,32 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 		return err
 	}
 
+}
+
+func GenerateExecuteSave(parameters []DDNS.Parameters) error {
+	requests := GenerateRequests(parameters)
+
+	d, err := DDNS.Find(parameters, Device.ServiceName)
+	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
+	if err == nil {
+		Parameters2Save = append(Parameters2Save, d)
+	}
+	ExecuteRequests(requests...)
+	for _, request := range requests {
+		// update info from request.parameters
+		Parameters2Save = append(Parameters2Save, request.ToParameters())
+	}
+
+	err = SaveFromParameters(Parameters2Save...)
+
+	if Time != 0 {
+		RunPerTime(Time, requests) // never return
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
@@ -607,16 +571,20 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 }
 
 // RunPerTime run ddns per time
-// todo fix && save config when success
-// Expect: run 1 --time-- run 2 --time-- run 3 ...
-// Actual   : --time-- run 1 --time-- run 2 --time-- run 3 ...
 func RunPerTime(Time uint64, requests []DDNS.Request) {
 
 	log.Infof("run ddns per %d seconds", Time)
 
-	c := cron.New()
+	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Debug(err)
+	}
+
+	logger := log.NewLogger(cornLogfile)
+	logger = logger.WithGroup("cron:")
+	c := cron.New(cron.WithLogger(cron.VerbosePrintfLogger(logger)))
 	for _, request := range requests {
-		_, err := c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.DelayIfStillRunning(cron.DefaultLogger)).Then(request))
+		_, err := c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(request))
 		if err != nil {
 			log.Errorf("error adding job %s: %s", request.GetName(), err.Error())
 		}
@@ -672,9 +640,17 @@ func CheckVersionUpgrade(msg chan<- string) {
 	}()
 	if err != nil {
 		if errors.Is(err, DDNS.NoCompatibleVersionError) {
-			// "no suitable version")
-			msg <- fmt.Sprintf("new version %s is available\n", v.Info())
-			msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s \n", DDNS.RepoURLs())
+			// "no suitable version"
+			if hasUpgrades {
+				msg <- fmt.Sprintf("new version %s is available\n", v.Info())
+				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s \n", DDNS.RepoURLs())
+			} else {
+				// "already the latest version"
+				msg <- ""
+				msg <- ""
+				return
+			}
+
 		}
 		// error checking version upgrade
 		msg <- ""
@@ -686,7 +662,9 @@ func CheckVersionUpgrade(msg chan<- string) {
 		msg <- fmt.Sprintf("new version %s is available\n", v.Info())
 		msg <- fmt.Sprintf("download url: %s", url)
 	} else {
-		// "already the latest version")
+		// "already the latest version"
+		msg <- ""
+		msg <- ""
 		return
 	}
 }

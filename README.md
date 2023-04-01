@@ -105,7 +105,6 @@ GLOBAL OPTIONS:
 ## TODO
 
 * [ ] add more service
-* [ ] to fix RunPerTime at main.go:664
 * [ ] new feature support multi-device for each service(like Device does)
 * [ ] ? refactor Dnspod.Config.ReadConfig:62
 

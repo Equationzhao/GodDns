@@ -217,7 +217,7 @@ func CheckUpdate() (hasUpgrades bool, v Version, url string, err error) {
 	latest, downloadURL, err := GetLatestVersionInfo()
 	if err != nil {
 		if errors.Is(err, NoCompatibleVersionError) {
-			return true, latest, "", err
+			return NowVersion.Compare(latest) < 0, latest, "", err
 		} else {
 			return false, v, "", err
 		}

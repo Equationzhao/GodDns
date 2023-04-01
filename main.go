@@ -123,7 +123,7 @@ func init() {
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:    "version",
 		Aliases: []string{"v", "V"},
-		Usage:   "print the version info",
+		Usage:   "print the version info/upgrade info",
 	}
 
 	cli.VersionPrinter = func(c *cli.Context) {
