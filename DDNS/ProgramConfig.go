@@ -3,6 +3,7 @@
 package DDNS
 
 import (
+	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util"
 	"bytes"
@@ -40,7 +41,7 @@ func getDefaultProgramConfigurationLocation() func() (string, error) {
 	}
 }
 
-type proxys []*url.URL
+type proxys []url.URL
 
 func (p proxys) Convert2KeyValue(format string) string {
 	v := "["
@@ -132,7 +133,7 @@ func IsConfigExist(file string) bool {
 }
 
 // LoadProgramConfig load program config from file
-func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, Other error) {
+func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, Warn error) {
 	cfg, Fatal := ini.Load(file)
 	if Fatal != nil {
 		return &ProgramConfig{}, Fatal, nil
@@ -141,6 +142,25 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 
 	res := &ProgramConfig{}
 
+	// load from env
+	// proxy from env: ALL_PROXY, HTTP_PROXY, HTTPS_PROXY
+	envProxy, err := loadProxy(fmt.Sprintf("[%s %s %s]", os.Getenv("ALL_PROXY"), os.Getenv("HTTP_PROXY"), os.Getenv("HTTPS_PROXY")))
+	res.proxy = envProxy
+	if err != nil {
+		Warn = errors.Join(Warn, err)
+	}
+
+	// no color from env: NO_COLOR
+	NoColor := os.Getenv("NO_COLOR")
+	if NoColor != "" {
+		// disable coloring
+		log.InfoPP.SetColoringEnabled(false)
+		log.WarnPP.SetColoringEnabled(false)
+		log.DebugPP.SetColoringEnabled(false)
+		log.ErrPP.SetColoringEnabled(false)
+	}
+
+	// load from file
 	for _, section := range cfg.Sections() {
 		switch section.Name() {
 		case "DEFAULT", "default", "Default":
@@ -153,44 +173,45 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 					proxy, err := loadProxy(k.Value())
 					res.proxy = proxy
 					if err != nil {
-						Other = errors.Join(Other, err)
+						Warn = errors.Join(Warn, err)
 					}
 				default:
-					Other = errors.Join(Other, NewUnknownKeyErr(k.Name(), section.Name()))
+					Warn = errors.Join(Warn, NewUnknownKeyErr(k.Name(), section.Name()))
 				}
 			}
 		default:
 			// load apis
 			if strings.HasPrefix(section.Name(), "Api.") || strings.HasPrefix(section.Name(), "api.") || strings.HasPrefix(section.Name(), "API.") {
 				if len(section.Name()) == 4 {
-					Other = errors.Join(Other, fmt.Errorf("invalid api name: `%s`", section.Name()))
+					Warn = errors.Join(Warn, fmt.Errorf("invalid api name: `%s`", section.Name()))
 					continue
 				}
 				api, err := LoadApiFromConfig(section)
 				if err != nil {
-					Other = errors.Join(Other, err)
+					Warn = errors.Join(Warn, err)
 				} else {
 					res.ags = append(res.ags, api)
 				}
 			} else {
-				Other = errors.Join(Other, fmt.Errorf("unknown section: %s", section.Name()))
+				Warn = errors.Join(Warn, fmt.Errorf("unknown section: %s", section.Name()))
 			}
 
 		}
 	}
 
-	return res, nil, Other
+	return res, nil, Warn
 }
 
 // LoadApiFromConfig load api from config
 // load string like "[http://localhost:10809 https://example.com:12345 socks5://127.0.0.1:10808 ]"
-func loadProxy(proxy string) (res []*url.URL, err error) {
+func loadProxy(proxy string) (res []url.URL, err error) {
 	split := strings.Fields(strings.ReplaceAll(strings.Trim(proxy, "[]"), ",", " "))
+	res = make([]url.URL, 0, len(split))
 	// remove empty string
 	for _, s := range split {
 		if s != "" {
 			if u, bad := url.Parse(s); bad == nil {
-				res = append(res, u)
+				res = append(res, *u)
 			} else {
 				err = errors.Join(err, fmt.Errorf("invalid proxy: %s", s))
 			}
@@ -198,6 +219,10 @@ func loadProxy(proxy string) (res []*url.URL, err error) {
 			continue
 		}
 	}
+
+	// remove duplicate
+	Util.RemoveDuplicate[url.URL](&res)
+
 	return res, err
 }
 

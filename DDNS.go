@@ -475,12 +475,10 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			request := request
 			wg.Add(1)
 			go func() {
+				var err error
 				log.Tracef("request: %s", request.GetName())
-				err := DDNS.ExecuteRequest(request)
-				if err != nil || request.Status().Status != DDNS.Success {
-					log.Errorf("error executing request, %v", err)
-					Retry(request, retryAttempt)
-				}
+				err = DDNS.ExecuteRequest(request)
+
 				deal(err, request)
 			}()
 			if !parallelExecuting {
