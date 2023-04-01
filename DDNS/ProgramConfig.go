@@ -121,7 +121,7 @@ func (p *ProgramConfig) GenerateConfigFile() error {
 	// 	panic("not a path error")
 	// }
 
-	return ConfigureWriter(location, os.O_CREATE|os.O_APPEND, p.ConfigStr())
+	return ConfigureWriter(location, os.O_CREATE|os.O_WRONLY, p.ConfigStr())
 }
 
 func IsConfigExist(file string) bool {
