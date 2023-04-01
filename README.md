@@ -111,6 +111,12 @@ GLOBAL OPTIONS:
 * [ ] ? refactor Dnspod.Config.ReadConfig:62
 
 
-## [![Repography logo](https://images.repography.com/logo.svg)](https://repography.com) Structure
+## Recent activity [![Time period](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_badge.svg)](https://repography.com)
+[![Timeline graph](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_timeline.svg)](https://github.com/Equationzhao/GodDns/commits)
 
-[![Structure](https://images.repography.com/35290882/Equationzhao/GoDDNS/structure/Xvtsc2MXHRRRBOO98rPykluHsbjgiXVtv151YJjZe-g/eV5f7dIVTtGDBh-UK4EnRsrCo0rHTumqrtoK3Ih6Ap0\_table.svg)](https://github.com/Equationzhao/GoDDNS)
+
+
+## Structure
+
+[![Structure](https://images.repography.com/35290882/Equationzhao/GodDns/structure/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/0cmrSCrg47Iro9mgH9R3TCPihAkB0y8Fm-LsJZBNscs_table.svg)](https://github.com/Equationzhao/GodDns)
+
