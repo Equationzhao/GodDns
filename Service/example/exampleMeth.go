@@ -3,7 +3,6 @@ package example
 
 import (
 	"GodDns/DDNS"
-	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util"
 	"gopkg.in/ini.v1"
@@ -46,13 +45,6 @@ func (p *Parameter) GetType() string {
 
 func (p *Parameter) IsTypeSet() bool {
 	return p.Type == "AAAA" || p.Type == "A"
-}
-
-// Run will call MakeRequest and log the result
-// implements Cron.Job
-func (r *Request) Run() {
-	err := r.MakeRequest()
-	log.Infof("status:%+v,err:%s", r.Status(), err)
 }
 
 func (r *Request) ToParameters() DDNS.Parameters {

@@ -36,11 +36,6 @@ func (r *Request) Init(yun DnspodYun) {
 	r.Parameters = yun
 }
 
-func (r *Request) Run() {
-	err := r.MakeRequest()
-	log.Infof("status:%+v,err:%s", r.Status(), err)
-}
-
 func (r *Request) ToParameters() DDNS.Parameters {
 	return &r.Parameters
 }
