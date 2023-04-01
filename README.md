@@ -72,6 +72,7 @@ COMMANDS:
    			override, o, O  run ddns, override the ip address of interface set in each service Section
 OPTIONS:
    --time seconds                         run ddns per time(seconds) (default: 0)
+   --parallel, --Parallel                 run ddns parallel (default: false)
    --retry times                          retry times (default: 3)
    --silent, -s, -S                       no message output (default: false)
    --log value, -l value, -L value        Trace/Debug/Info/Warn/Error (default: "info")
