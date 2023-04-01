@@ -19,9 +19,18 @@ var output = os.Stdout
 
 const MAXRETRY = 255
 const defaultRetryAttempt = 3
+const MINTIMEGAP = 5
+
+const (
+	run             = "run"
+	runAuto         = "run-auto"
+	runApi          = "run-api"
+	runAutoOverride = "run-auto-override"
+)
 
 var (
 	Time              uint64 = 0
+	TimeLimitation    uint64 = 0 // 0 means no limitation
 	ApiName                  = ""
 	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
@@ -31,6 +40,7 @@ var (
 	proxyEnable              = false
 	parallelExecuting        = false
 	// cleanUp         func()
+	runMode = ""
 )
 
 var (
@@ -48,11 +58,33 @@ var (
 		},
 	}
 
-	TimeFlag = &cli.Uint64Flag{
+	timeFlag = &cli.Uint64Flag{
 		Name:        "time",
+		Aliases:     []string{"t", "T"},
 		Value:       0,
 		Usage:       "run ddns per time(`seconds`)",
 		Destination: &Time,
+		Action: func(context *cli.Context, u uint64) error {
+			if u < MINTIMEGAP {
+				return errors.New("time gap is too short")
+			}
+			return nil
+		},
+	}
+
+	timeLimitationFlag = &cli.Uint64Flag{
+		Name:        "time-limitation",
+		Aliases:     []string{"tl", "TL"},
+		Value:       0,
+		Usage:       "run ddns per time(seconds) up to n `times`",
+		Destination: &TimeLimitation,
+		Action: func(context *cli.Context, u uint64) error {
+			t := context.Uint64("time")
+			if t == 0 {
+				return errors.New("time limitation must be used with time flag")
+			}
+			return nil
+		},
 	}
 
 	retryFlag = &cli.UintFlag{
@@ -180,7 +212,6 @@ func checkLog(l string) error {
 	}
 }
 
-// todo return non-zero value when error occurs
 // todo return config setting command `GodDns config -service=cloudflare`
 func main() {
 
@@ -255,6 +286,17 @@ func main() {
 					}
 					parameters = parametersTemp
 
+					if ApiName == "" {
+						runMode = run
+					} else {
+						runMode = runApi
+					}
+
+					if Time != 0 {
+						_ = RunDDNS(parameters)
+						RunPerTime(Time, nil, parameters)
+					}
+
 					return RunDDNS(parameters)
 				},
 				Flags: []cli.Flag{
@@ -267,7 +309,8 @@ func main() {
 						Destination: &ApiName,
 					},
 					parallelFlag,
-					TimeFlag,
+					timeFlag,
+					timeLimitationFlag,
 					retryFlag,
 					silentFlag,
 					logFlag,
@@ -302,11 +345,19 @@ func main() {
 								return err
 							}
 
+							runMode = runAuto
+
+							if Time != 0 {
+								_ = RunAuto(GlobalDevice, parameters)
+								RunPerTime(Time, &GlobalDevice, parameters)
+							}
+
 							return RunAuto(GlobalDevice, parameters)
 						},
 						Flags: []cli.Flag{
 							parallelFlag,
-							TimeFlag,
+							timeFlag,
+							timeLimitationFlag,
 							retryFlag,
 							silentFlag,
 							logFlag,
@@ -320,7 +371,8 @@ func main() {
 								Usage:   "run ddns, override the ip address of interface set in each service Section",
 								Flags: []cli.Flag{
 									parallelFlag,
-									TimeFlag,
+									timeFlag,
+									timeLimitationFlag,
 									retryFlag,
 									silentFlag,
 									logFlag,
@@ -348,6 +400,13 @@ func main() {
 									GlobalDevice, err = GetGlobalDevice(parameters)
 									if err != nil {
 										return err
+									}
+
+									runMode = runAutoOverride
+
+									if Time != 0 {
+										_ = RunOverride(GlobalDevice, parameters)
+										RunPerTime(Time, &GlobalDevice, parameters)
 									}
 
 									return RunOverride(GlobalDevice, parameters)

@@ -3,10 +3,7 @@
 package DDNS
 
 import (
-	"errors"
 	"fmt"
-
-	"github.com/robfig/cron/v3"
 )
 
 const (
@@ -17,7 +14,6 @@ const (
 )
 
 type Request interface {
-	cron.Job
 	ToParameters() Parameters
 	GetName() string    // return like "dnspod"
 	MakeRequest() error // MakeRequest will return error if exist
@@ -55,17 +51,4 @@ func (s *Status) AppendMsgF(format string, msg ...any) *Status {
 
 func ExecuteRequest(request Request) error {
 	return request.MakeRequest()
-}
-
-func ExecuteRequestList(request ...Request) ([]Status, error) {
-	var content []Status
-	var err error
-	for _, r := range request {
-		errTemp := r.MakeRequest()
-		content = append(content, r.Status())
-		if errTemp != nil {
-			err = errors.Join(err, errTemp)
-		}
-	}
-	return content, err
 }

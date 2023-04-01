@@ -11,6 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -398,10 +399,6 @@ func GenerateExecuteSave(parameters []DDNS.Parameters) error {
 
 	err = SaveFromParameters(Parameters2Save...)
 
-	if Time != 0 {
-		RunPerTime(Time, requests) // never return
-	}
-
 	if err != nil {
 		return err
 	}
@@ -425,10 +422,10 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 
 func ExecuteRequests(requests ...DDNS.Request) {
 	log.Info("start executing requests")
-	done1 := make(chan bool, len(requests))
-	done2 := make(chan bool, len(requests))
+	var wg sync.WaitGroup
 
 	deal := func(err error, request DDNS.Request) {
+		defer wg.Done()
 		if err != nil || request.Status().Status != DDNS.Success {
 			log.Errorf("error executing request, %v", err)
 			Retry(request, retryAttempt)
@@ -450,13 +447,12 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			log.Fatal("request not executed")
 		}
 
-		done1 <- true
-		done2 <- true
 	}
 
 	if proxyEnable {
 		for _, request := range requests {
 			request := request
+			wg.Add(1)
 			go func() {
 				var err error
 				log.Tracef("request: %s", request.GetName())
@@ -469,13 +465,15 @@ func ExecuteRequests(requests ...DDNS.Request) {
 				deal(err, request)
 			}()
 			if !parallelExecuting {
-				<-done1
+				wg.Wait()
 			}
 		}
+		wg.Wait()
 
 	} else {
 		for _, request := range requests {
 			request := request
+			wg.Add(1)
 			go func() {
 				log.Tracef("request: %s", request.GetName())
 				err := DDNS.ExecuteRequest(request)
@@ -486,18 +484,12 @@ func ExecuteRequests(requests ...DDNS.Request) {
 				deal(err, request)
 			}()
 			if !parallelExecuting {
-				<-done1
+				wg.Wait()
 			}
+		}
+		wg.Wait()
+	}
 
-		}
-	}
-	count := 0
-	for count < len(requests) {
-		select {
-		case <-done2:
-			count++
-		}
-	}
 	log.Info("all requests finished")
 }
 
@@ -571,7 +563,7 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 }
 
 // RunPerTime run ddns per time
-func RunPerTime(Time uint64, requests []DDNS.Request) {
+func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Parameters) {
 
 	log.Infof("run ddns per %d seconds", Time)
 
@@ -583,11 +575,9 @@ func RunPerTime(Time uint64, requests []DDNS.Request) {
 	logger := log.NewLogger(cornLogfile)
 	logger = logger.WithGroup("cron:")
 	c := cron.New(cron.WithLogger(cron.VerbosePrintfLogger(logger)))
-	for _, request := range requests {
-		_, err := c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(request))
-		if err != nil {
-			log.Errorf("error adding job %s: %s", request.GetName(), err.Error())
-		}
+	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(NewServiceCronJob(GlobalDevice, parameters...)))
+	if err != nil {
+		log.Errorf("error adding job : %s", err.Error())
 	}
 
 	c.Start()
@@ -666,5 +656,51 @@ func CheckVersionUpgrade(msg chan<- string) {
 		msg <- ""
 		msg <- ""
 		return
+	}
+}
+
+type ServiceCronJob struct {
+	ps           []DDNS.Parameters
+	GlobalDevice *Device.Device
+}
+
+func NewServiceCronJob(g *Device.Device, ps ...DDNS.Parameters) *ServiceCronJob {
+	return &ServiceCronJob{ps: ps, GlobalDevice: g}
+}
+
+func (r *ServiceCronJob) Run() {
+	switch runMode {
+	case run:
+		err := RunDDNS(r.ps)
+		if err != nil {
+			log.Error("error running ddns: ", log.String("error", err.Error()))
+		}
+	case runApi:
+		err := RunGetFromApi(r.ps)
+		if err != nil {
+			log.Error("error running api: ", log.String("error", err.Error()))
+		}
+	case runAuto:
+		if r.GlobalDevice == nil {
+			log.Error("error running auto: ", log.String("error", "no global device"))
+			panic("no global device")
+		}
+
+		err := RunAuto(*r.GlobalDevice, r.ps)
+		if err != nil {
+			log.Error("error running auto: ", log.String("error", err.Error()))
+		}
+	case runAutoOverride:
+		if r.GlobalDevice == nil {
+			log.Error("error running auto: ", log.String("error", "no global device"))
+			panic("no global device")
+		}
+
+		err := RunOverride(*r.GlobalDevice, r.ps)
+		if err != nil {
+			log.Error("error running override: ", log.String("error", err.Error()))
+		}
+	default:
+		panic("unknown run mode")
 	}
 }
