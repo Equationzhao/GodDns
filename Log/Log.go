@@ -2,14 +2,76 @@ package Log
 
 import (
 	"fmt"
+	"github.com/k0kubun/pp/v3"
+	log "golang.org/x/exp/slog"
 	"io"
 	"os"
 	"time"
+)
 
-	log "golang.org/x/exp/slog"
+var (
+	// InfoPP is a pretty printer for info with default color(white)
+	InfoPP = pp.Default
+	// ErrPP is a pretty printer for error with red color
+	ErrPP = pp.New()
+	// WarnPP is a pretty printer for warning with yellow color
+	WarnPP = pp.New()
+	// DebugPP is a pretty printer for debug with green color
+	DebugPP = pp.New()
 )
 
 var output []io.Writer
+var level log.Level
+
+func init() {
+	pp.Default.SetColoringEnabled(false)
+
+	ErrPP.SetColorScheme(pp.ColorScheme{
+		Bool:            pp.Bold | pp.Red,
+		Integer:         pp.Bold | pp.Red,
+		Float:           pp.Bold | pp.Red,
+		String:          pp.Bold | pp.Red,
+		StringQuotation: pp.Bold | pp.Red,
+		EscapedChar:     pp.Bold | pp.Red,
+		FieldName:       pp.Bold | pp.Red,
+		PointerAdress:   pp.Bold | pp.Red,
+		Nil:             pp.Bold | pp.Red,
+		Time:            pp.Bold | pp.Red,
+		StructName:      pp.Bold | pp.Red,
+		ObjectLength:    pp.Bold | pp.Red,
+	})
+
+	WarnPP.SetColorScheme(pp.ColorScheme{
+		Bool:            pp.Bold | pp.Yellow,
+		Integer:         pp.Bold | pp.Yellow,
+		Float:           pp.Bold | pp.Yellow,
+		String:          pp.Bold | pp.Yellow,
+		StringQuotation: pp.Bold | pp.Yellow,
+		EscapedChar:     pp.Bold | pp.Yellow,
+		FieldName:       pp.Bold | pp.Yellow,
+		PointerAdress:   pp.Bold | pp.Yellow,
+		Nil:             pp.Bold | pp.Yellow,
+		Time:            pp.Bold | pp.Yellow,
+		StructName:      pp.Bold | pp.Yellow,
+		ObjectLength:    pp.Bold | pp.Yellow,
+	})
+
+	DebugPP.SetColorScheme(pp.ColorScheme{
+		Bool:            pp.Bold | pp.Green,
+		Integer:         pp.Bold | pp.Green,
+		Float:           pp.Bold | pp.Green,
+		String:          pp.Bold | pp.Green,
+		StringQuotation: pp.Bold | pp.Green,
+		EscapedChar:     pp.Bold | pp.Green,
+		FieldName:       pp.Bold | pp.Green,
+		PointerAdress:   pp.Bold | pp.Green,
+		Nil:             pp.Bold | pp.Green,
+		Time:            pp.Bold | pp.Green,
+		StructName:      pp.Bold | pp.Green,
+		ObjectLength:    pp.Bold | pp.Green,
+	})
+
+}
 
 // TxtTo sets the output destination for a new logger and return it
 // You can set the output destination to any io.Writer,
@@ -18,8 +80,6 @@ func TxtTo(opts log.HandlerOptions, writer ...io.Writer) *log.Logger {
 	mw := io.MultiWriter(writer...)
 	return log.New(opts.NewTextHandler(mw))
 }
-
-var level log.Level
 
 // InitLog
 // initialize the log file with fileMode and log level
@@ -85,10 +145,24 @@ func InitLog(filename string, filePerm os.FileMode, loglevel string, _output ...
 }
 
 func toOutput(l log.Level, v ...any) {
+
 	if l >= level {
 		if output != nil {
 			mw := io.MultiWriter(output...)
-			_, _ = fmt.Fprintln(mw, v...)
+			switch l {
+
+			case log.LevelError:
+				_, _ = ErrPP.Fprintln(mw, v...)
+			case log.LevelInfo:
+				_, _ = InfoPP.Fprintln(mw, v...)
+			case log.LevelWarn:
+				_, _ = WarnPP.Fprintln(mw, v...)
+			case log.LevelDebug:
+				_, _ = DebugPP.Fprintln(mw, v...)
+
+			default:
+				_, _ = pp.Fprintln(mw, v...)
+			}
 		}
 	}
 }

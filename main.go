@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -16,6 +17,7 @@ import (
 )
 
 var output = os.Stdout
+var returnCode = 0
 
 const MAXRETRY = 255
 const defaultRetryAttempt = 3
@@ -28,6 +30,7 @@ const (
 	runAutoOverride = "run-auto-override"
 )
 
+// global variables
 var (
 	Time              uint64 = 0
 	TimeLimitation    uint64 = 0 // 0 means no limitation
@@ -35,18 +38,20 @@ var (
 	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
 	defaultLocation          = ""
-	logLevel                 = "Info"
+	logLevel                 = ""
 	proxy                    = ""
 	proxyEnable              = false
 	parallelExecuting        = false
+	runMode                  = ""
+	isLogSet                 = false
 	// cleanUp         func()
-	runMode = ""
 )
 
+// Flags
 var (
 	silentFlag = &cli.BoolFlag{
-		Name:    "silent",
-		Aliases: []string{"s", "S"},
+		Name:    "no-output",
+		Aliases: []string{"s", "S", "silent"},
 		Value:   false,
 		Usage:   "no message output",
 		Action: func(context *cli.Context, silent bool) error {
@@ -56,6 +61,7 @@ var (
 			}
 			return nil
 		},
+		Category: "OUTPUT",
 	}
 
 	timeFlag = &cli.Uint64Flag{
@@ -66,25 +72,30 @@ var (
 		Destination: &Time,
 		Action: func(context *cli.Context, u uint64) error {
 			if u < MINTIMEGAP {
-				return errors.New("time gap is too short")
+				returnCode = 2
+				return fmt.Errorf("time gap is too short, should be more than %d seconds", MINTIMEGAP)
 			}
 			return nil
 		},
+		Category: "TIME",
 	}
 
 	timeLimitationFlag = &cli.Uint64Flag{
 		Name:        "time-limitation",
 		Aliases:     []string{"tl", "TL"},
 		Value:       0,
-		Usage:       "run ddns per time(seconds) up to n `times`",
+		DefaultText: "infinity",
+		Usage:       "run ddns per time(seconds) up to `n` times",
 		Destination: &TimeLimitation,
 		Action: func(context *cli.Context, u uint64) error {
 			t := context.Uint64("time")
 			if t == 0 {
+				returnCode = 2
 				return errors.New("time limitation must be used with time flag")
 			}
 			return nil
 		},
+		Category: "TIME",
 	}
 
 	retryFlag = &cli.UintFlag{
@@ -98,14 +109,23 @@ var (
 			retryAttempt = uint8(u)
 			return nil
 		},
+		Category: "RUN",
 	}
 
 	logFlag = &cli.StringFlag{
 		Name:        "log",
 		Aliases:     []string{"l", "L", "Log"},
-		Value:       "Info",
+		DefaultText: "Info",
+		Value: func() string {
+			debugEnv := os.Getenv("DEBUG")
+			if debugEnv != "" {
+				return "Debug"
+			}
+			return "Info"
+		}(),
 		Usage:       "`level`: Trace/Debug/Info/Warn/Error",
 		Destination: &logLevel,
+		Category:    "OUTPUT",
 	}
 
 	configFlag = &cli.StringFlag{
@@ -115,6 +135,7 @@ var (
 		DefaultText: defaultLocation,
 		Usage:       "set configuration `file`",
 		Destination: &config,
+		Category:    "CONFIG",
 	}
 
 	proxyFlag = &cli.StringFlag{
@@ -126,6 +147,9 @@ var (
 		Action: func(context *cli.Context, s string) error {
 			if s != "" {
 				if s == "enable" {
+					if Net.GlobalProxys.GetProxyIter().Len() == 0 {
+						return fmt.Errorf("no proxy url found, please set proxy url in config/env/flag first")
+					}
 					proxyEnable = true
 					return nil
 				} else if s == "disable" {
@@ -140,6 +164,7 @@ var (
 			}
 			return errors.New("empty proxy url")
 		},
+		Category: "RUN",
 	}
 
 	parallelFlag = &cli.BoolFlag{
@@ -148,6 +173,7 @@ var (
 		Value:       false,
 		Usage:       "run ddns parallel",
 		Destination: &parallelExecuting,
+		Category:    "RUN",
 	}
 )
 
@@ -162,11 +188,22 @@ func init() {
 		msg := make(chan string, 2)
 		go CheckVersionUpgrade(msg)
 		fmt.Println(DDNS.NowVersionInfo())
+
+		fmt.Println(func() string {
+			{
+				info, err := os.Stat(os.Args[0])
+				if err != nil {
+					return ""
+				}
+				t := info.ModTime().Local()
+				return fmt.Sprintf("compiled at %s", t.Format(time.RFC3339))
+			}
+		}())
 		for i := 0; i < 2; i++ {
 			select {
 			case s := <-msg:
 				if s != "" {
-					fmt.Println(s)
+					_, _ = log.DebugPP.Println(s)
 				}
 			case <-time.After(2 * time.Second):
 				return
@@ -205,6 +242,7 @@ func checkLog(l string) error {
 			log.Error("failed to init log file ", log.String("error", err.Error()))
 			return err
 		}
+		isLogSet = true
 		// cleanUp = clean
 		return nil
 	default:
@@ -215,36 +253,50 @@ func checkLog(l string) error {
 // todo return config setting command `GodDns config -service=cloudflare`
 func main() {
 
+	defer func() {
+		os.Exit(returnCode)
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			_, _ = fmt.Fprintln(output, "panic: ", err)
+			_, _ = fmt.Fprintln(output, string(debug.Stack()))
+			_, _ = fmt.Fprintln(output, "please report this issue to ", DDNS.IssueURL())
+			_, _ = fmt.Fprintln(output, "or send email to ", DDNS.FeedbackEmail())
+			returnCode = 1
+		}
+	}()
+
 	var parameters []DDNS.Parameters
 	var GlobalDevice Device.Device
 	configFactoryList := DDNS.ConfigFactoryList
 
 	location, err := DDNS.GetProgramConfigLocation()
 	if err != nil {
-		_, _ = fmt.Fprintln(output, "error loading program config: ", err, " use default config")
+		_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
 	} else {
 		if DDNS.IsConfigExist(location) {
-			programConfig, fatal, other := DDNS.LoadProgramConfig(location)
+			programConfig, fatal, warn := DDNS.LoadProgramConfig(location)
 			if fatal != nil {
 				// default setup
-				_, _ = fmt.Fprintln(output, "error loading program config: ", err, " use default config")
-				_, _ = fmt.Fprintln(output, fatal)
+				_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
+				_, _ = log.ErrPP.Fprintln(output, fatal)
 				DDNS.DefaultConfig.Setup()
 			} else {
-				if other != nil {
-					_, _ = fmt.Fprintln(output, other)
+				if warn != nil {
+					_, _ = log.WarnPP.Fprintln(output, warn)
 				}
 				programConfig.Setup()
 			}
 		} else {
 			// create Config here
-			_, _ = fmt.Fprintln(output, "no config at ", location, " try to generate a default config")
+			_, _ = log.ErrPP.Fprintln(output, "no config at ", location, " try to generate a default config")
 			err := DDNS.DefaultConfig.GenerateConfigFile()
 			DDNS.DefaultConfig.Setup()
 			if err != nil {
-				_, _ = fmt.Fprintln(output, "failed to generate default program config at ", location)
+				_, _ = log.ErrPP.Fprintln(output, "failed to generate default program config at ", location)
 			} else {
-				_, _ = fmt.Fprintln(output, "generate default program config at ", location)
+				_, _ = log.ErrPP.Fprintln(output, "generate default program config at ", location)
 			}
 		}
 	}
@@ -307,6 +359,8 @@ func main() {
 						Usage: "get ip address from provided `ApiName`, eg: ipify/identMe",
 
 						Destination: &ApiName,
+
+						Category: "RUN",
 					},
 					parallelFlag,
 					timeFlag,
@@ -441,16 +495,19 @@ func main() {
 				},
 			},
 		},
-		After: func(context *cli.Context) error {
-			// if cleanUp != nil {
-			// 	// bug cleanUp()
-			// }
-			return nil
-		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Errorf("fatal: %s", err)
+		if returnCode == 0 {
+			returnCode = 1
+		}
+
+		if isLogSet {
+			log.Errorf("fatal: %s", err)
+		} else {
+			_, _ = log.ErrPP.Fprintf(output, "fatal: %s", err.Error())
+		}
+
 	}
 
 }

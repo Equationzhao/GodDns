@@ -92,10 +92,10 @@ func TestConfigStr(t *testing.T) {
 	u3, _ := url.Parse("https://ip.3322.net")
 
 	p := ProgramConfig{
-		proxy: []*url.URL{
-			u1,
-			u2,
-			u3,
+		proxy: []url.URL{
+			*u1,
+			*u2,
+			*u3,
 		},
 		ags: []ApiGenerator{
 			{
@@ -139,9 +139,9 @@ func TestProgramConfigGenerateConfiguration(t *testing.T) {
 	u2, _ := url.Parse("https://localhost:10809")
 
 	p := ProgramConfig{
-		proxy: []*url.URL{
-			u1,
-			u2,
+		proxy: []url.URL{
+			*u1,
+			*u2,
 		},
 		ags: []ApiGenerator{
 			{

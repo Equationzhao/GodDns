@@ -42,6 +42,11 @@ func RepoURLs() []string {
 	return urls
 }
 
+// IssueURL return issue url
+func IssueURL() string {
+	return fmt.Sprintf("https://github.com/%s/%s/issues", owner, repo)
+}
+
 // String returns a string representation of the version
 // e.g. "1.2.3"
 // The string is generated using the major, minor, and patch versions.
@@ -90,7 +95,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 4,
+	patch: 5,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub

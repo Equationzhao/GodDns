@@ -475,12 +475,10 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			request := request
 			wg.Add(1)
 			go func() {
+				var err error
 				log.Tracef("request: %s", request.GetName())
-				err := DDNS.ExecuteRequest(request)
-				if err != nil || request.Status().Status != DDNS.Success {
-					log.Errorf("error executing request, %v", err)
-					Retry(request, retryAttempt)
-				}
+				err = DDNS.ExecuteRequest(request)
+
 				deal(err, request)
 			}()
 			if !parallelExecuting {
@@ -632,8 +630,8 @@ func CheckVersionUpgrade(msg chan<- string) {
 		if errors.Is(err, DDNS.NoCompatibleVersionError) {
 			// "no suitable version"
 			if hasUpgrades {
-				msg <- fmt.Sprintf("new version %s is available\n", v.Info())
-				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s \n", DDNS.RepoURLs())
+				msg <- fmt.Sprintf("new version %s is available", v.Info())
+				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s ", DDNS.RepoURLs())
 			} else {
 				// "already the latest version"
 				msg <- ""
@@ -649,7 +647,7 @@ func CheckVersionUpgrade(msg chan<- string) {
 	}
 
 	if hasUpgrades {
-		msg <- fmt.Sprintf("new version %s is available\n", v.Info())
+		msg <- fmt.Sprintf("new version %s is available", v.Info())
 		msg <- fmt.Sprintf("download url: %s", url)
 	} else {
 		// "already the latest version"
