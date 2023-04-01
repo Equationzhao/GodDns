@@ -573,13 +573,18 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Para
 	logger := log.NewLogger(cornLogfile)
 	logger = logger.WithGroup("cron:")
 	c := cron.New(cron.WithLogger(cron.VerbosePrintfLogger(logger)))
-	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(NewServiceCronJob(GlobalDevice, parameters...)))
+	newServiceCronJob := NewServiceCronJob(GlobalDevice, parameters...)
+	wg := new(sync.WaitGroup)
+	newServiceCronJob.SetWg(wg)
+	newServiceCronJob.SetTimes(TimeLimitation)
+	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(newServiceCronJob))
 	if err != nil {
 		log.Errorf("error adding job : %s", err.Error())
 	}
 
 	c.Start()
-	select {}
+	wg.Wait()
+	log.Info("all jobs finished", log.Uint64("total execution time", TimeLimitation).String())
 
 }
 
@@ -660,6 +665,19 @@ func CheckVersionUpgrade(msg chan<- string) {
 type ServiceCronJob struct {
 	ps           []DDNS.Parameters
 	GlobalDevice *Device.Device
+	wg           *sync.WaitGroup
+	times        uint64
+}
+
+func (r *ServiceCronJob) SetTimes(times uint64) {
+	r.times = times
+	for i := uint64(0); i < times; i++ {
+		r.wg.Add(1)
+	}
+}
+
+func (r *ServiceCronJob) SetWg(wg *sync.WaitGroup) {
+	r.wg = wg
 }
 
 func NewServiceCronJob(g *Device.Device, ps ...DDNS.Parameters) *ServiceCronJob {
@@ -667,6 +685,12 @@ func NewServiceCronJob(g *Device.Device, ps ...DDNS.Parameters) *ServiceCronJob 
 }
 
 func (r *ServiceCronJob) Run() {
+	if r.times == 0 {
+		return
+	}
+	defer r.wg.Done()
+	defer func() { r.times-- }()
+
 	switch runMode {
 	case run:
 		err := RunDDNS(r.ps)
@@ -701,4 +725,5 @@ func (r *ServiceCronJob) Run() {
 	default:
 		panic("unknown run mode")
 	}
+
 }

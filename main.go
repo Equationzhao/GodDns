@@ -347,6 +347,7 @@ func main() {
 					if Time != 0 {
 						_ = RunDDNS(parameters)
 						RunPerTime(Time, nil, parameters)
+						return nil
 					}
 
 					return RunDDNS(parameters)
@@ -404,6 +405,7 @@ func main() {
 							if Time != 0 {
 								_ = RunAuto(GlobalDevice, parameters)
 								RunPerTime(Time, &GlobalDevice, parameters)
+								return nil
 							}
 
 							return RunAuto(GlobalDevice, parameters)
@@ -461,6 +463,7 @@ func main() {
 									if Time != 0 {
 										_ = RunOverride(GlobalDevice, parameters)
 										RunPerTime(Time, &GlobalDevice, parameters)
+										return nil
 									}
 
 									return RunOverride(GlobalDevice, parameters)

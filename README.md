@@ -70,26 +70,33 @@ COMMANDS:
    [--api ApiName, -i ApiName, -I ApiName  get ip address from provided ApiName, eg: ipify/identMe]
 	   auto, a, A  run ddns, use ip address of interface set in Device Section automatically
    			override, o, O  run ddns, override the ip address of interface set in each service Section
-OPTIONS:
-   --time seconds                         run ddns per time(seconds) (default: 0)
-   --parallel, --Parallel                 run ddns parallel (default: false)
-   --retry times                          retry times (default: 3)
-   --time-limitation times, --tl times, --TL times  run ddns per time(seconds) up to n times (default: 0)
-   --silent, -s, -S                       no message output (default: false)
-   --log value, -l value, -L value        Trace/Debug/Info/Warn/Error (default: "info")
-   --config file, -c file, -C file        set configuration file
-   --proxy url, -p url, -P url            set proxy url
-   --help, -h, -H                         show help (default: false)
 
 COMMANDS:
    generate, g, G  generate a default configuration file
    help, h         Shows a list of commands or help for one command
 
 OPTIONS:
-   --silent, -s, -S                 no message output (default: false)
-   --log value, -l value, -L value  Trace/Debug/Info/Warn/Error
-   --config file, -c file, -C file  set configuration file
-   --help, -h, -H                   show help (default: false)
+   CONFIG
+
+   --config file, -c file, -C file, --Config file  set configuration file
+
+   OUTPUT
+
+   --log level, -l level, -L level, --Log level  level: Trace/Debug/Info/Warn/Error (default: Info)
+   --no-output, -s, -S, --silent                 no message output (default: false)
+
+   RUN
+
+   --api ApiName, -i ApiName, -I ApiName     get ip address from provided ApiName, eg: ipify/identMe
+   --parallel, --Parallel                    run ddns parallel (default: false)
+   --proxy url, -p url, -P url, --Proxy url  set proxy url
+   --retry times                             retry times (default: 3)
+
+   TIME
+
+   --time seconds, -t seconds, -T seconds  run ddns per time(seconds) (default: 0)
+   --time-limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
+
 
 GLOBAL OPTIONS:
    --help, -h, -H     show help (default: false)
