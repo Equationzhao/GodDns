@@ -33,7 +33,7 @@ const (
 // global variables
 var (
 	Time              uint64 = 0
-	TimeLimitation    uint64 = 0 // 0 means no limitation
+	TimesLimitation   uint64 = 0 // 0 means no limitation
 	ApiName                  = ""
 	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
@@ -80,13 +80,13 @@ var (
 		Category: "TIME",
 	}
 
-	timeLimitationFlag = &cli.Uint64Flag{
-		Name:        "time-limitation",
+	timesLimitationFlag = &cli.Uint64Flag{
+		Name:        "times-limitation",
 		Aliases:     []string{"tl", "TL"},
 		Value:       0,
 		DefaultText: "infinity",
 		Usage:       "run ddns per time(seconds) up to `n` times",
-		Destination: &TimeLimitation,
+		Destination: &TimesLimitation,
 		Action: func(context *cli.Context, u uint64) error {
 			t := context.Uint64("time")
 			if t == 0 {
@@ -365,7 +365,7 @@ func main() {
 					},
 					parallelFlag,
 					timeFlag,
-					timeLimitationFlag,
+					timesLimitationFlag,
 					retryFlag,
 					silentFlag,
 					logFlag,
@@ -413,7 +413,7 @@ func main() {
 						Flags: []cli.Flag{
 							parallelFlag,
 							timeFlag,
-							timeLimitationFlag,
+							timesLimitationFlag,
 							retryFlag,
 							silentFlag,
 							logFlag,
@@ -428,7 +428,7 @@ func main() {
 								Flags: []cli.Flag{
 									parallelFlag,
 									timeFlag,
-									timeLimitationFlag,
+									timesLimitationFlag,
 									retryFlag,
 									silentFlag,
 									logFlag,

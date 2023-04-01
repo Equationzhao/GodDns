@@ -95,7 +95,7 @@ OPTIONS:
    TIME
 
    --time seconds, -t seconds, -T seconds  run ddns per time(seconds) (default: 0)
-   --time-limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
+   --times-limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
 
 
 GLOBAL OPTIONS:

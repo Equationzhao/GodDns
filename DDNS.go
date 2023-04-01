@@ -576,7 +576,7 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Para
 	newServiceCronJob := NewServiceCronJob(GlobalDevice, parameters...)
 	wg := new(sync.WaitGroup)
 	newServiceCronJob.SetWg(wg)
-	newServiceCronJob.SetTimes(TimeLimitation)
+	newServiceCronJob.SetTimes(TimesLimitation)
 	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(newServiceCronJob))
 	if err != nil {
 		log.Errorf("error adding job : %s", err.Error())
@@ -584,7 +584,7 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Para
 
 	c.Start()
 	wg.Wait()
-	log.Info("all jobs finished", log.Uint64("total execution time", TimeLimitation).String())
+	log.Info("all jobs finished", log.Uint64("total execution time", TimesLimitation).String())
 
 }
 
