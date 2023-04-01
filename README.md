@@ -74,6 +74,7 @@ OPTIONS:
    --time seconds                         run ddns per time(seconds) (default: 0)
    --parallel, --Parallel                 run ddns parallel (default: false)
    --retry times                          retry times (default: 3)
+   --time-limitation times, --tl times, --TL times  run ddns per time(seconds) up to n times (default: 0)
    --silent, -s, -S                       no message output (default: false)
    --log value, -l value, -L value        Trace/Debug/Info/Warn/Error (default: "info")
    --config file, -c file, -C file        set configuration file
