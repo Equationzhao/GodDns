@@ -385,9 +385,6 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 func GenerateExecuteSave(parameters []DDNS.Parameters) error {
 	requests := GenerateRequests(parameters)
 
-	if Time != 0 {
-		RunPerTime(Time, requests)
-	}
 	d, err := DDNS.Find(parameters, Device.ServiceName)
 	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
 	if err == nil {
@@ -398,7 +395,17 @@ func GenerateExecuteSave(parameters []DDNS.Parameters) error {
 		// update info from request.parameters
 		Parameters2Save = append(Parameters2Save, request.ToParameters())
 	}
-	return SaveFromParameters(Parameters2Save...)
+
+	err = SaveFromParameters(Parameters2Save...)
+
+	if Time != 0 {
+		RunPerTime(Time, requests) // never return
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
@@ -564,16 +571,20 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 }
 
 // RunPerTime run ddns per time
-// todo fix && save config when success
-// Expect: run 1 --time-- run 2 --time-- run 3 ...
-// Actual   : --time-- run 1 --time-- run 2 --time-- run 3 ...
 func RunPerTime(Time uint64, requests []DDNS.Request) {
 
 	log.Infof("run ddns per %d seconds", Time)
 
-	c := cron.New()
+	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Debug(err)
+	}
+
+	logger := log.NewLogger(cornLogfile)
+	logger = logger.WithGroup("cron:")
+	c := cron.New(cron.WithLogger(cron.VerbosePrintfLogger(logger)))
 	for _, request := range requests {
-		_, err := c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.DelayIfStillRunning(cron.DefaultLogger)).Then(request))
+		_, err := c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(request))
 		if err != nil {
 			log.Errorf("error adding job %s: %s", request.GetName(), err.Error())
 		}

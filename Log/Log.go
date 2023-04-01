@@ -93,6 +93,36 @@ func toOutput(l log.Level, v ...any) {
 	}
 }
 
+type Logger log.Logger
+
+func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
+	(*log.Logger)(l).Info(msg, keysAndValues...)
+}
+
+func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
+	keysAndValues = append(keysAndValues, "error", err)
+	(*log.Logger)(l).Error(msg, keysAndValues...)
+}
+
+func NewLogger(w io.Writer) *Logger {
+	l := log.New(log.NewTextHandler(w))
+	return (*Logger)(l)
+}
+
+func (l *Logger) WithGroup(g string) *Logger {
+	newLogger := (*log.Logger)(l)
+	newLogger = newLogger.WithGroup(g)
+	return (*Logger)(newLogger)
+}
+func (l *Logger) Raw() *log.Logger {
+	return (*log.Logger)(l)
+}
+
+func (l *Logger) Printf(msg string, v ...interface{}) {
+	msg = fmt.Sprintf(msg, v...)
+	(*log.Logger)(l).Info(msg)
+}
+
 func Debug(v ...any) {
 	msg := fmt.Sprintf("%s", v[0])
 	vLeft := v[1:]
