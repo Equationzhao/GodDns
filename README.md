@@ -95,7 +95,7 @@ OPTIONS:
    TIME
 
    --time seconds, -t seconds, -T seconds  run ddns per time(seconds) (default: 0)
-   --times-limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
+   --times -limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
 
 
 GLOBAL OPTIONS:
@@ -110,13 +110,21 @@ GLOBAL OPTIONS:
 
 [Service Config](Service/README.md)
 
+## Build from source
+
+```powershell
+go build -o GodDns.exe GodDns/Cmd 
+```
+
+```bash
+go build -o GodDns GodDns/Cmd 
+```
 
 ## TODO
 
 * [ ] add more service
 * [ ] new feature support multi-device for each service(like Device does)
 * [ ] ? refactor Dnspod.Config.ReadConfig:62
-
 
 ## Recent activity [![Time period](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_badge.svg)](https://repography.com)
 [![Timeline graph](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_timeline.svg)](https://github.com/Equationzhao/GodDns/commits)

@@ -416,7 +416,7 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 		log.Error(err.Error())
 		return err
 	}
-	log.Info("generate a default config file at ", DDNS.GetConfigureLocation())
+	log.Infof("generate a default config file at %s", DDNS.GetConfigureLocation())
 	return nil
 }
 
