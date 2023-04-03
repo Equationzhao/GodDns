@@ -13,10 +13,7 @@ var GlobalProxys = &Proxys{}
 
 func IsProxyValid(proxy proxy) bool {
 	_, err := url.Parse(proxy)
-	if err != nil {
-		return false
-	}
-	return true
+	return err==nil
 }
 
 func AddProxy(target *Proxys, proxy ...proxy) {
@@ -28,5 +25,5 @@ func AddProxy2Top(target *Proxys, proxy ...proxy) {
 }
 
 func (p *Proxys) GetProxyIter() *Util.Iter[proxy] {
-	return Util.NewIter[proxy]((*[]proxy)(p))
+	return Util.NewIter((*[]proxy)(p))
 }
