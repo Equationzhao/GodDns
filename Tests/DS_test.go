@@ -41,7 +41,7 @@ func TestRemoveDuplicate(t *testing.T) {
 
 func TestPair(t *testing.T) {
 
-	p := Util.NewPair[int, string](0, "")
+	p := Util.NewPair(0, "")
 	p.Set(1, "a")
 	if *p.First != 1 || *p.Second != "a" {
 		t.Error("Pair set error")
@@ -52,7 +52,7 @@ func TestPair(t *testing.T) {
 		t.Error("Pair clear error")
 	}
 
-	p2 := Util.NewPair[int, string](0, "")
+	p2 := Util.NewPair(0, "")
 	p2.Set(2, "b")
 	Util.ExchangePairs(p, p2)
 
