@@ -7,7 +7,8 @@ on:
     branches: [ $default-branch ]
 
 jobs:
-  build-release:
+  releases-matrix:
+    name: Release Go Binary
     runs-on: ubuntu-latest
     strategy:
       matrix:
