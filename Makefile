@@ -41,6 +41,8 @@ build: ## Build the binary
   		echo "Path: $(GOPATH)/bin/${App}"; \
   	fi \
 
+rebuild: clean build ## Clean and build the binary
+
 
 init: ## Initialize the config
 	$(info Initializing the config)
