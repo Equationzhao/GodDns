@@ -8,6 +8,6 @@
 * [Device/Net Interface](Device/README.md)
 * [Log](Log/README.md)
 * [Net](Net/README.md)
-* [Program Config](DDNS/README.md)
+* [Program Config](Core/README.md)
 * [Util](Util/README.md)
 

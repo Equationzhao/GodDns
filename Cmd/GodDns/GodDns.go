@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Net"
@@ -33,7 +33,7 @@ const (
 // global variables
 var (
 	Time              uint64 = 0
-	TimeLimitation    uint64 = 0 // 0 means no limitation
+	TimesLimitation   uint64 = 0 // 0 means no limitation
 	ApiName                  = ""
 	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
@@ -68,6 +68,7 @@ var (
 		Name:        "time",
 		Aliases:     []string{"t", "T"},
 		Value:       0,
+		DefaultText: "disabled",
 		Usage:       "run ddns per time(`seconds`)",
 		Destination: &Time,
 		Action: func(context *cli.Context, u uint64) error {
@@ -80,13 +81,13 @@ var (
 		Category: "TIME",
 	}
 
-	timeLimitationFlag = &cli.Uint64Flag{
-		Name:        "time-limitation",
+	timesLimitationFlag = &cli.Uint64Flag{
+		Name:        "times-limitation",
 		Aliases:     []string{"tl", "TL"},
 		Value:       0,
 		DefaultText: "infinity",
 		Usage:       "run ddns per time(seconds) up to `n` times",
-		Destination: &TimeLimitation,
+		Destination: &TimesLimitation,
 		Action: func(context *cli.Context, u uint64) error {
 			t := context.Uint64("time")
 			if t == 0 {
@@ -179,9 +180,10 @@ var (
 
 func init() {
 	cli.VersionFlag = &cli.BoolFlag{
-		Name:    "version",
-		Aliases: []string{"v", "V"},
-		Usage:   "print the version info/upgrade info",
+		Name:               "version",
+		Aliases:            []string{"v", "V"},
+		Usage:              "print the version info/upgrade info",
+		DisableDefaultText: true,
 	}
 
 	cli.VersionPrinter = func(c *cli.Context) {
@@ -213,9 +215,10 @@ func init() {
 	}
 
 	cli.HelpFlag = &cli.BoolFlag{
-		Name:    "help",
-		Aliases: []string{"h", "H"},
-		Usage:   "show help",
+		Name:               "help",
+		Aliases:            []string{"h", "H"},
+		Usage:              "show help",
+		DisableDefaultText: true,
 	}
 
 	var err error
@@ -347,6 +350,7 @@ func main() {
 					if Time != 0 {
 						_ = RunDDNS(parameters)
 						RunPerTime(Time, nil, parameters)
+						return nil
 					}
 
 					return RunDDNS(parameters)
@@ -364,7 +368,7 @@ func main() {
 					},
 					parallelFlag,
 					timeFlag,
-					timeLimitationFlag,
+					timesLimitationFlag,
 					retryFlag,
 					silentFlag,
 					logFlag,
@@ -404,6 +408,7 @@ func main() {
 							if Time != 0 {
 								_ = RunAuto(GlobalDevice, parameters)
 								RunPerTime(Time, &GlobalDevice, parameters)
+								return nil
 							}
 
 							return RunAuto(GlobalDevice, parameters)
@@ -411,7 +416,7 @@ func main() {
 						Flags: []cli.Flag{
 							parallelFlag,
 							timeFlag,
-							timeLimitationFlag,
+							timesLimitationFlag,
 							retryFlag,
 							silentFlag,
 							logFlag,
@@ -426,7 +431,7 @@ func main() {
 								Flags: []cli.Flag{
 									parallelFlag,
 									timeFlag,
-									timeLimitationFlag,
+									timesLimitationFlag,
 									retryFlag,
 									silentFlag,
 									logFlag,
@@ -461,6 +466,7 @@ func main() {
 									if Time != 0 {
 										_ = RunOverride(GlobalDevice, parameters)
 										RunPerTime(Time, &GlobalDevice, parameters)
+										return nil
 									}
 
 									return RunOverride(GlobalDevice, parameters)

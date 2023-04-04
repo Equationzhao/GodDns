@@ -1,7 +1,7 @@
 package Tests_test
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Service/Dnspod"
 	"fmt"
 	"os"
@@ -37,42 +37,21 @@ func TestCreateDefaultConfig(t *testing.T) {
 func TestStatus_AppendMsg(t *testing.T) {
 	s := &DDNS.Status{
 		Name:   "test",
-		Msg:    "hello",
+		MG:     DDNS.NewDefaultMsgGroup(),
 		Status: DDNS.Success,
 	}
 
-	s2 := &DDNS.Status{
-		Name:   "test",
-		Msg:    "!",
-		Status: DDNS.Success,
-	}
+	s.AppendMsg(DDNS.NewStringMsg(DDNS.Info).AppendAssign("hello"))
+	s.MG.AddInfo("world")
 
-	s.AppendMsg(" ", "world", s2.Msg)
-
-	if s.Msg != "hello world!" {
+	if s.MG.GetInfo()[0].String() != "hello" {
 		t.Error("AppendMsg failed")
 	}
-	t.Log(s.Msg)
-}
 
-func TestStatus_AppendMsgF(t *testing.T) {
-	s := &DDNS.Status{
-		Name:   "test",
-		Msg:    "hello",
-		Status: DDNS.Success,
-	}
-
-	s2 := &DDNS.Status{
-		Name:   "test",
-		Msg:    "!",
-		Status: DDNS.Success,
-	}
-	s.AppendMsgF(" %s%s", "world", s2.Msg)
-
-	if s.Msg != "hello world!" {
+	if s.MG.GetInfo()[1].String() != "world" {
 		t.Error("AppendMsg failed")
 	}
-	t.Log(s.Msg)
+	t.Log(s.MG)
 }
 
 func TestVersion(t *testing.T) {

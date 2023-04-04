@@ -1,7 +1,7 @@
 package DnspodYunApi
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	log "GodDns/Log"
 	"encoding/json"
 	"fmt"
@@ -27,7 +27,7 @@ func (r *Request) Target() string {
 func newStatus() *DDNS.Status {
 	return &DDNS.Status{
 		Name:   serviceName,
-		Msg:    "",
+		MG:     DDNS.NewDefaultMsgGroup(),
 		Status: DDNS.NotExecute,
 	}
 }
@@ -36,7 +36,7 @@ func (r *Request) Init(yun DnspodYun) {
 	r.Parameters = yun
 }
 
-func (r *Request) ToParameters() DDNS.Parameters {
+func (r *Request) ToParameters() DDNS.Service {
 	return &r.Parameters
 }
 
@@ -68,7 +68,7 @@ func (r *Request) MakeRequest() error {
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
 		log.Debugf("an API error has returned: %s", err.Error())
 		r.status.Status = DDNS.Failed
-		r.status.Msg = err.(*errors.TencentCloudSDKError).Message
+		r.status.MG.AddError(err.(*errors.TencentCloudSDKError).Message)
 		return fmt.Errorf("an API error has returned: %w", err)
 	} else if err != nil {
 		return err
@@ -95,7 +95,7 @@ func (r *Request) MakeRequest() error {
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
 		log.Debugf("an API error has returned: %s", err.Error())
 		r.status.Status = DDNS.Failed
-		r.status.Msg = err.(*errors.TencentCloudSDKError).Message
+		r.status.MG.AddError(err.(*errors.TencentCloudSDKError).Message)
 		return fmt.Errorf("an API error has returned: %w", err)
 	} else if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (r *Request) MakeRequest() error {
 	res := res{}
 	err = json.Unmarshal([]byte(responseDDNS.ToJsonString()), &res)
 	if err != nil {
-		log.Debugf("error umarshaling response %v: %s", responseDDNS.ToJsonString(), err.Error())
+		log.Debugf("error unmarshalling response %v: %s", responseDDNS.ToJsonString(), err.Error())
 		r.status.Status = DDNS.Failed
 
 		return fmt.Errorf("error umarshaling response %v: %w", responseDDNS.ToJsonString(), err)
@@ -112,8 +112,7 @@ func (r *Request) MakeRequest() error {
 
 	// set status
 	r.status.Status = DDNS.Success
-	r.status.Msg = "operation success"
-	r.status.AppendMsg(fmt.Sprintf(" %s %s", r.Parameters.getTotalDomain(), r.Parameters.Value))
+	r.status.MG.AddInfo(fmt.Sprintf("operation success %s %s", r.Parameters.getTotalDomain(), r.Parameters.Value))
 	return nil
 }
 

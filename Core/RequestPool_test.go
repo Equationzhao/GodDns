@@ -50,3 +50,38 @@ func TestNoPool(t *testing.T) {
 
 	fmt.Println(c.Load())
 }
+
+func BenchmarkClientPool(b *testing.B) {
+	r := resty.New()
+
+	pool := NewClientPool(*r)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			{
+				get := pool.Get()
+				_, err := get.First.R().Get("http://ident.me")
+				if err != nil {
+					return
+				}
+				get.Release()
+
+			}
+		}
+	})
+}
+
+func BenchmarkNopool(b *testing.B) {
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			{
+				get := resty.New()
+				_, err := get.R().Get("http://ident.me")
+				if err != nil {
+					return
+				}
+			}
+		}
+	})
+}

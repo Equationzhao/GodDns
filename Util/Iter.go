@@ -13,10 +13,8 @@ func (i *Iter[T]) Len() int {
 }
 
 func NewCopyIter[T any](slice []T) *Iter[T] {
-	copied := make([]T, len(slice))
-	for _, v := range slice {
-		copied = append(copied, v)
-	}
+	copied := make([]T, 0, len(slice))
+	copy(copied, slice)
 	return &Iter[T]{
 		slice:  &copied,
 		length: 0,

@@ -2,7 +2,7 @@
 package example
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 )
 
 func init() {
@@ -17,15 +17,16 @@ var configInstance Config
 
 type (
 
-	// Parameter should implement DDNS.ServiceParameter at least
+	// Parameter should implement DDNS.Service at least
 	// and implement DDNS.DeviceOverridable to support user-defined Net Interface name in this Service Section in config
 	Parameter struct {
-		Token     string `KeyValue:"Token,this tag will affect the name displayed in config, all the string after the ',' will be displayed as comments above this key"`
-		Domain    string
-		SubDomain string
-		RecordID  string
-		IpToSet   string
-		Type      string // "AAAA" or "A"
+		DDNS.DefaultMsgGroup `KeyValue:"-"`
+		Token                string `KeyValue:"Token,this tag will affect the name displayed in config, all the string after the ',' will be displayed as comments above this key"`
+		Domain               string
+		SubDomain            string
+		RecordID             string
+		IpToSet              string
+		Type                 string // "AAAA" or "A"
 		// ... other parameters
 	}
 

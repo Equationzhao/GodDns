@@ -224,6 +224,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 				log.Debugf("succeed to read config for %s", c.GetName())
 				ps = append(ps, temp...)
 			} else {
+				_ = ""
 				// unknown service
 				// todo
 				// look up plugin folder, call external cmd if a same-name executable file or shell script exist

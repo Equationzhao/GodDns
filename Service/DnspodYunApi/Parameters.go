@@ -2,21 +2,22 @@
 package DnspodYunApi
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Net"
 )
 
 type DnspodYun struct {
-	SecretID   string
-	SecretKey  string
-	Domain     string
-	SubDomain  string
-	RecordId   string
-	RecordLine string
-	Value      string
-	TTL        uint64
-	Type       string
-	device     string
+	DDNS.DefaultMsgGroup `json:"-" xwwwformurlencoded:"-" KeyValue:"-"`
+	SecretID             string
+	SecretKey            string
+	Domain               string
+	SubDomain            string
+	RecordId             string
+	RecordLine           string
+	Value                string
+	TTL                  uint64
+	Type                 string
+	device               string
 }
 
 func (s *DnspodYun) GetDevice() string {
@@ -55,6 +56,10 @@ func (s *DnspodYun) IsTypeSet() bool {
 
 func (s *DnspodYun) GetName() string {
 	return serviceName
+}
+
+func (s *DnspodYun) Target() string {
+	return s.getTotalDomain()
 }
 
 func (s *DnspodYun) getTotalDomain() string {

@@ -2,9 +2,10 @@
 package DnspodYunApi
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Net"
 	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"bytes"
 	"strings"
 
@@ -74,7 +75,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 			case "SubDomain":
 				subdomain := sec.Key(name).String()
 				subdomains = strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
-				Util.RemoveDuplicate(&subdomains)
+				Collections.RemoveDuplicate(&subdomains)
 			case "TTL":
 				ttl, err := sec.Key(name).Uint64()
 				if err != nil {

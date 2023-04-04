@@ -3,7 +3,7 @@
 package DDNS
 
 import (
-	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"sync"
 	"sync/atomic"
 
@@ -20,7 +20,7 @@ const _DEFAULTPOOLADDSTEP = 4
 
 func init() {
 	mpm := make(nonLockCpm, _DEFAULTMAPSIZE)
-	MainPoolMap = ClientPoolMap(Util.EmplacePair(&mpm, &sync.RWMutex{}))
+	MainPoolMap = ClientPoolMap(Collections.EmplacePair(&mpm, &sync.RWMutex{}))
 }
 
 const (
@@ -30,12 +30,12 @@ const (
 
 // Client is a pair of resty.Client and atomic.Bool
 // after using the resty.Client, call Release() to set the Bool to idle
-type Client Util.Pair[resty.Client, atomic.Bool]
+type Client Collections.Pair[resty.Client, atomic.Bool]
 
 func NewClient(prototype resty.Client) Client {
 	b := new(atomic.Bool)
 	b.Store(idle) // set to idle
-	return Client(Util.EmplacePair(&prototype, b))
+	return Client(Collections.EmplacePair(&prototype, b))
 }
 
 // Engage set the Bool to engaged
@@ -194,7 +194,7 @@ func NewClientPool(prototype resty.Client) *ClientPool {
 type nonLockCpm map[string]*ClientPool
 
 // ClientPoolMap is a map of ClientPool with a RWMutex
-type ClientPoolMap Util.Pair[nonLockCpm, sync.RWMutex]
+type ClientPoolMap Collections.Pair[nonLockCpm, sync.RWMutex]
 
 func (m *ClientPoolMap) ForEach(f func(string, *ClientPool) bool) {
 	m.Second.RLock()

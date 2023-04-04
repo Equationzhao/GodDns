@@ -1,7 +1,7 @@
 package Device
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"strconv"
 	"strings"
 	"testing"

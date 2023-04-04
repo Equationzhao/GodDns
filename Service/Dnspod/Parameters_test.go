@@ -1,7 +1,6 @@
 package Dnspod
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -30,17 +29,5 @@ func TestGenerateConfigInfo(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(info)
-}
-
-func TestMarshal(t *testing.T) {
-
-	res, _ := json.Marshal(p)
-	fmt.Println(string(res))
-}
-
-func TestDnspodParameters_ToRequest(t *testing.T) {
-	request, _ := p.ToRequest()
-
-	fmt.Println(request)
+	fmt.Println(info.Content)
 }

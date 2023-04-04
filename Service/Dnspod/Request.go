@@ -1,7 +1,7 @@
 package Dnspod
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Net"
 	"GodDns/Util"
 	"errors"
@@ -45,13 +45,13 @@ func (r *Request) Status() DDNS.Status {
 func newStatus() *DDNS.Status {
 	return &DDNS.Status{
 		Name:   serviceName,
-		Msg:    "",
 		Status: DDNS.NotExecute,
+		MG:     DDNS.NewDefaultMsgGroup(),
 	}
 }
 
 // ToParameters return DDNS.Parameters
-func (r *Request) ToParameters() DDNS.Parameters {
+func (r *Request) ToParameters() DDNS.Service {
 	return &r.parameters
 }
 
@@ -72,9 +72,10 @@ func (r *Request) RequestThroughProxy() error {
 	done := make(chan bool)
 	status := newStatus()
 	var err error
-	go func(done chan bool) {
-		*status, err = r.GetRecordIdByProxy(done)
-	}(done)
+	go func() {
+		*status, err = r.GetRecordIdByProxy()
+		done <- true
+	}()
 
 	s := &resOfddns{}
 
@@ -84,13 +85,25 @@ func (r *Request) RequestThroughProxy() error {
 		if err != nil || status.Status != DDNS.Success {
 			r.status.Name = serviceName
 			r.status.Status = DDNS.Failed
-			r.status.Msg = status.Msg
+			for _, i := range status.MG.GetInfo() {
+				r.status.MG.AddInfo(i.String())
+			}
+
+			for _, i := range status.MG.GetWarn() {
+				r.status.MG.AddWarn(i.String())
+			}
+
+			for _, i := range status.MG.GetError() {
+				r.status.MG.AddError(i.String())
+			}
+
+			r.status.MG.AddError(err.Error())
 			return err
 		}
 		content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
 	case <-time.After(time.Second * 20):
 		r.status.Status = DDNS.Timeout
-		r.status.Msg = "GetRecordId timeout"
+		r.status.MG.AddError("GetRecordId timeout")
 		return errors.New("GetRecordId timeout")
 	}
 
@@ -107,7 +120,9 @@ func (r *Request) RequestThroughProxy() error {
 			return *r, nil
 		})
 		if err != nil {
-			log.Error("error get client pool from map", log.String("error", err.Error()))
+			errMsg := fmt.Sprintf("error get client pool from map: %s", err.Error())
+			r.status.MG.AddError(errMsg)
+			log.Error(errMsg)
 		} else {
 			client := pool.Get()
 			response, err = client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
@@ -115,15 +130,22 @@ func (r *Request) RequestThroughProxy() error {
 			log.Debugf("result:%+v", s)
 			client.Release()
 			if err != nil {
-				log.Errorf("request error through proxy %s: %v", proxy, err)
+				errMsg := fmt.Sprintf("request error through proxy %s: %v", proxy, err)
+				r.status.MG.AddError(errMsg)
+				log.Errorf(errMsg)
 				continue
 			} else {
 				break
 			}
 		}
-
 	}
-	r.status = *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
+	r.status = *code2status(s.Status.Code)
+	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
+	if r.status.Status == DDNS.Success {
+		r.status.MG.AddInfo(resultMsg)
+	} else {
+		r.status.MG.AddError(resultMsg)
+	}
 
 	if err != nil {
 		return err
@@ -137,9 +159,10 @@ func (r *Request) MakeRequest() error {
 	done := make(chan bool)
 	status := newStatus()
 	var err error
-	go func(done chan bool) {
-		*status, err = r.GetRecordId(done)
-	}(done)
+	go func() {
+		*status, err = r.GetRecordId()
+		done <- true
+	}()
 
 	s := &resOfddns{}
 
@@ -149,13 +172,24 @@ func (r *Request) MakeRequest() error {
 		if err != nil || status.Status != DDNS.Success {
 			r.status.Name = serviceName
 			r.status.Status = DDNS.Failed
-			r.status.Msg = status.Msg
+			for _, i := range status.MG.GetInfo() {
+				r.status.MG.AddInfo(i.String())
+			}
+
+			for _, i := range status.MG.GetWarn() {
+				r.status.MG.AddWarn(i.String())
+			}
+
+			for _, i := range status.MG.GetError() {
+				r.status.MG.AddError(i.String())
+			}
+			r.status.MG.AddError(err.Error())
 			return err
 		}
 		content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
 	case <-time.After(time.Second * 20):
 		r.status.Status = DDNS.Timeout
-		r.status.Msg = "GetRecordId timeout"
+		r.status.MG.AddError("GetRecordId timeout")
 		return errors.New("GetRecordId timeout")
 	}
 
@@ -165,9 +199,13 @@ func (r *Request) MakeRequest() error {
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
 
-	// r.status = *code2msg(s.Status.Code).AppendMsg(" ", s.Status.Message, "at ", s.Status.CreatedAt, " ", r.parameters.getTotalDomain(), " ", s.Record.Value)
-	r.status = *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
-
+	r.status = *code2status(s.Status.Code)
+	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
+	if r.status.Status == DDNS.Success {
+		r.status.MG.AddInfo(resultMsg)
+	} else {
+		r.status.MG.AddError(resultMsg)
+	}
 	if err != nil {
 		return err
 	} else {
@@ -177,10 +215,11 @@ func (r *Request) MakeRequest() error {
 }
 
 // GetRecordId make request to Dnspod to get RecordId and set ExternalParameter.RecordId
-func (r *Request) GetRecordId(done chan<- bool) (DDNS.Status, error) {
-	defer func() {
-		done <- true
-	}()
+func (r *Request) GetRecordId() (DDNS.Status, error) {
+	if r.status.MG == nil {
+		r.status.MG = DDNS.NewDefaultMsgGroup()
+	}
+
 	s := &resOfRecordId{}
 
 	p := param2GetId{
@@ -202,33 +241,42 @@ func (r *Request) GetRecordId(done chan<- bool) (DDNS.Status, error) {
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
-	status := *code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
+	status := *code2status(s.Status.Code)
 	if err != nil {
+		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return status, err
 	}
 
 	if s.Status.Code != "1" {
-		return status, fmt.Errorf("status code is not 1, code:%s", s.Status.Code)
+		if s.Status.Code == "" {
+			return status, errors.New("status code is empty")
+		} else {
+			status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
+			return status, fmt.Errorf("status code:%s", s.Status.Code)
+		}
 	}
 
 	if len(s.Records) == 0 {
+		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return status, fmt.Errorf("no record found")
 	}
 
-	id, err := strconv.Atoi(s.Records[0].Id) // todo what if s.Records is empty
+	id, err := strconv.Atoi(s.Records[0].Id)
 
 	if err != nil {
+		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return status, err
 	}
 
+	status.MG.AddInfo(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 	r.parameters.RecordId = uint32(id)
 	return status, nil
 }
 
-func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
-	defer func() {
-		done <- true
-	}()
+func (r *Request) GetRecordIdByProxy() (DDNS.Status, error) {
+	if r.status.MG == nil {
+		r.status.MG = DDNS.NewDefaultMsgGroup()
+	}
 	s := &resOfRecordId{}
 
 	p := param2GetId{
@@ -244,8 +292,6 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 	content := Util.Convert2XWWWFormUrlencoded(p)
 	log.Debugf("content:%s", content)
 
-	status := newStatus()
-
 	// make request to "https://dnsapi.cn/Record.List" to get record id
 	iter := Net.GlobalProxys.GetProxyIter()
 	for iter.NotLast() {
@@ -256,7 +302,9 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 			return *r, nil
 		})
 		if err != nil {
-			log.Error("error get client pool from map", log.String("error", err.Error()))
+			errMsg := fmt.Sprintf("error get client pool from map, error:%s", err.Error())
+			r.status.MG.AddError(errMsg)
+			log.ErrorRaw(errMsg)
 		} else {
 			client := pool.Get()
 			response, err := client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
@@ -266,27 +314,36 @@ func (r *Request) GetRecordIdByProxy(done chan<- bool) (DDNS.Status, error) {
 			if err == nil {
 				break
 			}
-
-			log.Errorf("error getting record id by proxy %s", proxy)
+			errMsg := fmt.Sprintf("error get record id by proxy %s, error:%s", proxy, err.Error())
+			r.status.MG.AddError(errMsg)
+			log.ErrorRaw(errMsg)
 			continue
 
 		}
 	}
-	status = code2msg(s.Status.Code).AppendMsgF(" %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain())
+	status := code2status(s.Status.Code) // " %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()
+
 	if s.Status.Code != "1" {
-		return *status, fmt.Errorf("status code is not 1, code:%s", s.Status.Code)
+		if s.Status.Code == "" {
+			return *status, errors.New("status code is empty")
+		} else {
+			status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
+			return *status, fmt.Errorf("status code:%s", s.Status.Code)
+		}
 	}
 
 	if len(s.Records) == 0 {
+		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return *status, fmt.Errorf("no record found")
 	}
 
 	id, err := strconv.Atoi(s.Records[0].Id)
 
 	if err != nil {
+		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return *status, err
 	}
-
+	status.MG.AddInfo(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 	r.parameters.RecordId = uint32(id)
 	return *status, nil
 }
