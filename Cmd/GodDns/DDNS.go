@@ -460,34 +460,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		defer wg.Done()
 		if err != nil || (request).Status().Status != DDNS.Success {
 			log.ErrorRaw(fmt.Sprintf("error executing request, %v", err))
-			// Retry(request, retryAttempt)
-			for j := uint8(1); j <= retryAttempt; j++ {
-				errMsg := fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j)
-				log.WarnRaw(errMsg)
-				request.Status().MG.AddError(fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j))
-
-				if proxyEnable {
-					throughProxy, ok := request.(DDNS.ThroughProxy)
-					if ok {
-						err := throughProxy.RequestThroughProxy()
-						if err != nil {
-							throughProxy.Status().MG.AddError(fmt.Sprintf("error executing request, %v", err))
-							log.ErrorRaw(fmt.Sprintf("error: %s", err.Error()))
-						} else {
-							return
-						}
-					}
-				} else {
-					err := request.MakeRequest()
-					if err != nil {
-						request.Status().MG.AddError(fmt.Sprintf("error: %s", err.Error()))
-						log.ErrorRaw(fmt.Sprintf("error: %s", err.Error()))
-					} else {
-						return
-					}
-				}
-
-			}
+			Retry(request, retryAttempt)
 		}
 
 		status := ""
@@ -553,7 +526,33 @@ func ExecuteRequests(requests ...DDNS.Request) {
 }
 
 func Retry(request DDNS.Request, i uint8) {
+	for j := uint8(1); j <= i; j++ {
+		errMsg := fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j)
+		log.WarnRaw(errMsg)
+		request.Status().MG.AddError(fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j))
 
+		if proxyEnable {
+			throughProxy, ok := request.(DDNS.ThroughProxy)
+			if ok {
+				err := throughProxy.RequestThroughProxy()
+				if err != nil {
+					throughProxy.Status().MG.AddError(fmt.Sprintf("error executing request, %v", err))
+					log.ErrorRaw(fmt.Sprintf("error: %s", err.Error()))
+				} else {
+					return
+				}
+			}
+		} else {
+			err := request.MakeRequest()
+			if err != nil {
+				request.Status().MG.AddError(fmt.Sprintf("error: %s", err.Error()))
+				log.ErrorRaw(fmt.Sprintf("error: %s", err.Error()))
+			} else {
+				return
+			}
+		}
+
+	}
 }
 
 func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
