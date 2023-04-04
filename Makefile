@@ -74,3 +74,7 @@ uninstall : ## Uninstall the binary from GOPATH
   		echo "Please remove the binary manually"; \
   		echo "Path: $(GOPATH)/bin/${App}"; \
   	fi \
+
+upx: ## Compress the binary
+	$(info Compressing the binary)
+	upx build/${App}

@@ -20,8 +20,9 @@ var output = os.Stdout
 var returnCode = 0
 
 const MAXRETRY = 255
-const defaultRetryAttempt = 3
 const MINTIMEGAP = 5
+const MAXTIMES = 2628000
+const defaultRetryAttempt = 3
 
 const (
 	run             = "run"
@@ -33,7 +34,7 @@ const (
 // global variables
 var (
 	Time              uint64 = 0
-	TimesLimitation   uint64 = 0 // 0 means no limitation
+	TimesLimitation          = 0 // 0 means no limitation
 	ApiName                  = ""
 	retryAttempt      uint8  = defaultRetryAttempt
 	config                   = ""
@@ -81,14 +82,14 @@ var (
 		Category: "TIME",
 	}
 
-	timesLimitationFlag = &cli.Uint64Flag{
+	timesLimitationFlag = &cli.IntFlag{
 		Name:        "times-limitation",
 		Aliases:     []string{"tl", "TL"},
 		Value:       0,
 		DefaultText: "infinity",
 		Usage:       "run ddns per time(seconds) up to `n` times",
 		Destination: &TimesLimitation,
-		Action: func(context *cli.Context, u uint64) error {
+		Action: func(context *cli.Context, i int) error {
 			t := context.Uint64("time")
 			if t == 0 {
 				returnCode = 2
