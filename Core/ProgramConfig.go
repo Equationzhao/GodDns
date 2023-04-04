@@ -421,9 +421,8 @@ func (j jsonHandler) HandleResponse(source string, toGet string) (target any, er
 					return "", errors.New("no such key")
 				}
 				break
-			} else {
-				result = resultTemp
 			}
+			result = resultTemp
 		}
 	}
 	if err != nil {
