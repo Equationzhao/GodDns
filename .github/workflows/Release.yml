@@ -1,0 +1,31 @@
+name: Go Release Binaries
+  
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+     strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [386, amd64, arm, arm64] 
+        exclude:
+            -   goarch: "386"
+                goos: darwin
+            -   goarch: "arm"
+                goos: darwin
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: wangyoucao577/go-release-action@v1.37
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    goos: ${{ matrix.goos }}
+    goarch: ${{ matrix.goarch }}
+    binary_name: "GodDns" 
+    project_path: "./Cmd/GodDns"
+    extra_files: LICENSE README.md
+    
