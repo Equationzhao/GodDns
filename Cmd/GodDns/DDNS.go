@@ -613,6 +613,9 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Para
 	newServiceCronJob := NewServiceCronJob(GlobalDevice, parameters...)
 	wg := new(sync.WaitGroup)
 	newServiceCronJob.SetWg(wg)
+	if TimesLimitation == 0 {
+		TimesLimitation = MAXTIMES
+	}
 	newServiceCronJob.SetTimes(TimesLimitation)
 	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(newServiceCronJob))
 	if err != nil {
@@ -621,7 +624,7 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Para
 
 	c.Start()
 	wg.Wait()
-	log.Info("all jobs finished", log.Uint64("total execution time", TimesLimitation).String())
+	log.Info("all jobs finished", log.Int("total execution time", TimesLimitation).String())
 
 }
 
@@ -703,14 +706,12 @@ type ServiceCronJob struct {
 	ps           []DDNS.Parameters
 	GlobalDevice *Device.Device
 	wg           *sync.WaitGroup
-	times        uint64
+	times        int // times to run
 }
 
-func (r *ServiceCronJob) SetTimes(times uint64) {
+func (r *ServiceCronJob) SetTimes(times int) {
 	r.times = times
-	for i := uint64(0); i < times; i++ {
-		r.wg.Add(1)
-	}
+	r.wg.Add(int(times))
 }
 
 func (r *ServiceCronJob) SetWg(wg *sync.WaitGroup) {
