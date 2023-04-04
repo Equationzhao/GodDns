@@ -7,7 +7,8 @@ on:
     branches: [ $default-branch ]
 
 jobs:
-  build-release:
+  releases-matrix:
+    name: Release Go Binary
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,13 +19,13 @@ jobs:
             goos: darwin
           - goarch: "arm"
             goos: darwin
-
     steps:
     - uses: actions/checkout@v3
     - uses: wangyoucao577/go-release-action@v1.37
-    github_token: ${{ secrets.GITHUB_TOKEN }}
-    goos: ${{ matrix.goos }}
-    goarch: ${{ matrix.goarch }}
-    binary_name: "GodDns"
-    project_path: "./Cmd/GodDns"
-    extra_files: LICENSE README.md
+      with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          binary_name: "GodDns"
+          project_path: "./Cmd/GodDns"
+          extra_files: LICENSE README.md

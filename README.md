@@ -94,13 +94,13 @@ OPTIONS:
 
    TIME
 
-   --time seconds, -t seconds, -T seconds  run ddns per time(seconds) (default: 0)
+   --time seconds, -t seconds, -T seconds  run ddns per time(seconds) (default: disabled)
    --times -limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
 
 
 GLOBAL OPTIONS:
-   --help, -h, -H     show help (default: false)
-   --version, -v, -V  print the version info (default: false)
+   --help, -h, -H     show help
+   --version, -v, -V  print the version info
 
 ```
 
