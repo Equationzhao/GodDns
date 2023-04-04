@@ -1,6 +1,6 @@
 package Dnspod
 
-import "GodDns/DDNS"
+import "GodDns/Core"
 
 const (
 	BanedDomain                    = "-15"
@@ -34,66 +34,66 @@ const (
 	AccountLocked = "83"
 )
 
-// code2msg
+// code2status
 // convert the code to message and set status.Status
-func code2msg(code string) *DDNS.Status {
+func code2status(code string) *DDNS.Status {
 	var msg = newStatus()
 	switch code {
 	case Success:
-		msg.Msg = "接口调用成功"
+		msg.MG.AddInfo("接口调用成功")
 	case BanedDomain:
-		msg.Msg = "域名被封禁"
+		msg.MG.AddError("域名被封禁")
 	case BadDomainId:
-		msg.Msg = "域名 ID 错误"
+		msg.MG.AddError("域名 ID 错误")
 	case BadDomainOwner:
-		msg.Msg = "域名不属于您"
+		msg.MG.AddError("域名不属于您")
 	case BadDomain:
-		msg.Msg = "域名不存在"
+		msg.MG.AddError("域名不存在")
 	case IncorrectRecordValue:
-		msg.Msg = "记录值非法"
+		msg.MG.AddError("记录值非法")
 	case LockedDomain:
-		msg.Msg = "域名被锁定"
+		msg.MG.AddError("域名被锁定")
 	case InvalidSubdomain:
-		msg.Msg = "子域名非法"
+		msg.MG.AddError("子域名非法")
 	case SubdomainLevelOverRange:
-		msg.Msg = "子域名级数超出限制"
+		msg.MG.AddError("子域名级数超出限制")
 	case SubdomainUniversalParsingError:
-		msg.Msg = "子域名通配符解析错误"
+		msg.MG.AddError("子域名通配符解析错误")
 	case TypeAOverLimit:
-		msg.Msg = "A 记录负载均衡超出限制"
+		msg.MG.AddError("A 记录负载均衡超出限制")
 	case TypeCNAMEOverLimit:
-		msg.Msg = "CNAME 记录负载均衡超出限制"
+		msg.MG.AddError("CNAME 记录负载均衡超出限制")
 	case RecordLineError:
-		msg.Msg = "记录线路非法"
+		msg.MG.AddError("记录线路非法")
 	case LoginError:
-		msg.Msg = "用户未登录"
+		msg.MG.AddError("用户未登录")
 	case APIOverLimit:
-		msg.Msg = "请求次数超过限制"
+		msg.MG.AddError("请求次数超过限制")
 	case InvalidProxy:
-		msg.Msg = "不是合法代理"
+		msg.MG.AddError("不是合法代理")
 	case NotUnderProxy:
-		msg.Msg = "不在代理名下"
+		msg.MG.AddError("不在代理名下")
 	case APIPermissionDenied:
-		msg.Msg = "无接口权限"
+		msg.MG.AddError("无接口权限")
 	case TemporarilyBaned:
-		msg.Msg = "用户被封禁"
+		msg.MG.AddError("用户被封禁")
 	case FunctionClosed:
-		msg.Msg = "接口已关闭"
+		msg.MG.AddError("接口已关闭")
 
 	case PostOnly:
-		msg.Msg = "请求方法错误"
+		msg.MG.AddError("请求方法错误")
 	case UnknownError:
-		msg.Msg = "未知错误"
+		msg.MG.AddError("未知错误")
 	// case BadUserId:
 	//	msg.msg = "用户 ID 错误"
 	// case BadUserOwner:
 	//	msg.msg = "用户不属于您"
 	case AccountLocked:
-		msg.Msg = "账号被锁定"
+		msg.MG.AddError("账号被锁定")
 	case LoginRegionLimited:
-		msg.Msg = "用户登录地异常或该帐户开启了登录区域保护，当前IP不在允许的区域内。"
+		msg.MG.AddError("用户登录地异常或该帐户开启了登录区域保护，当前IP不在允许的区域内。")
 	default:
-		msg.Msg = "未知错误"
+		msg.MG.AddError("未知错误")
 	}
 
 	if code == "1" {

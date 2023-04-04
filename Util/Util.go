@@ -77,8 +77,12 @@ func Convert2KeyValue(format string, i any) string {
 			continue
 		}
 		name := t.Field(i).Tag.Get("KeyValue") // `name,comments`
+		if name == "-" {
+			continue
+		}
 
 		comments := ""
+
 		if strings.Contains(name, ",") {
 			comments = strings.SplitN(name, ",", 2)[1] // get comments
 			name = strings.Split(name, ",")[0]         // get name
@@ -89,6 +93,10 @@ func Convert2KeyValue(format string, i any) string {
 			if strings.Contains(name, ",") {
 				name = strings.SplitN(name, ",", 2)[0] // get name, remove ",omitempty"
 			}
+		}
+
+		if name == "-" {
+			continue
 		}
 
 		if name == "" {
@@ -127,7 +135,7 @@ type ConvertableXWWWFormUrlencoded interface {
 //			Device string `xwwwformurlencoded:"device" json:"device"`
 //			IP     string `json:"ip"`
 //		 	Type   string
-//		    	unexported string
+//		    unexported string
 //		}
 //		a := A{Device: "device", IP: "ip", Type: "type"}
 //		fmt.Println(Convert2XWWWFormUrlencoded(a))
@@ -259,28 +267,37 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 		n := t.NumField()
 		pieces := make([]string, 0, n)
 		for i := 0; i < n; i++ {
-			if !t.Field(i).IsExported() {
+			fieldi := t.Field(i)
+			if !fieldi.IsExported() {
 				continue
 			}
-			fieldType := t.Field(i).Type
-			if fieldType.Kind() == reflect.Struct {
-				pieces = append(pieces, convert2xwwwformurlencoded(v.Field(i).Interface(), true))
+			name := fieldi.Tag.Get("xwwwformurlencoded")
+			if name == "-" {
 				continue
 			}
-
-			name := t.Field(i).Tag.Get("xwwwformurlencoded")
 			if name == "" {
 				// if there's no "xwwwformurlencoded" Tag, use "json" instead
-				name = t.Field(i).Tag.Get("json")
+				name = fieldi.Tag.Get("json")
+
+				if name == "-" {
+					continue
+				}
 
 				if strings.Contains(name, ",") {
 					name = strings.SplitN(name, ",", 2)[0] // remove ",omitempty"
 				}
 				// if there's no "json" Tag, use field name instead
 				if name == "" {
-					name = t.Field(i).Name
+					name = fieldi.Name
 				}
 			}
+
+			fieldType := fieldi.Type
+			if fieldType.Kind() == reflect.Struct {
+				pieces = append(pieces, convert2xwwwformurlencoded(v.Field(i).Interface(), true))
+				continue
+			}
+
 			pieces = append(pieces, fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface()))))
 		}
 		content.WriteString(strings.Join(pieces, "&"))
@@ -397,7 +414,7 @@ func SetVariable(ptr2i any, name string, value any) error {
 //
 //	  	s := DDNS.Status{
 //			Name:    "Test",
-//			Msg:     "Hello",
+//			MG:     "Hello",
 //			Status: DDNS.Status,
 //	 	}
 //

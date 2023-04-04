@@ -1,10 +1,31 @@
 package Dnspod
 
 import (
+	DDNS "GodDns/Core"
+	"GodDns/Util"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"testing"
 	"time"
 )
+
+func TestXWWWFORMURLENCODED(t *testing.T) {
+	p := Parameters{
+		LoginToken:   "TOKEN",
+		Format:       "json",
+		Lang:         "cn",
+		ErrorOnEmpty: "no",
+		Domain:       "domain.com",
+		RecordId:     0,
+		Subdomain:    "",
+		RecordLine:   "默认",
+		Value:        "",
+		TTL:          600,
+		Type:         "A",
+	}
+	fmt.Println(Util.Convert2XWWWFormUrlencoded(p))
+
+}
 
 func TestRequest_GetRecordId(t *testing.T) {
 
@@ -27,8 +48,12 @@ func TestRequest_GetRecordId(t *testing.T) {
 	}
 
 	done := make(chan bool)
-	status, err := r.GetRecordId(done)
-	<-done
+	status := DDNS.Status{}
+	var err error
+	go func() {
+		status, err = r.GetRecordId()
+		done <- true
+	}()
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,8 +82,13 @@ func TestRequest_MakeRequest(t *testing.T) {
 	r := Request{
 		parameters: p,
 	}
+	status := DDNS.Status{}
 	done := make(chan bool)
-	status, err := r.GetRecordId(done)
+	var err error
+	go func() {
+		status, err = r.GetRecordId()
+		done <- true
+	}()
 	select {
 	case <-done:
 		if err != nil {

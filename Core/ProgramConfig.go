@@ -6,19 +6,19 @@ import (
 	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
+	"github.com/go-resty/resty/v2"
+	"gopkg.in/ini.v1"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/go-resty/resty/v2"
-	"gopkg.in/ini.v1"
 )
 
 const URLPattern = `(http|https)://[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?`
@@ -93,7 +93,6 @@ func (p *ProgramConfig) Setup() {
 	}
 	// 2. add apis
 	for _, ag := range p.ags {
-		// ? why there's a bug when ag has only pointer method, the api func add to map will be replaced by the last one
 		api := ag.Generate()
 		Net.ApiMap.Add2Apis(ag.apiName, api)
 	}
@@ -126,10 +125,7 @@ func (p *ProgramConfig) GenerateConfigFile() error {
 
 func IsConfigExist(file string) bool {
 	_, err := os.Stat(file)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // LoadProgramConfig load program config from file
@@ -221,7 +217,7 @@ func loadProxy(proxy string) (res []url.URL, err error) {
 	}
 
 	// remove duplicate
-	Util.RemoveDuplicate[url.URL](&res)
+	Collections.RemoveDuplicate[url.URL](&res)
 
 	return res, err
 }
@@ -276,7 +272,7 @@ type ApiGenerator struct {
 }
 
 // Convert2KeyValue convert ApiGenerator to key-value format
-func (a ApiGenerator) Convert2KeyValue(format string) string {
+func (a *ApiGenerator) Convert2KeyValue(format string) string {
 	head := "[api." + a.apiName + "]\n"
 	s := struct {
 		A          string
@@ -324,7 +320,7 @@ func (a *ApiGenerator) validateResponseType() error {
 	return err
 }
 
-func (a ApiGenerator) validateURL() error {
+func (a *ApiGenerator) validateURL() error {
 	URLPattern := regexp.MustCompile(URLPattern)
 	URLS := [2]string{a.a, a.aaaa}
 	for _, URL := range URLS {
@@ -352,22 +348,23 @@ func (a *ApiGenerator) validateMethod() error {
 
 // Generate  api,
 // PLZ check if the api is valid before call Generate(), use ApiGenerator.Validate()
-func (a ApiGenerator) Generate() Net.Api {
+func (a *ApiGenerator) Generate() Net.Api {
+	copiedA := *a
 	f := func(t Net.Type) (string, error) {
 		URL := ""
 		switch t {
 		case Net.A:
-			URL = a.a
+			URL = copiedA.a
 		case Net.AAAA:
-			URL = a.aaaa
+			URL = copiedA.aaaa
 		default:
 			return "", Net.NewUnknownType(t)
 		}
-		res, err := a.methodHandler.Do(URL)
+		res, err := copiedA.methodHandler.Do(URL)
 		if err != nil {
 			return "", err
 		}
-		target, err := a.responseHandler.HandleResponse(res, a.resName)
+		target, err := copiedA.responseHandler.HandleResponse(res, copiedA.resName)
 		if err != nil {
 			return "", err
 		}
@@ -398,7 +395,8 @@ func (j jsonHandler) HandleResponse(source string, toGet string) (target any, er
 
 	// parse resName
 	var result map[string]any
-	err = json.Unmarshal([]byte(source), &result)
+
+	err = sonic.Unmarshal([]byte(source), &result)
 	if err != nil {
 		return "", err
 	}

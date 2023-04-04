@@ -2,9 +2,10 @@
 package example
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Net"
 	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"gopkg.in/ini.v1"
 	"strings"
 )
@@ -24,6 +25,10 @@ func (p *Parameter) ToRequest() (DDNS.Request, error) {
 		Parameter: *p,
 	}
 	return &request, nil
+}
+
+func (p *Parameter) Target() string {
+	return p.SubDomain + "." + p.Domain
 }
 
 func (r *Request) Target() string {
@@ -47,7 +52,7 @@ func (p *Parameter) IsTypeSet() bool {
 	return p.Type == "AAAA" || p.Type == "A"
 }
 
-func (r *Request) ToParameters() DDNS.Parameters {
+func (r *Request) ToParameters() DDNS.Service {
 	return &r.Parameter
 }
 
@@ -57,7 +62,7 @@ func (r *Request) MakeRequest() error {
 
 	// make ddns request
 	// update status.Status using DDNS.Status or DDNS.Fail or DDNS.NotExecute
-	// update status.Msg & status.Name
+	// update status.MG & status.Name
 	// log.Infof("relevant info...")
 
 	panic("implement me")
@@ -103,7 +108,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 				// support value like this subdomain = `sub1,sub2,sub3` or `sub1 sub2 sub3`
 				subdomain := sec.Key(name).String()
 				subdomains = strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
-				Util.RemoveDuplicate(&subdomains) // remove duplicate subdomains, remind to pass pointer
+				Collections.RemoveDuplicate(&subdomains) // remove duplicate subdomains, remind to pass pointer
 			case "Type":
 				p.Type = Net.Type2Str(sec.Key(name).String()) // convert "4"/"6"/"A"/"AAAA" to "A"/"AAAA"
 			// case UnexportedField:

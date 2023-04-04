@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Net"
@@ -68,6 +68,7 @@ var (
 		Name:        "time",
 		Aliases:     []string{"t", "T"},
 		Value:       0,
+		DefaultText: "disabled",
 		Usage:       "run ddns per time(`seconds`)",
 		Destination: &Time,
 		Action: func(context *cli.Context, u uint64) error {
@@ -179,9 +180,10 @@ var (
 
 func init() {
 	cli.VersionFlag = &cli.BoolFlag{
-		Name:    "version",
-		Aliases: []string{"v", "V"},
-		Usage:   "print the version info/upgrade info",
+		Name:               "version",
+		Aliases:            []string{"v", "V"},
+		Usage:              "print the version info/upgrade info",
+		DisableDefaultText: true,
 	}
 
 	cli.VersionPrinter = func(c *cli.Context) {
@@ -213,9 +215,10 @@ func init() {
 	}
 
 	cli.HelpFlag = &cli.BoolFlag{
-		Name:    "help",
-		Aliases: []string{"h", "H"},
-		Usage:   "show help",
+		Name:               "help",
+		Aliases:            []string{"h", "H"},
+		Usage:              "show help",
+		DisableDefaultText: true,
 	}
 
 	var err error

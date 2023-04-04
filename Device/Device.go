@@ -3,7 +3,7 @@
 package Device
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Util"
 	"bytes"
 	"strings"

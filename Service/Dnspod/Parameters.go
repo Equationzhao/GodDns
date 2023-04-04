@@ -2,7 +2,7 @@ package Dnspod
 
 import "C"
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Net"
 )
 
@@ -25,6 +25,10 @@ type Parameters struct {
 	TTL          uint16 `json:"ttl,omitempty" xwwwformurlencoded:"ttl" KeyValue:"ttl,Time-To-Live, 600(default)"`
 	Type         string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"type,A/AAAA/4/6"`
 	device       string
+}
+
+func (p *Parameters) Target() string {
+	return p.getTotalDomain()
 }
 
 // IsDeviceSet return whether the device is set

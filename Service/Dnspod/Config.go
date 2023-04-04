@@ -1,9 +1,10 @@
 package Dnspod
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Net"
 	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"bytes"
 	"strconv"
 	"strings"
@@ -129,7 +130,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	}
 
 	subdomains := strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
-	Util.RemoveDuplicate(&subdomains)
+	Collections.RemoveDuplicate(&subdomains)
 
 	ps := make([]DDNS.Parameters, 0, len(subdomains))
 

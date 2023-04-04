@@ -106,7 +106,7 @@ GLOBAL OPTIONS:
 
 ## Configuration
 
-[Program Config](DDNS/README.md)
+[Program Config](Core/README.md)
 
 [Service Config](Service/README.md)
 

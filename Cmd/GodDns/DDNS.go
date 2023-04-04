@@ -1,11 +1,11 @@
 package main
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Net"
-	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
@@ -137,7 +137,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 
 	for _, parameter := range parameters {
 		if parameter.GetName() != Device.ServiceName {
-			if d, ok := parameter.(DDNS.ServiceParameters); ok {
+			if d, ok := parameter.(DDNS.Service); ok {
 				if d.IsTypeSet() {
 					if Net.TypeEqual(d.GetType(), Net.A) {
 						d.SetValue(ip4)
@@ -162,8 +162,8 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 
 	devices := GlobalDevice.GetDevices()
 
-	ip4 := Util.MakePair[string, string]() // First is device, second is ip
-	ip6 := Util.MakePair[string, string]() // First is device, second is ip
+	ip4 := Collections.MakePair[string, string]() // First is device, second is ip
+	ip6 := Collections.MakePair[string, string]() // First is device, second is ip
 
 	var (
 		err1, err2 error
@@ -204,15 +204,15 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 	}
 
 	set := func(parameter DDNS.Parameters) error {
-		switch parameter.(DDNS.ServiceParameters).GetType() {
+		switch parameter.(DDNS.Service).GetType() {
 		case "4":
-			parameter.(DDNS.ServiceParameters).SetValue(ip4.GetSecond())
+			parameter.(DDNS.Service).SetValue(ip4.GetSecond())
 			return err1
 		case "6":
-			parameter.(DDNS.ServiceParameters).SetValue(ip6.GetSecond())
+			parameter.(DDNS.Service).SetValue(ip6.GetSecond())
 			return err2
 		default:
-			return fmt.Errorf("unknown type %s", parameter.(DDNS.ServiceParameters).GetType())
+			return fmt.Errorf("unknown type %s", parameter.(DDNS.Service).GetType())
 		}
 	}
 
@@ -304,10 +304,10 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				err := set(GlobalDevice, parameter)
 				if err != nil {
 					errCount++
-					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(DDNS.ServiceParameters).GetIP())
+					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(DDNS.Service).GetIP())
 					continue
 				}
-				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.ServiceParameters).GetIP())
+				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.Service).GetIP())
 			}
 
 		}
@@ -321,10 +321,10 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 
 func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 
-	toSet := ParameterToSet.(DDNS.ServiceParameters)
+	toSet := ParameterToSet.(DDNS.Service)
 	Type := toSet.GetType() // Type is "4" or "6" or ""
 
-	ip := Util.MakePair[string, string]() // First is device, second is ip
+	ip := Collections.MakePair[string, string]() // First is device, second is ip
 
 	var err error
 	devices := GlobalDevice.GetDevices()
@@ -371,11 +371,11 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 		}
 
 	default:
-		return fmt.Errorf("unknown type %s", ParameterToSet.(DDNS.ServiceParameters).GetType())
+		return fmt.Errorf("unknown type %s", ParameterToSet.(DDNS.Service).GetType())
 	}
 
 	if ip.GetFirst() != "" && ip.GetSecond() != "" {
-		ParameterToSet.(DDNS.ServiceParameters).SetValue(ip.GetSecond())
+		ParameterToSet.(DDNS.Service).SetValue(ip.GetSecond())
 		return nil
 	} else {
 		return err
@@ -392,9 +392,11 @@ func GenerateExecuteSave(parameters []DDNS.Parameters) error {
 		Parameters2Save = append(Parameters2Save, d)
 	}
 	ExecuteRequests(requests...)
+	DisplayAll(requests...)
 	for _, request := range requests {
 		// update info from request.parameters
-		Parameters2Save = append(Parameters2Save, request.ToParameters())
+		s2p := request.ToParameters()
+		Parameters2Save = append(Parameters2Save, s2p)
 	}
 
 	err = SaveFromParameters(Parameters2Save...)
@@ -403,6 +405,36 @@ func GenerateExecuteSave(parameters []DDNS.Parameters) error {
 		return err
 	}
 	return nil
+}
+
+func Display(request DDNS.Request) {
+	_, _ = log.InfoPP.Fprintln(output, fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+	serviceInfo := request.Status().MG.GetMsgOf(DDNS.Info)
+	if len(serviceInfo) > 0 {
+		for _, i := range serviceInfo {
+			_, _ = log.SuccessPP.Fprintln(output, i)
+		}
+	}
+
+	serviceErr := request.Status().MG.GetMsgOf(DDNS.Error)
+	serviceWarn := request.Status().MG.GetMsgOf(DDNS.Warn)
+	if len(serviceErr) > 0 {
+		for _, e := range serviceErr {
+			_, _ = log.ErrPP.Fprintln(output, e)
+		}
+	}
+	if len(serviceWarn) > 0 {
+		for _, w := range serviceWarn {
+			_, _ = log.WarnPP.Fprintln(output, w)
+		}
+	}
+}
+
+func DisplayAll(requests ...DDNS.Request) {
+	for _, request := range requests {
+		Display(request)
+		_, _ = fmt.Fprintln(output)
+	}
 }
 
 func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
@@ -426,22 +458,51 @@ func ExecuteRequests(requests ...DDNS.Request) {
 
 	deal := func(err error, request DDNS.Request) {
 		defer wg.Done()
-		if err != nil || request.Status().Status != DDNS.Success {
-			log.Errorf("error executing request, %v", err)
-			Retry(request, retryAttempt)
+		if err != nil || (request).Status().Status != DDNS.Success {
+			log.ErrorRaw(fmt.Sprintf("error executing request, %v", err))
+			// Retry(request, retryAttempt)
+			for j := uint8(1); j <= retryAttempt; j++ {
+				errMsg := fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j)
+				log.WarnRaw(errMsg)
+				request.Status().MG.AddError(fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j))
+
+				if proxyEnable {
+					throughProxy, ok := request.(DDNS.ThroughProxy)
+					if ok {
+						err := throughProxy.RequestThroughProxy()
+						if err != nil {
+							throughProxy.Status().MG.AddError(fmt.Sprintf("error executing request, %v", err))
+							log.ErrorRaw(fmt.Sprintf("error: %s", err.Error()))
+						} else {
+							return
+						}
+					}
+				} else {
+					err := request.MakeRequest()
+					if err != nil {
+						request.Status().MG.AddError(fmt.Sprintf("error: %s", err.Error()))
+						log.ErrorRaw(fmt.Sprintf("error: %s", err.Error()))
+					} else {
+						return
+					}
+				}
+
+			}
 		}
 
 		status := ""
-		res := request.Status()
+		res := (request).Status()
 		if res.Status == DDNS.Success {
 			status = "Success"
-			log.Infof("name:%s, status:%s  msg:%s", res.Name, status, res.Msg)
+			log.InfoRaw(fmt.Sprintf("name:%s, status:%s  msg:%s", res.Name, status, res.MG))
 		} else if res.Status == DDNS.Failed {
-			log.Errorf("error executing request, %v", err)
+			errMsg := fmt.Sprintf("error executing request, %v", err)
+
+			log.ErrorRaw(errMsg)
 			status = "Failed"
-			log.Infof("name:%s, status:%s, msg:%s", res.Name, status, res.Msg)
+			log.InfoRaw(fmt.Sprintf("name:%s, status:%s, msg:%s", res.Name, status, res.MG))
 			if retryAttempt != 0 {
-				log.Errorf("all retry failed, skip %s:%s", request.GetName(), request.Target())
+				log.ErrorRaw(fmt.Sprintf("all retry failed, skip %s:%s", (request).GetName(), (request).Target()))
 			}
 		} else if res.Status == DDNS.NotExecute {
 			log.Fatal("request not executed")
@@ -460,7 +521,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 				if ok {
 					err = throughProxy.RequestThroughProxy()
 				} else {
-					err = DDNS.ExecuteRequest(request)
+					err = request.MakeRequest()
 				}
 				deal(err, request)
 			}()
@@ -477,7 +538,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			go func() {
 				var err error
 				log.Tracef("request: %s", request.GetName())
-				err = DDNS.ExecuteRequest(request)
+				err = request.MakeRequest()
 
 				deal(err, request)
 			}()
@@ -492,30 +553,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 }
 
 func Retry(request DDNS.Request, i uint8) {
-	for j := uint8(1); j <= i; j++ {
 
-		log.Warnf("retrying %s:%s %d time", request.GetName(), request.Target(), j)
-
-		if proxyEnable {
-			throughProxy, ok := request.(DDNS.ThroughProxy)
-			if ok {
-				err := throughProxy.RequestThroughProxy()
-				if err != nil {
-					log.Errorf("error: %s", err.Error())
-				} else {
-					return
-				}
-			}
-		} else {
-			err := DDNS.ExecuteRequest(request)
-			if err != nil {
-				log.Errorf("error: %s", err.Error())
-			} else {
-				return
-			}
-		}
-
-	}
 }
 
 func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
@@ -528,7 +566,7 @@ func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
 		}
 
 		log.Infof("service: %s", parameter.GetName())
-		request, err := parameter.(DDNS.ServiceParameters).ToRequest()
+		request, err := parameter.(DDNS.Service).ToRequest()
 		if err != nil {
 			errCount++
 			log.Errorf("error generating request for %s:%s ", parameter.GetName(), err.Error())

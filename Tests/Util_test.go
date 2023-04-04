@@ -1,8 +1,9 @@
 package Tests_test
 
 import (
-	"GodDns/DDNS"
+	DDNS "GodDns/Core"
 	"GodDns/Service/Dnspod"
+	"GodDns/Service/DnspodYunApi"
 	"GodDns/Util"
 	"io"
 	"net/url"
@@ -14,6 +15,21 @@ import (
 )
 
 var p Dnspod.Parameters
+
+var pWithoutTag = struct {
+	LoginToken   string
+	Format       string
+	Lang         string
+	ErrorOnEmpty string
+	Domain       string
+	RecordId     uint32
+	Subdomain    string
+	RecordLine   string
+	Value        string
+	TTL          uint16
+	Type         string
+	device       string
+}{}
 
 func init() {
 	p = Dnspod.Parameters{
@@ -29,6 +45,17 @@ func init() {
 		TTL:          600,
 		Type:         "AAAA",
 	}
+	pWithoutTag.LoginToken = p.LoginToken
+	pWithoutTag.Format = p.Format
+	pWithoutTag.Lang = p.Lang
+	pWithoutTag.ErrorOnEmpty = p.ErrorOnEmpty
+	pWithoutTag.Domain = p.Domain
+	pWithoutTag.RecordId = p.RecordId
+	pWithoutTag.Subdomain = p.Subdomain
+	pWithoutTag.RecordLine = p.RecordLine
+	pWithoutTag.Value = p.Value
+	pWithoutTag.TTL = p.TTL
+	pWithoutTag.Type = p.Type
 
 }
 
@@ -39,7 +66,11 @@ func TestConfigFileGenerator(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = DDNS.ConfigureWriter("test.conf", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, dnspod)
+	yun, err := DnspodYunApi.Config{}.GenerateDefaultConfigInfo()
+	if err != nil {
+		t.Error(err)
+	}
+	err = DDNS.ConfigureWriter("test.conf", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, dnspod, yun)
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,15 +83,21 @@ func TestConvert2KeyValue(t *testing.T) {
 		x string
 	}
 
+	type C struct {
+		X string `KeyValue:"-"`
+		x string
+	}
+
 	type A struct {
 		Device     string `KeyValue:"device,device name" json:"device"`
 		IP         string `json:"ip,omitempty,string"`
 		Type       string
 		unexported string
 		B          B
+		C          C `KeyValue:"-"`
 	}
 
-	a := A{Device: "device", IP: "ip", Type: "type", unexported: "123", B: B{X: "123", x: "321"}}
+	a := A{Device: "device", IP: "ip", Type: "type", unexported: "123", B: B{X: "123", x: "321"}, C: C{X: "123", x: "321"}}
 
 	t.Log("\n", Util.Convert2KeyValue("%s: %s", a))
 
@@ -85,17 +122,18 @@ func TestConvert2XWWWFormUrlencoded(t *testing.T) {
 		i any
 	}
 
+	type B struct {
+		x   string
+		xx  string
+		xxx string
+	}
+
 	type A struct {
 		Device     string `KeyValue:"device" json:"device"`
 		IP         string `json:"ip"`
 		unexported string
 		Type       string
-	}
-
-	type B struct {
-		x   string
-		xx  string
-		xxx string
+		BB         B `xwwwformurlencoded:"-"`
 	}
 
 	tests := []struct {
@@ -386,9 +424,11 @@ func TestLog(t *testing.T) {
 func TestGetTypeName(t *testing.T) {
 	s := DDNS.Status{
 		Name:   "Test",
-		Msg:    "Hello",
+		MG:     DDNS.NewDefaultMsgGroup(),
 		Status: DDNS.Success,
 	}
+
+	s.MG.AddInfo("test")
 
 	t.Log(Util.GetTypeName(s))
 	t.Log(Util.GetTypeName(&s))
@@ -399,28 +439,6 @@ func TestGetTypeName(t *testing.T) {
 	t.Log(Util.GetTypeName(b))
 	t.Log(Util.GetTypeName(c))
 
-}
-
-func TestTemp(t *testing.T) {
-	type A struct {
-		Device     string `xwwwformurlencoded:"device" json:"device"`
-		IP         string `json:"ip"`
-		Type       string
-		unexported string
-	}
-
-	type B struct {
-		X string
-		x string
-	}
-	a := A{Device: "device", IP: "ip", Type: "type"}
-	ab := struct {
-		A
-		B
-	}{A: a, B: B{X: "123", x: "321"}}
-
-	res := Util.Convert2XWWWFormUrlencoded(ab)
-	t.Log(res)
 }
 
 func BenchmarkConvert2XWWWFORMURLENCODED(b *testing.B) {
@@ -448,6 +466,149 @@ func BenchmarkURLEncode(b *testing.B) {
 		ttl := strconv.Itoa(int(p.TTL))
 		v.Add("ttl", ttl)
 		v.Add("type", p.Type)
+		s := v.Encode()
+		_ = s
+	}
+}
+
+func BenchmarkConvert2XWWWFORMURLENCODEDWithoutTag(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		s := Util.Convert2XWWWFormUrlencoded(pWithoutTag)
+		_ = s
+	}
+}
+
+func BenchmarkURLEncodeWithoutTag(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		v := url.Values{}
+		v.Add("LoginToken", pWithoutTag.LoginToken)
+		v.Add("Format", pWithoutTag.Format)
+		v.Add("Lang", pWithoutTag.Lang)
+		v.Add("ErrorOnEmpty", pWithoutTag.ErrorOnEmpty)
+		v.Add("Domain", pWithoutTag.Domain)
+		v.Add("Subdomain", pWithoutTag.Subdomain)
+		id := strconv.Itoa(int(pWithoutTag.RecordId))
+		v.Add("RecordId", id)
+		v.Add("RecordLine", pWithoutTag.RecordLine)
+		v.Add("Value", pWithoutTag.Value)
+		ttl := strconv.Itoa(int(pWithoutTag.TTL))
+		v.Add("TTL", ttl)
+		v.Add("Type", pWithoutTag.Type)
+
+		s := v.Encode()
+		_ = s
+	}
+}
+
+func BenchmarkConvert2XWWWFORMURLENCODED_small(b *testing.B) {
+	type A struct {
+		Device     string `xwwwformurlencoded:"device" json:"device"`
+		IP         string `json:"ip"`
+		Type       string
+		unexported string
+	}
+
+	type B struct {
+		X string
+		x string
+	}
+	a := A{Device: "device", IP: "ip", Type: "type", unexported: "unexported"}
+	ab := struct {
+		A
+		B
+	}{A: a, B: B{X: "123", x: "321"}}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s := Util.Convert2XWWWFormUrlencoded(ab)
+		_ = s
+	}
+}
+
+func BenchmarkURLEncode_small(b *testing.B) {
+	type A struct {
+		Device     string
+		IP         string
+		Type       string
+		unexported string
+	}
+
+	type B struct {
+		X string
+		x string
+	}
+	a := A{Device: "device", IP: "ip", Type: "type", unexported: "unexported"}
+	ab := struct {
+		A
+		B
+	}{A: a, B: B{X: "123", x: "321"}}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v := url.Values{}
+		v.Add("device", ab.Device)
+		v.Add("ip", ab.IP)
+		v.Add("type", ab.Type)
+		v.Add("X", ab.X)
+		s := v.Encode()
+		_ = s
+	}
+}
+
+func BenchmarkConvert2XWWWFORMURLENCODED_tiny(b *testing.B) {
+	type A struct {
+		Name string `xwwwformurlencoded:"name"`
+		age  int    `xwwwformurlencoded:"age"`
+	}
+	a := A{Name: "name", age: 1}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		s := Util.Convert2XWWWFormUrlencoded(a)
+		_ = s
+	}
+}
+
+func BenchmarkURLEncode_tiny(b *testing.B) {
+	type A struct {
+		Name string `xwwwformurlencoded:"name"`
+		age  int
+	}
+	a := A{Name: "name"}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		v := url.Values{}
+		v.Add("name", a.Name)
+		v.Add("age", strconv.Itoa(a.age))
+		s := v.Encode()
+		_ = s
+	}
+}
+
+func BenchmarkConvert2XWWWFORMURLENCODED_tinyWithoutTag(b *testing.B) {
+	type A struct {
+		Name string
+		age  int
+	}
+	a := A{Name: "name", age: 1}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		s := Util.Convert2XWWWFormUrlencoded(a)
+		_ = s
+	}
+}
+
+func BenchmarkURLEncode_tinyWithoutTag(b *testing.B) {
+	type A struct {
+		Name string
+		age  int
+	}
+	a := A{Name: "name", age: 1}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		v := url.Values{}
+		v.Add("Name", a.Name)
 		s := v.Encode()
 		_ = s
 	}

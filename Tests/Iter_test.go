@@ -46,6 +46,7 @@ func TestNewIter(t *testing.T) {
 	for i.NotLast() {
 		a := i.Get()
 		a++
+		_ = a
 		i.Next()
 	}
 	fmt.Println(s) // no change

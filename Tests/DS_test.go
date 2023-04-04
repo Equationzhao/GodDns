@@ -1,7 +1,7 @@
 package Tests
 
 import (
-	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 func TestRemoveDuplicate(t *testing.T) {
 	s := []string{"a", "b", "c", "a", "b", "c", "a", "b", "c"}
-	Util.RemoveDuplicate(&s)
+	Collections.RemoveDuplicate(&s)
 	ss := [][]string{{"a", "b", "c"}, {"a", "c", "b"}, {"b", "a", "c"}, {"b", "c", "a"}, {"c", "a", "b"}, {"c", "b", "a"}}
 	// shuffle ss
 	for i := range ss {
@@ -41,7 +41,7 @@ func TestRemoveDuplicate(t *testing.T) {
 
 func TestPair(t *testing.T) {
 
-	p := Util.NewPair[int, string](0, "")
+	p := Collections.NewPair[int, string](0, "")
 	p.Set(1, "a")
 	if *p.First != 1 || *p.Second != "a" {
 		t.Error("Pair set error")
@@ -52,20 +52,20 @@ func TestPair(t *testing.T) {
 		t.Error("Pair clear error")
 	}
 
-	p2 := Util.NewPair[int, string](0, "")
+	p2 := Collections.NewPair[int, string](0, "")
 	p2.Set(2, "b")
-	Util.ExchangePairs(p, p2)
+	Collections.ExchangePairs(p, p2)
 
 	if *p.First != 2 || *p.Second != "b" || *p2.First != 0 || *p2.Second != "" {
 		t.Error("Pairs exchange error")
 	}
 
-	p3 := Util.MakePair[int, string]()
+	p3 := Collections.MakePair[int, string]()
 	if *p3.First != 0 || *p3.Second != "" {
 		t.Error("Make error")
 	}
 
-	*p = Util.MakePair[int, string](3, "d")
+	*p = Collections.MakePair[int, string](3, "d")
 	if *p.First != 3 || *p.Second != "d" {
 		t.Error("Make error")
 	}
@@ -85,7 +85,7 @@ func TestPair(t *testing.T) {
 
 	a := 3
 	b := "a"
-	*p = Util.EmplacePair(&a, &b)
+	*p = Collections.EmplacePair(&a, &b)
 	a = 4
 	b = "b"
 	if &a != p.First || &b != p.Second {
@@ -95,7 +95,7 @@ func TestPair(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	sub := Util.NewSet[int]()
+	sub := Collections.NewSet[int]()
 	sub.Add(1)
 	sub.Add(2)
 	sub.Add(3)

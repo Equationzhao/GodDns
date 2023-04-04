@@ -1,7 +1,7 @@
 package Dnspod
 
 import (
-	"GodDns/DDNS"
+	"GodDns/Core"
 	"strings"
 	"testing"
 

@@ -3,6 +3,7 @@ package DDNS
 import (
 	"GodDns/Net"
 	"encoding/json"
+	"github.com/bytedance/sonic"
 	"net/url"
 	"regexp"
 	"testing"
@@ -11,6 +12,80 @@ import (
 func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
 	l := getDefaultProgramConfigurationLocation()
 	t.Log(l())
+}
+
+func BenchmarkStdJson(b *testing.B) {
+	result := map[string]any{}
+	s := struct {
+		Code int `json:"code"`
+		Data struct {
+			IpInfo []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			} `json:"ipInfo"`
+		} `json:"data"`
+	}{
+		Code: 123,
+		Data: struct {
+			IpInfo []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			} `json:"ipInfo"`
+		}{
+			IpInfo: []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			}{
+				{
+					Value:  "1.2.3.4",
+					Region: "CN",
+				},
+			},
+		},
+	}
+
+	for i := 0; i < b.N; i++ {
+		bytes, _ := json.Marshal(s)
+		_ = json.Unmarshal(bytes, &result)
+		_ = result
+	}
+}
+
+func BenchmarkSonic(b *testing.B) {
+	result := map[string]any{}
+	s := struct {
+		Code int `json:"code"`
+		Data struct {
+			IpInfo []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			} `json:"ipInfo"`
+		} `json:"data"`
+	}{
+		Code: 123,
+		Data: struct {
+			IpInfo []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			} `json:"ipInfo"`
+		}{
+			IpInfo: []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			}{
+				{
+					Value:  "1.2.3.4",
+					Region: "CN",
+				},
+			},
+		},
+	}
+
+	for i := 0; i < b.N; i++ {
+		bytes, _ := sonic.Marshal(s)
+		_ = sonic.Unmarshal(bytes, &result)
+		_ = result
+	}
 }
 
 func TestJsonHandler(t *testing.T) {
@@ -79,10 +154,15 @@ func TestJsonHandler(t *testing.T) {
 }
 
 func TestURLParse(t *testing.T) {
-	urls := "https://myip.ipip.net/s"
-	re := regexp.MustCompile("(http|https)://[\\w\\-_]+(\\.[\\w\\-_]+)+([\\w\\-.,@?^=%&:/~+#]*[\\w\\-@?^=%&/~+#])?")
-	if !re.MatchString(urls) {
-		t.Error("url parse failed")
+	urls := []string{
+		"https://myip.ipip.net/s",
+		"https://speed.neu6.edu.cn/getIP.php",
+	}
+	for _, u := range urls {
+		re := regexp.MustCompile(`(http|https)://[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?`)
+		if !re.MatchString(u) {
+			t.Error("u parse failed")
+		}
 	}
 }
 

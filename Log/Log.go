@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	SuccessPP = pp.New()
 	// InfoPP is a pretty printer for info with default color(white)
 	InfoPP = pp.Default
 	// ErrPP is a pretty printer for error with red color
@@ -25,6 +26,21 @@ var level log.Level
 
 func init() {
 	pp.Default.SetColoringEnabled(false)
+
+	DebugPP.SetColorScheme(pp.ColorScheme{
+		Bool:            pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		Integer:         pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		Float:           pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		String:          pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		StringQuotation: pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		EscapedChar:     pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		FieldName:       pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		PointerAdress:   pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		Nil:             pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		Time:            pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		StructName:      pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		ObjectLength:    pp.Bold | pp.BackgroundBlue | pp.Cyan,
+	})
 
 	ErrPP.SetColorScheme(pp.ColorScheme{
 		Bool:            pp.Bold | pp.Red,
@@ -56,7 +72,7 @@ func init() {
 		ObjectLength:    pp.Bold | pp.Yellow,
 	})
 
-	DebugPP.SetColorScheme(pp.ColorScheme{
+	SuccessPP.SetColorScheme(pp.ColorScheme{
 		Bool:            pp.Bold | pp.Green,
 		Integer:         pp.Bold | pp.Green,
 		Float:           pp.Bold | pp.Green,
@@ -217,6 +233,12 @@ func Info(v ...any) {
 	toOutput(log.LevelInfo, v...)
 }
 
+func InfoRaw(v ...any) {
+	msg := fmt.Sprintf("%s", v[0])
+	vLeft := v[1:]
+	log.Info(msg, vLeft...)
+}
+
 func Infof(format string, v ...any) {
 	msg := fmt.Sprintf(format, v...)
 	log.Info(msg)
@@ -234,6 +256,12 @@ func Errorf(format string, v ...any) {
 	msg := fmt.Sprintf(format, v...)
 	log.Error(msg)
 	toOutput(log.LevelError, msg)
+}
+
+func ErrorRaw(v ...any) {
+	msg := fmt.Sprintf("%s", v[0])
+	vLeft := v[1:]
+	log.Error(msg, vLeft...)
 }
 
 func Trace(v ...any) {
@@ -260,6 +288,12 @@ func Warnf(format string, v ...any) {
 	msg := fmt.Sprintf(format, v...)
 	log.Warn(msg)
 	toOutput(log.LevelWarn, msg)
+}
+
+func WarnRaw(v ...any) {
+	msg := fmt.Sprintf("%s", v[0])
+	vLeft := v[1:]
+	log.Warn(msg, vLeft...)
 }
 
 func Fatal(v ...any) {

@@ -12,10 +12,10 @@ type Parameters interface {
 	SaveConfig(No uint) (ConfigStr, error) // todo LoadOptions with comment/without comment(default)/...
 }
 
-// ServiceParameters is an interface a service must implement
-type ServiceParameters interface {
+// Service is an interface a service must implement
+type Service interface {
 	Parameters
-
+	Target() string
 	ToRequest() (Request, error)
 	SetValue(string)
 	GetIP() string
@@ -25,7 +25,7 @@ type ServiceParameters interface {
 
 // DeviceOverridable is an interface for service whose Ip value can be overridden by the specific Type ip of a device
 type DeviceOverridable interface {
-	ServiceParameters
+	Service
 	// GetDevice return the device name
 	GetDevice() string // todo change to GetDeviceList and return []string
 	// IsDeviceSet return true if the device is set
