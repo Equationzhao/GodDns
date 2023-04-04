@@ -28,19 +28,20 @@ func init() {
 	pp.Default.SetColoringEnabled(false)
 
 	DebugPP.SetColorScheme(pp.ColorScheme{
-		Bool:            pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		Integer:         pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		Float:           pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		String:          pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		StringQuotation: pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		EscapedChar:     pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		FieldName:       pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		PointerAdress:   pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		Nil:             pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		Time:            pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		StructName:      pp.Bold | pp.BackgroundBlue | pp.Cyan,
-		ObjectLength:    pp.Bold | pp.BackgroundBlue | pp.Cyan,
+		Bool:            pp.Bold | pp.BackgroundMagenta | pp.Black,
+		Integer:         pp.Bold | pp.BackgroundMagenta | pp.Black,
+		Float:           pp.Bold | pp.BackgroundMagenta | pp.Black,
+		String:          pp.Bold | pp.BackgroundMagenta | pp.Black,
+		StringQuotation: pp.Bold | pp.BackgroundMagenta | pp.Black,
+		EscapedChar:     pp.Bold | pp.BackgroundMagenta | pp.Black,
+		FieldName:       pp.Bold | pp.BackgroundMagenta | pp.Black,
+		PointerAdress:   pp.Bold | pp.BackgroundMagenta | pp.Black,
+		Nil:             pp.Bold | pp.BackgroundMagenta | pp.Black,
+		Time:            pp.Bold | pp.BackgroundMagenta | pp.Black,
+		StructName:      pp.Bold | pp.BackgroundMagenta | pp.Black,
+		ObjectLength:    pp.Bold | pp.BackgroundMagenta | pp.Black,
 	})
+	DebugPP.WithLineInfo = true
 
 	ErrPP.SetColorScheme(pp.ColorScheme{
 		Bool:            pp.Bold | pp.Red,
