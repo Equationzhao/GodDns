@@ -25,5 +25,5 @@ func AddProxy2Top(target *Proxys, proxy ...proxy) {
 }
 
 func (p *Proxys) GetProxyIter() *Util.Iter[proxy] {
-	return Util.NewIter[proxy]((*[]proxy)(p))
+	return Util.NewIter((*[]proxy)(p))
 }
