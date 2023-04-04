@@ -95,7 +95,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 5,
+	patch: 6,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub
