@@ -47,7 +47,7 @@ func NewPair[T, U any](first T, second U) *Pair[T, U] {
 }
 
 // MakePair return a new Pair
-// if no input, return a pair contains nil T pointer and U pointer 
+// if no input, return a pair contains nil T pointer and U pointer
 // if pos(in) == 2, copy the input to the pair
 // else panic
 func MakePair[T, U any](in ...any) Pair[T, U] {
