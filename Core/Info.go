@@ -37,7 +37,7 @@ type Version struct {
 func RepoURLs() []string {
 	var urls []string
 	for _, git := range gits {
-		urls = append(urls, fmt.Sprintf("git@%s:%s/%s.git", git, owner, repo))
+		urls = append(urls, fmt.Sprintf("https://%s:%s/%s.git", git, owner, repo))
 	}
 	return urls
 }

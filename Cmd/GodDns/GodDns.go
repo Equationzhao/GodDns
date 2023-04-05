@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime/debug"
+	"runtime/pprof"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -45,6 +47,8 @@ var (
 	parallelExecuting        = false
 	runMode                  = ""
 	isLogSet                 = false
+	onChange                 = false
+
 	// cleanUp         func()
 )
 
@@ -65,6 +69,15 @@ var (
 		Category: "OUTPUT",
 	}
 
+	onChangeFlag = &cli.BoolFlag{
+		Name:        "on-change",
+		Aliases:     []string{"oc", "OC"},
+		Value:       false,
+		Usage:       "run ddns automatically when ip changed",
+		Destination: &onChange,
+		Category:    "TRIGGER",
+	}
+
 	timeFlag = &cli.Uint64Flag{
 		Name:        "time",
 		Aliases:     []string{"t", "T"},
@@ -79,7 +92,7 @@ var (
 			}
 			return nil
 		},
-		Category: "TIME",
+		Category: "TRIGGER",
 	}
 
 	timesLimitationFlag = &cli.IntFlag{
@@ -91,13 +104,13 @@ var (
 		Destination: &TimesLimitation,
 		Action: func(context *cli.Context, i int) error {
 			t := context.Uint64("time")
-			if t == 0 {
+			if t == 0 || onChange {
 				returnCode = 2
-				return errors.New("time limitation must be used with time flag")
+				return errors.New("time limitation must be used with time flag or on-change flag")
 			}
 			return nil
 		},
-		Category: "TIME",
+		Category: "TIMES",
 	}
 
 	retryFlag = &cli.UintFlag{
@@ -177,6 +190,27 @@ var (
 		Destination: &parallelExecuting,
 		Category:    "RUN",
 	}
+
+	cpuProflingFlag = &cli.BoolFlag{
+		Name:    "cpu-profile",
+		Aliases: []string{"cpuprofile"},
+		Value:   false,
+		Usage:   "enable cpu profiling",
+		Action: func(context *cli.Context, b bool) error {
+			if b {
+				filename := "goddns-cpu-" + time.Now().Format("2006010203040506") + "prof"
+				prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+				if err != nil {
+					return err
+				}
+				err = pprof.StartCPUProfile(prof)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
 )
 
 func init() {
@@ -206,7 +240,7 @@ func init() {
 			select {
 			case s := <-msg:
 				if s != "" {
-					_, _ = log.DebugPP.Println(s)
+					_, _ = log.DebugPP.Println(s) // use debug pretty print for green color
 				}
 			case <-time.After(2 * time.Second):
 				return
@@ -260,14 +294,10 @@ func main() {
 	defer func() {
 		os.Exit(returnCode)
 	}()
-
+	defer pprof.StopCPUProfile()
 	defer func() {
 		if err := recover(); err != nil {
-			_, _ = fmt.Fprintln(output, "panic: ", err)
-			_, _ = fmt.Fprintln(output, string(debug.Stack()))
-			_, _ = fmt.Fprintln(output, "please report this issue to ", DDNS.IssueURL())
-			_, _ = fmt.Fprintln(output, "or send email to ", DDNS.FeedbackEmail())
-			returnCode = 1
+			panicInfo(err)
 		}
 	}()
 
@@ -329,7 +359,6 @@ func main() {
 					if err != nil {
 						return err
 					}
-
 					if config != "" {
 						DDNS.UpdateConfigureLocation(config)
 					} else {
@@ -375,12 +404,25 @@ func main() {
 					logFlag,
 					configFlag,
 					proxyFlag,
+					cpuProflingFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
 						Name:    "auto",
 						Aliases: []string{"a", "A"},
 						Usage:   "run ddns, use ip address of interface set in Device Section automatically",
+						Flags: []cli.Flag{
+							parallelFlag,
+							timeFlag,
+							timesLimitationFlag,
+							retryFlag,
+							silentFlag,
+							logFlag,
+							configFlag,
+							proxyFlag,
+							cpuProflingFlag,
+							onChangeFlag,
+						},
 						Action: func(context *cli.Context) error {
 
 							err := checkLog(logLevel)
@@ -405,6 +447,9 @@ func main() {
 							}
 
 							runMode = runAuto
+							if onChange {
+								OnChange(parameters, &GlobalDevice)
+							}
 
 							if Time != 0 {
 								_ = RunAuto(GlobalDevice, parameters)
@@ -413,16 +458,6 @@ func main() {
 							}
 
 							return RunAuto(GlobalDevice, parameters)
-						},
-						Flags: []cli.Flag{
-							parallelFlag,
-							timeFlag,
-							timesLimitationFlag,
-							retryFlag,
-							silentFlag,
-							logFlag,
-							configFlag,
-							proxyFlag,
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -438,6 +473,8 @@ func main() {
 									logFlag,
 									configFlag,
 									proxyFlag,
+									cpuProflingFlag,
+									onChangeFlag,
 								},
 								Action: func(context *cli.Context) error {
 
@@ -463,6 +500,9 @@ func main() {
 									}
 
 									runMode = runAutoOverride
+									if onChange {
+										OnChange(parameters, &GlobalDevice)
+									}
 
 									if Time != 0 {
 										_ = RunOverride(GlobalDevice, parameters)
@@ -499,22 +539,46 @@ func main() {
 					silentFlag,
 					logFlag,
 					configFlag,
+					cpuProflingFlag,
 				},
 			},
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
-		if returnCode == 0 {
-			returnCode = 1
-		}
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	e := make(chan error, 1)
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				panicInfo(err)
+				e <- errors.New(fmt.Sprint(err))
+			}
+		}()
+		e <- app.Run(os.Args)
+	}()
 
-		if isLogSet {
-			log.Errorf("fatal: %s", err)
-		} else {
-			_, _ = log.ErrPP.Fprintf(output, "fatal: %s", err.Error())
+	select {
+	case err = <-e:
+		if err != nil {
+			if returnCode == 0 {
+				returnCode = 1
+			}
+			if isLogSet {
+				log.Errorf("fatal: %s", err)
+			} else {
+				_, _ = log.ErrPP.Fprintf(output, "fatal: %s", err.Error())
+			}
 		}
-
+	case <-interrupt:
+		log.Warn("interrupted by user")
 	}
+}
 
+func panicInfo(err any) {
+	_, _ = fmt.Fprintln(output, "panic: ", err)
+	_, _ = fmt.Fprintln(output, "version: ", DDNS.NowVersion)
+	_, _ = fmt.Fprintln(output, string(debug.Stack()))
+	_, _ = fmt.Fprintln(output, "please report this issue to ", DDNS.IssueURL(), "or send email to", DDNS.FeedbackEmail())
+	returnCode = 1
 }

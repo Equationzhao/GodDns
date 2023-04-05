@@ -6,6 +6,7 @@ import (
 	"GodDns/Util"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
 	"strconv"
 	"time"
 
@@ -20,6 +21,8 @@ const (
 	// DDNSURL  url of DDNS
 	DDNSURL = "https://dnsapi.cn/Record.Ddns"
 )
+
+type empty struct{}
 
 // usage
 // r:=Dnspod.Request
@@ -69,12 +72,12 @@ func (r *Request) Init(parameters Parameters) error {
 
 func (r *Request) RequestThroughProxy() error {
 
-	done := make(chan bool)
+	done := make(chan empty)
 	status := newStatus()
 	var err error
 	go func() {
 		*status, err = r.GetRecordIdByProxy()
-		done <- true
+		done <- empty{}
 	}()
 
 	s := &resOfddns{}
@@ -156,12 +159,12 @@ func (r *Request) RequestThroughProxy() error {
 
 // MakeRequest  1.GetRecordId  2.DDNS
 func (r *Request) MakeRequest() error {
-	done := make(chan bool)
+	done := make(chan struct{})
 	status := newStatus()
 	var err error
 	go func() {
 		*status, err = r.GetRecordId()
-		done <- true
+		done <- empty{}
 	}()
 
 	s := &resOfddns{}
@@ -238,7 +241,8 @@ func (r *Request) GetRecordId() (DDNS.Status, error) {
 	// make request to "https://dnsapi.cn/Record.List" to get record id
 	client := resty.New()
 
-	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
+	response, err := client.R().SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
+	_ = sonic.UnmarshalString(response.String(), s)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
 	status := *code2status(s.Status.Code)

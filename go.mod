@@ -8,12 +8,12 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.9.0
 	gopkg.in/ini.v1 v1.67.0
-
 )
 
 require (
 	github.com/bytedance/sonic v1.8.6
 	github.com/k0kubun/pp/v3 v3.2.0
+	github.com/panjf2000/ants/v2 v2.7.2
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.624
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.624
 	github.com/urfave/cli/v2 v2.25.0

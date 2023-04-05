@@ -204,6 +204,23 @@ func WhichType(ip string) uint8 {
 	return 0
 }
 
+// WhichTypeStr get the type of ip in string
+// parameter: ip
+func WhichTypeStr(ip string) string {
+
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return ""
+	}
+	if netip.Addr.Is4(addr) {
+		return "A"
+	} else if netip.Addr.Is6(addr) {
+		return "AAAA"
+	}
+
+	return ""
+}
+
 type IntegerNumeric interface {
 	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64
 }
@@ -591,8 +608,7 @@ func NewSelector(no uint64) IpHandler {
 // HandleIp ip
 // handle ip with handlers
 // join errors together when error handling
-func HandleIp(ips []string, handlers ...IpHandler) ([]string, error) {
-	var errs error
+func HandleIp(ips []string, handlers ...IpHandler) (res []string, errs error) {
 
 	for _, ipHandler := range handlers {
 		var temp []string = nil

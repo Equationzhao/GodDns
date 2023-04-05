@@ -118,12 +118,6 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 		Type = Net.Type2Str(sec.Key("type").String())
 	}
 
-	// todo multi-subdomain eg. sub1,sub2
-	// 1. remove ','
-	// 2. split by ' '
-	// 3. remove empty string
-	// 4. remove duplicate subdomain
-	// 5. copy other parameters and modify subdomains
 	subdomain := Unpack(sec, "sub_domain", &err)
 	if err != nil {
 		return nil, err
