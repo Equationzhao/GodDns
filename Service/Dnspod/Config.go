@@ -6,10 +6,9 @@ import (
 	"GodDns/Util"
 	"GodDns/Util/Collections"
 	"bytes"
+	"gopkg.in/ini.v1"
 	"strconv"
 	"strings"
-
-	"gopkg.in/ini.v1"
 )
 
 type Config struct {
@@ -17,7 +16,7 @@ type Config struct {
 }
 
 func init() {
-	DDNS.Add2FactoryList(configFactoryInstance)
+	Core.Add2FactoryList(configFactoryInstance)
 }
 
 // GetName Get name of service
@@ -28,7 +27,7 @@ func (c Config) GetName() string {
 // GenerateDefaultConfigInfo Create default config
 // Return: DDNS.ConfigStr , error
 // if any error occurs, FileName will be ""
-func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
+func (c Config) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
 	P := GenerateDefaultConfigInfo()
 	return c.GenerateConfigInfo(&P, 0)
 }
@@ -37,7 +36,7 @@ func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 // Parameters: sec ini.Section
 // Return: DDNS.Parameters and error
 // if any error occurs, returned Parameters will be nil
-func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 	var err error = nil
 
 	// if no error, err=nil
@@ -126,7 +125,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	subdomains := strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
 	Collections.RemoveDuplicate(&subdomains)
 
-	ps := make([]DDNS.Parameters, 0, len(subdomains))
+	ps := make([]Core.Parameters, 0, len(subdomains))
 
 	for _, s := range subdomains {
 		if s == "" {
@@ -167,25 +166,25 @@ func (c ConfigFactory) GetName() string {
 }
 
 // Get return a singleton Config
-func (c ConfigFactory) Get() DDNS.Config {
+func (c ConfigFactory) Get() Core.Config {
 	return &configInstance
 }
 
 // New return a new Config
-func (c ConfigFactory) New() *DDNS.Config {
-	var config DDNS.Config = &Config{}
+func (c ConfigFactory) New() *Core.Config {
+	var config Core.Config = &Config{}
 	return &config
 }
 
 // GenerateConfigInfo
 // Generate KeyValue style config
-func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
+func (c Config) GenerateConfigInfo(parameters Core.Parameters, No uint) (Core.ConfigStr, error) {
 
-	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
-	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+	buffer := bytes.NewBufferString(Core.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(Core.Format, parameters))
 	buffer.Write([]byte{'\n', '\n'})
 
-	return DDNS.ConfigStr{
+	return Core.ConfigStr{
 		Name:    "Dnspod",
 		Content: buffer.String(),
 	}, nil

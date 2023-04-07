@@ -29,7 +29,7 @@ func TestConfig_GenerateConfigInfo(t *testing.T) {
 }
 
 func TestConfig_ReadConfig(t *testing.T) {
-	Filename, err := DDNS.GetDefaultConfigurationLocation()
+	Filename, err := Core.GetDefaultConfigurationLocation()
 	if err != nil {
 		t.Error(err)
 	}

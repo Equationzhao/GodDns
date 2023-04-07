@@ -2,17 +2,15 @@ package Dnspod
 
 import (
 	"GodDns/Core"
+	log "GodDns/Log"
 	"GodDns/Net"
-	"GodDns/Util"
+	json "GodDns/Util/Json"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
+	"github.com/go-resty/resty/v2"
+	"net/url"
 	"strconv"
 	"time"
-
-	log "GodDns/Log"
-
-	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -32,7 +30,7 @@ type empty struct{}
 // Request implements DDNS.Request
 type Request struct {
 	parameters Parameters
-	status     DDNS.Status
+	status     Core.Status
 }
 
 // Target return target domain
@@ -41,20 +39,20 @@ func (r *Request) Target() string {
 }
 
 // Status return DDNS.Status which contains execution result etc.
-func (r *Request) Status() DDNS.Status {
+func (r *Request) Status() Core.Status {
 	return r.status
 }
 
-func newStatus() *DDNS.Status {
-	return &DDNS.Status{
+func newStatus() *Core.Status {
+	return &Core.Status{
 		Name:   serviceName,
-		Status: DDNS.NotExecute,
-		MG:     DDNS.NewDefaultMsgGroup(),
+		Status: Core.NotExecute,
+		MG:     Core.NewDefaultMsgGroup(),
 	}
 }
 
 // ToParameters return DDNS.Parameters
-func (r *Request) ToParameters() DDNS.Service {
+func (r *Request) ToParameters() Core.Service {
 	return &r.parameters
 }
 
@@ -70,24 +68,54 @@ func (r *Request) Init(parameters Parameters) error {
 	return nil
 }
 
+func (r *Request) encodeURLWithoutIDContent() url.Values {
+	v := url.Values{}
+	v.Add("login_token", r.parameters.LoginToken)
+	v.Add("format", r.parameters.Format)
+	v.Add("lang", r.parameters.Lang)
+	v.Add("error_on_empty", r.parameters.ErrorOnEmpty)
+	v.Add("domain", r.parameters.Domain)
+	v.Add("sub_domain", r.parameters.Subdomain)
+	v.Add("record_line", r.parameters.RecordLine)
+
+	v.Add("record_type", r.parameters.Type)
+	return v
+}
+
+func (r *Request) encodeURLWithoutID() (content string) {
+	content = r.encodeURLWithoutIDContent().Encode()
+	return content
+}
+
+func (r *Request) encodeURL() (content string) {
+	v := r.encodeURLWithoutIDContent()
+	ttl := strconv.Itoa(int(r.parameters.TTL))
+	v.Add("ttl", ttl)
+	v.Add("value", r.parameters.Value)
+	id := strconv.Itoa(int(r.parameters.RecordId))
+	v.Add("record_id", id)
+	content = v.Encode()
+	return content
+}
+
 func (r *Request) RequestThroughProxy() error {
 
 	done := make(chan empty)
 	status := newStatus()
 	var err error
-	go func() {
+	_ = Core.MainGoroutinePool.Submit(func() {
 		*status, err = r.GetRecordIdByProxy()
 		done <- empty{}
-	}()
+	})
 
 	s := &resOfddns{}
 
 	content := ""
 	select {
 	case <-done:
-		if err != nil || status.Status != DDNS.Success {
+		if err != nil || status.Status != Core.Success {
 			r.status.Name = serviceName
-			r.status.Status = DDNS.Failed
+			r.status.Status = Core.Failed
 			for _, i := range status.MG.GetInfo() {
 				r.status.MG.AddInfo(i.String())
 			}
@@ -103,48 +131,39 @@ func (r *Request) RequestThroughProxy() error {
 			r.status.MG.AddError(err.Error())
 			return err
 		}
-		content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
+		// content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
+		content = r.encodeURL()
+
 	case <-time.After(time.Second * 20):
-		r.status.Status = DDNS.Timeout
+		r.status.Status = Core.Timeout
 		r.status.MG.AddError("GetRecordId timeout")
 		return errors.New("GetRecordId timeout")
 	}
 
 	log.Debugf("content:%s", content)
 
-	iter := Net.GlobalProxys.GetProxyIter()
-	var response *resty.Response
-
+	iter := Net.GlobalProxies.GetProxyIter()
+	client := Core.MainClientPool.Get().(*resty.Client)
+	defer Core.MainClientPool.Put(client)
+	req := client.R()
 	for iter.NotLast() {
 		proxy := iter.Next()
-		pool, err := DDNS.MainPoolMap.GetOrCreate(proxy, func() (resty.Client, error) {
-			r := resty.New()
-			r.SetProxy(proxy)
-			return *r, nil
-		})
+		response, err := req.SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
 		if err != nil {
-			errMsg := fmt.Sprintf("error get client pool from map: %s", err.Error())
+			errMsg := fmt.Sprintf("request error through proxy %s: %v", proxy, err)
 			r.status.MG.AddError(errMsg)
-			log.Error(errMsg)
+			log.Errorf(errMsg)
+			continue
 		} else {
-			client := pool.Get()
-			response, err = client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
-			log.Tracef("response: %v", response)
-			log.Debugf("result:%+v", s)
-			client.Release()
-			if err != nil {
-				errMsg := fmt.Sprintf("request error through proxy %s: %v", proxy, err)
-				r.status.MG.AddError(errMsg)
-				log.Errorf(errMsg)
-				continue
-			} else {
-				break
-			}
+			log.Debugf("result:%+v", string(response.Body()))
+			_ = json.Unmarshal(response.Body(), s)
+			log.Debugf("after marshall:%+v", s)
+			break
 		}
 	}
 	r.status = *code2status(s.Status.Code)
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
-	if r.status.Status == DDNS.Success {
+	if r.status.Status == Core.Success {
 		r.status.MG.AddInfo(resultMsg)
 	} else {
 		r.status.MG.AddError(resultMsg)
@@ -162,19 +181,19 @@ func (r *Request) MakeRequest() error {
 	done := make(chan struct{})
 	status := newStatus()
 	var err error
-	go func() {
+	_ = Core.MainGoroutinePool.Submit(func() {
 		*status, err = r.GetRecordId()
 		done <- empty{}
-	}()
+	})
 
 	s := &resOfddns{}
 
 	content := ""
 	select {
 	case <-done:
-		if err != nil || status.Status != DDNS.Success {
+		if err != nil || status.Status != Core.Success {
 			r.status.Name = serviceName
-			r.status.Status = DDNS.Failed
+			r.status.Status = Core.Failed
 			for _, i := range status.MG.GetInfo() {
 				r.status.MG.AddInfo(i.String())
 			}
@@ -189,22 +208,26 @@ func (r *Request) MakeRequest() error {
 			r.status.MG.AddError(err.Error())
 			return err
 		}
-		content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
+		// content = Util.Convert2XWWWFormUrlencoded(&r.parameters)
+		content = r.encodeURL()
+
 	case <-time.After(time.Second * 20):
-		r.status.Status = DDNS.Timeout
+		r.status.Status = Core.Timeout
 		r.status.MG.AddError("GetRecordId timeout")
 		return errors.New("GetRecordId timeout")
 	}
 
 	log.Debugf("content:%s", content)
-	client := resty.New()
+	client := Core.MainClientPool.Get().(*resty.Client)
+	defer Core.MainClientPool.Put(client)
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
-
+	_ = json.Unmarshal(response.Body(), s)
+	log.Debugf("after marshall:%+v", s)
 	r.status = *code2status(s.Status.Code)
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
-	if r.status.Status == DDNS.Success {
+	if r.status.Status == Core.Success {
 		r.status.MG.AddInfo(resultMsg)
 	} else {
 		r.status.MG.AddError(resultMsg)
@@ -218,33 +241,23 @@ func (r *Request) MakeRequest() error {
 }
 
 // GetRecordId make request to Dnspod to get RecordId and set ExternalParameter.RecordId
-func (r *Request) GetRecordId() (DDNS.Status, error) {
+func (r *Request) GetRecordId() (Core.Status, error) {
 	if r.status.MG == nil {
-		r.status.MG = DDNS.NewDefaultMsgGroup()
+		r.status.MG = Core.NewDefaultMsgGroup()
 	}
 
 	s := &resOfRecordId{}
 
-	p := param2GetId{
-		LoginToken:   r.parameters.LoginToken,
-		Format:       r.parameters.Format,
-		Lang:         r.parameters.Lang,
-		ErrorOnEmpty: r.parameters.ErrorOnEmpty,
-		Type:         r.parameters.Type,
-		Domain:       r.parameters.Domain,
-		Subdomain:    r.parameters.Subdomain,
-	}
+	content := r.encodeURLWithoutID()
 
-	content := Util.Convert2XWWWFormUrlencoded(p)
 	log.Debugf("content:%s", content)
 
 	// make request to "https://dnsapi.cn/Record.List" to get record id
-	client := resty.New()
+	client := Core.MainClientPool.Get().(*resty.Client)
+	defer Core.MainClientPool.Put(client)
+	_, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
 
-	response, err := client.R().SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
-	_ = sonic.UnmarshalString(response.String(), s)
-	log.Tracef("response: %v", response)
-	log.Debugf("result:%+v", s)
+	log.Debugf("after marshall:%s", s)
 	status := *code2status(s.Status.Code)
 	if err != nil {
 		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
@@ -277,53 +290,32 @@ func (r *Request) GetRecordId() (DDNS.Status, error) {
 	return status, nil
 }
 
-func (r *Request) GetRecordIdByProxy() (DDNS.Status, error) {
+func (r *Request) GetRecordIdByProxy() (Core.Status, error) {
 	if r.status.MG == nil {
-		r.status.MG = DDNS.NewDefaultMsgGroup()
+		r.status.MG = Core.NewDefaultMsgGroup()
 	}
 	s := &resOfRecordId{}
 
-	p := param2GetId{
-		LoginToken:   r.parameters.LoginToken,
-		Format:       r.parameters.Format,
-		Lang:         r.parameters.Lang,
-		ErrorOnEmpty: r.parameters.ErrorOnEmpty,
-		Type:         r.parameters.Type,
-		Domain:       r.parameters.Domain,
-		Subdomain:    r.parameters.Subdomain,
-	}
-
-	content := Util.Convert2XWWWFormUrlencoded(p)
+	content := r.encodeURLWithoutID()
 	log.Debugf("content:%s", content)
 
+	client := Core.MainClientPool.Get().(*resty.Client)
+	defer Core.MainClientPool.Put(client)
+	res := client.R().SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	// make request to "https://dnsapi.cn/Record.List" to get record id
-	iter := Net.GlobalProxys.GetProxyIter()
+	iter := Net.GlobalProxies.GetProxyIter()
 	for iter.NotLast() {
 		proxy := iter.Next()
-		pool, err := DDNS.MainPoolMap.GetOrCreate(proxy, func() (resty.Client, error) {
-			r := resty.New()
-			r.SetProxy(proxy)
-			return *r, nil
-		})
-		if err != nil {
-			errMsg := fmt.Sprintf("error get client pool from map, error:%s", err.Error())
-			r.status.MG.AddError(errMsg)
-			log.ErrorRaw(errMsg)
-		} else {
-			client := pool.Get()
-			response, err := client.First.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
-			log.Tracef("response: %v", response)
-			log.Debugf("result:%+v", s)
-
-			if err == nil {
-				break
-			}
-			errMsg := fmt.Sprintf("error get record id by proxy %s, error:%s", proxy, err.Error())
-			r.status.MG.AddError(errMsg)
-			log.ErrorRaw(errMsg)
-			continue
-
+		_, err := res.SetBody(content).SetResult(s).Post(RecordListUrl)
+		log.Debugf("after marshall:%s", s)
+		if err == nil {
+			break
 		}
+
+		errMsg := fmt.Sprintf("error get record id by proxy %s, error:%s", proxy, err.Error())
+		r.status.MG.AddError(errMsg)
+		log.ErrorRaw(errMsg)
+		continue
 	}
 	status := code2status(s.Status.Code) // " %s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()
 
@@ -350,16 +342,6 @@ func (r *Request) GetRecordIdByProxy() (DDNS.Status, error) {
 	status.MG.AddInfo(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 	r.parameters.RecordId = uint32(id)
 	return *status, nil
-}
-
-type param2GetId struct {
-	LoginToken   string `json:"login_token,omitempty" xwwwformurlencoded:"login_token"`
-	Format       string `json:"format,omitempty" xwwwformurlencoded:"format"`
-	Lang         string `json:"lang,omitempty" xwwwformurlencoded:"lang"`
-	ErrorOnEmpty string `json:"error_on_empty,omitempty" xwwwformurlencoded:"error_on_empty"`
-	Domain       string `json:"domain,omitempty" xwwwformurlencoded:"domain"`
-	Subdomain    string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain"`
-	Type         string `json:"record_type,omitempty" xwwwformurlencoded:"record_type"`
 }
 
 type resOfRecordId struct {

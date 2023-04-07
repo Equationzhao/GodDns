@@ -1,9 +1,10 @@
-package DDNS
+package Core
 
 import (
 	"GodDns/Net"
+	sonic "GodDns/Util/Json"
 	"encoding/json"
-	"github.com/bytedance/sonic"
+	jsoniter "github.com/json-iterator/go"
 	"net/url"
 	"regexp"
 	"testing"
@@ -14,36 +15,36 @@ func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
 	t.Log(l())
 }
 
-func BenchmarkStdJson(b *testing.B) {
-	result := map[string]any{}
-	s := struct {
-		Code int `json:"code"`
-		Data struct {
-			IpInfo []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			} `json:"ipInfo"`
-		} `json:"data"`
+var result = map[string]any{}
+var s = struct {
+	Code int `json:"code"`
+	Data struct {
+		IpInfo []struct {
+			Value  string `json:"value"`
+			Region string `json:"region"`
+		} `json:"ipInfo"`
+	} `json:"data"`
+}{
+	Code: 123,
+	Data: struct {
+		IpInfo []struct {
+			Value  string `json:"value"`
+			Region string `json:"region"`
+		} `json:"ipInfo"`
 	}{
-		Code: 123,
-		Data: struct {
-			IpInfo []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			} `json:"ipInfo"`
+		IpInfo: []struct {
+			Value  string `json:"value"`
+			Region string `json:"region"`
 		}{
-			IpInfo: []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			}{
-				{
-					Value:  "1.2.3.4",
-					Region: "CN",
-				},
+			{
+				Value:  "1.2.3.4",
+				Region: "CN",
 			},
 		},
-	}
+	},
+}
 
+func BenchmarkStdJson(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		bytes, _ := json.Marshal(s)
 		_ = json.Unmarshal(bytes, &result)
@@ -52,38 +53,17 @@ func BenchmarkStdJson(b *testing.B) {
 }
 
 func BenchmarkSonic(b *testing.B) {
-	result := map[string]any{}
-	s := struct {
-		Code int `json:"code"`
-		Data struct {
-			IpInfo []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			} `json:"ipInfo"`
-		} `json:"data"`
-	}{
-		Code: 123,
-		Data: struct {
-			IpInfo []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			} `json:"ipInfo"`
-		}{
-			IpInfo: []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			}{
-				{
-					Value:  "1.2.3.4",
-					Region: "CN",
-				},
-			},
-		},
-	}
-
 	for i := 0; i < b.N; i++ {
 		bytes, _ := sonic.Marshal(s)
 		_ = sonic.Unmarshal(bytes, &result)
+		_ = result
+	}
+}
+
+func BenchmarkJsoniter(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		bytes, _ := jsoniter.Marshal(s)
+		_ = jsoniter.Unmarshal(bytes, &result)
 		_ = result
 	}
 }

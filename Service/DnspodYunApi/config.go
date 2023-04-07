@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	DDNS.Add2FactoryList(factoryInstance)
+	Core.Add2FactoryList(factoryInstance)
 }
 
 const serviceName = "DnspodYun"
@@ -28,12 +28,12 @@ func (f Factory) GetName() string {
 	return serviceName
 }
 
-func (f Factory) Get() DDNS.Config {
+func (f Factory) Get() Core.Config {
 	return &configInstance
 }
 
-func (f Factory) New() *DDNS.Config {
-	var c DDNS.Config = Config{}
+func (f Factory) New() *Core.Config {
+	var c Core.Config = Config{}
 	return &c
 }
 
@@ -44,7 +44,7 @@ func (c Config) GetName() string {
 	return serviceName
 }
 
-func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
+func (c Config) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
 	p := GenerateDefaultConfigInfo()
 	return c.GenerateConfigInfo(&p, 0)
 }
@@ -63,13 +63,13 @@ func GenerateDefaultConfigInfo() DnspodYun {
 	}
 }
 
-func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 	names := [9]string{"SecretID", "SecretKey", "Domain", "SubDomain", "RecordId", "RecordLine", "Value", "TTL", "Type"}
 	p := DnspodYun{}
 	var subdomains []string
 	for _, name := range names {
 		if !sec.HasKey(name) {
-			return nil, DDNS.NewMissKeyErr(name, serviceName)
+			return nil, Core.NewMissKeyErr(name, serviceName)
 		} else {
 			switch name {
 			case "SubDomain":
@@ -92,7 +92,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 			}
 		}
 	}
-	ps := make([]DDNS.Parameters, 0, len(subdomains))
+	ps := make([]Core.Parameters, 0, len(subdomains))
 	for _, subdomain := range subdomains {
 		if subdomain == "" {
 			continue
@@ -113,12 +113,12 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	return ps, nil
 }
 
-func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, u uint) (DDNS.ConfigStr, error) {
-	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, u))
-	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+func (c Config) GenerateConfigInfo(parameters Core.Parameters, u uint) (Core.ConfigStr, error) {
+	buffer := bytes.NewBufferString(Core.ConfigHead(parameters, u))
+	buffer.WriteString(Util.Convert2KeyValue(Core.Format, parameters))
 	buffer.Write([]byte{'\n', '\n'})
 
-	return DDNS.ConfigStr{
+	return Core.ConfigStr{
 		Name:    "Dnspod_yun",
 		Content: buffer.String(),
 	}, nil

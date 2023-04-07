@@ -1,16 +1,15 @@
-// Package DDNS
-// ProgramConfig
-package DDNS
+// Package Core is the core package of GodDns, it contains the basic interfaces and tools for DDNS service.
+package Core
 
 import (
 	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util"
 	"GodDns/Util/Collections"
+	json "GodDns/Util/Json"
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"github.com/go-resty/resty/v2"
 	"gopkg.in/ini.v1"
 	"net/url"
@@ -89,7 +88,7 @@ func (p *ProgramConfig) ConfigStr() ConfigStr {
 func (p *ProgramConfig) Setup() {
 	// 1. set proxy
 	for _, p := range p.proxy {
-		Net.AddProxy(Net.GlobalProxys, p.String())
+		Net.AddProxy(Net.GlobalProxies, p.String())
 	}
 	// 2. add apis
 	for _, ag := range p.ags {
@@ -234,7 +233,9 @@ type GetHandler struct {
 }
 
 func (g GetHandler) Do(s string) (string, error) {
-	res, err := resty.New().R().Get(s)
+	c := MainClientPool.Get().(*resty.Client)
+	defer MainClientPool.Put(c)
+	res, err := c.R().Get(s)
 	if err != nil {
 		return "", err
 	}
@@ -249,7 +250,9 @@ type PostHandler struct {
 }
 
 func (p PostHandler) Do(s string) (string, error) {
-	res, err := resty.New().R().Post(s)
+	c := MainClientPool.Get().(*resty.Client)
+	defer MainClientPool.Put(c)
+	res, err := c.R().Post(s)
 	if err != nil {
 		return "", err
 	}
@@ -396,7 +399,7 @@ func (j jsonHandler) HandleResponse(source string, toGet string) (target any, er
 	// parse resName
 	var result map[string]any
 
-	err = sonic.Unmarshal([]byte(source), &result)
+	err = json.Unmarshal([]byte(source), &result)
 	if err != nil {
 		return "", err
 	}

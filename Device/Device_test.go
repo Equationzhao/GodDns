@@ -26,7 +26,7 @@ func TestDevice_ReadConfig(t *testing.T) {
 
 	t.Log(d)
 
-	parameters, err, errs := DDNS.ConfigureReader("test.ini", ConfigFactoryInstance)
+	parameters, err, errs := Core.ConfigureReader("test.ini", ConfigFactoryInstance)
 
 	if errs != nil {
 		t.Error(errs)

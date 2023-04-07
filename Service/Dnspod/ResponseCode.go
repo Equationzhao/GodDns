@@ -36,7 +36,7 @@ const (
 
 // code2status
 // convert the code to message and set status.Status
-func code2status(code string) *DDNS.Status {
+func code2status(code string) *Core.Status {
 	var msg = newStatus()
 	switch code {
 	case Success:
@@ -97,9 +97,9 @@ func code2status(code string) *DDNS.Status {
 	}
 
 	if code == "1" {
-		msg.Status = DDNS.Success
+		msg.Status = Core.Success
 	} else {
-		msg.Status = DDNS.Failed
+		msg.Status = Core.Failed
 	}
 
 	return msg

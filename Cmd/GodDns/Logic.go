@@ -18,7 +18,41 @@ import (
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
 
-func RunDDNS(parameters []DDNS.Parameters) error {
+func ModeController(ps []Core.Parameters, GlobalDevice *Device.Device) error {
+	switch runMode {
+	case run:
+		err := RunDDNS(ps)
+		if err != nil {
+			return err
+		}
+	case runApi:
+		err := RunGetFromApi(ps)
+		if err != nil {
+			return err
+		}
+	case runAuto:
+		if GlobalDevice == nil {
+			panic("no global device")
+		}
+		err := RunAuto(*GlobalDevice, ps)
+		if err != nil {
+			return err
+		}
+	case runAutoOverride:
+		if GlobalDevice == nil {
+			panic("no global device")
+		}
+		err := RunOverride(*GlobalDevice, ps)
+		if err != nil {
+			return err
+		}
+	default:
+		panic("unknown run mode")
+	}
+	return nil
+}
+
+func RunDDNS(parameters []Core.Parameters) error {
 	log.Debugf("run ddns")
 	// run ddns here
 
@@ -53,8 +87,8 @@ func (d *d2i) Add(device string, ip string, t Net.Type) {
 
 var Device2Ips = make(d2i, 20)
 
-func ReadConfig(configs []DDNS.ConfigFactory) ([]DDNS.Parameters, error) {
-	parameters, fileErr, configErrs := DDNS.ConfigureReader(DDNS.GetConfigureLocation(), configs...)
+func ReadConfig(configs []Core.ConfigFactory) ([]Core.Parameters, error) {
+	parameters, fileErr, configErrs := Core.ConfigureReader(Core.GetConfigureLocation(), configs...)
 	if fileErr != nil {
 		log.Errorf("error reading config: %s", fileErr.Error())
 
@@ -74,7 +108,7 @@ func ReadConfig(configs []DDNS.ConfigFactory) ([]DDNS.Parameters, error) {
 
 // RunGetFromApi get ip address from api
 // require parameters contain Device.Device
-func RunGetFromApi(parameters []DDNS.Parameters) error {
+func RunGetFromApi(parameters []Core.Parameters) error {
 
 	// if api is api name , get api from map
 	// if api is url , try to make request to url  http://example.com/api?ip=4 or http://example.com/api?ip=6
@@ -97,7 +131,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 	_ip6 := ""
 
 	var err1 error
-	go func() {
+	_ = Core.MainGoroutinePool.Submit(func() {
 		_ip4, err1 = api.Get(4)
 		if err1 != nil {
 			ip4Done <- false
@@ -106,10 +140,10 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 			ip4Done <- true
 		}
 		close(ip4Done)
-	}()
+	})
 
 	var err2 error
-	go func() {
+	_ = Core.MainGoroutinePool.Submit(func() {
 
 		_ip6, err2 = api.Get(6)
 		if err2 != nil {
@@ -121,7 +155,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 			ip6Done <- true
 		}
 		close(ip6Done)
-	}()
+	})
 
 	var ipv4Received, ipv6Received bool
 	for {
@@ -160,7 +194,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 
 	for _, parameter := range parameters {
 		if parameter.GetName() != Device.ServiceName {
-			if d, ok := parameter.(DDNS.Service); ok {
+			if d, ok := parameter.(Core.Service); ok {
 				if d.IsTypeSet() {
 					if Net.TypeEqual(d.GetType(), Net.A) {
 						d.SetValue(ip4)
@@ -177,7 +211,7 @@ func RunGetFromApi(parameters []DDNS.Parameters) error {
 	return GenerateExecuteSave(parameters)
 }
 
-func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
+func RunAuto(GlobalDevice Device.Device, parameters []Core.Parameters) error {
 	log.Info("get ip address automatically")
 	// get ip addr automatically
 
@@ -230,7 +264,7 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 	Device2Ips.Add(ip4.GetFirst(), ip4.GetSecond(), Net.A)
 	Device2Ips.Add(ip6.GetFirst(), ip6.GetSecond(), Net.AAAA)
 
-	set := func(parameter DDNS.Service) error {
+	set := func(parameter Core.Service) error {
 		switch parameter.GetType() {
 		case "4":
 			MainBinder.Bind(ip4.GetFirst(), &parameter)
@@ -247,9 +281,9 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 		}
 	}
 
-	newParameters := make([]DDNS.Parameters, 0, len(parameters))
+	newParameters := make([]Core.Parameters, 0, len(parameters))
 	for _, parameter := range parameters {
-		if service, ok := parameter.(DDNS.Service); ok {
+		if service, ok := parameter.(Core.Service); ok {
 			// if parameter implements DeviceOverridable interface, set the ip address
 			if err := set(service); err != nil {
 				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), service.GetName())
@@ -268,22 +302,22 @@ func RunAuto(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
 
 // GetGlobalDevice get the global device
 // if not found, fatal
-func GetGlobalDevice(parameters []DDNS.Parameters) (Device.Device, error) {
-	deviceInterface, err := DDNS.Find(parameters, Device.ServiceName)
+func GetGlobalDevice(parameters []Core.Parameters) (Device.Device, error) {
+	deviceInterface, err := Core.Find(parameters, Device.ServiceName)
 	if err != nil {
-		log.Errorf("Section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
-		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", DDNS.GetConfigureLocation())
+		log.Errorf("Section [Devices] not found, check configuration at %s", Core.GetConfigureLocation())
+		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", Core.GetConfigureLocation())
 	}
 
 	GlobalDevice, ok := deviceInterface.(Device.Device)
 	if !ok {
-		log.Errorf("Section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
-		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", DDNS.GetConfigureLocation())
+		log.Errorf("Section [Devices] is not a device, check configuration at %s", Core.GetConfigureLocation())
+		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", Core.GetConfigureLocation())
 	}
 	return GlobalDevice, nil
 }
 
-func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error {
+func RunOverride(GlobalDevice Device.Device, parameters []Core.Parameters) error {
 	// override the ip address here
 	// use the Key `Devices` and `Type` of the Service if exist
 	log.Info("-O is set, override the ip address")
@@ -293,7 +327,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
-			if d, ok := parameter.(DDNS.DeviceOverridable); ok {
+			if d, ok := parameter.(Core.DeviceOverridable); ok {
 				log.Debugf("Parameter %s implements DeviceOverridable interface", parameter.GetName())
 
 				var tempDeviceName string
@@ -307,7 +341,7 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 
 						continue
 					}
-					log.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(DDNS.DeviceOverridable).GetIP())
+					log.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(Core.DeviceOverridable).GetIP())
 					continue // skip
 				}
 
@@ -329,16 +363,16 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 				}
 
 				log.Infof("override %s with %s", parameter.GetName(), ips[0])
-				parameter.(DDNS.DeviceOverridable).SetValue(ips[0])
+				parameter.(Core.DeviceOverridable).SetValue(ips[0])
 			} else {
 				// Service is not DeviceOverridable, use ip got from Devices Section
 				err := set(GlobalDevice, parameter)
 				if err != nil {
 					errCount++
-					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(DDNS.Service).GetIP())
+					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(Core.Service).GetIP())
 					continue
 				}
-				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(DDNS.Service).GetIP())
+				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(Core.Service).GetIP())
 			}
 
 		}
@@ -350,9 +384,9 @@ func RunOverride(GlobalDevice Device.Device, parameters []DDNS.Parameters) error
 
 }
 
-func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
+func set(GlobalDevice Device.Device, ParameterToSet Core.Parameters) error {
 
-	toSet := ParameterToSet.(DDNS.Service)
+	toSet := ParameterToSet.(Core.Service)
 	Type := toSet.GetType() // Type is "4" or "6" or ""
 
 	ip := Collections.MakePair[string, string]() // First is device, second is ip
@@ -402,11 +436,11 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 		}
 
 	default:
-		return fmt.Errorf("unknown type %s", ParameterToSet.(DDNS.Service).GetType())
+		return fmt.Errorf("unknown type %s", ParameterToSet.(Core.Service).GetType())
 	}
 
 	if ip.GetFirst() != "" && ip.GetSecond() != "" {
-		ParameterToSet.(DDNS.Service).SetValue(ip.GetSecond())
+		ParameterToSet.(Core.Service).SetValue(ip.GetSecond())
 		return nil
 	} else {
 		return err
@@ -414,11 +448,11 @@ func set(GlobalDevice Device.Device, ParameterToSet DDNS.Parameters) error {
 
 }
 
-func GenerateExecuteSave(parameters []DDNS.Parameters) error {
+func GenerateExecuteSave(parameters []Core.Parameters) error {
 	requests := GenerateRequests(parameters)
 
-	d, err := DDNS.Find(parameters, Device.ServiceName)
-	Parameters2Save := make([]DDNS.Parameters, 0, len(parameters))
+	d, err := Core.Find(parameters, Device.ServiceName)
+	Parameters2Save := make([]Core.Parameters, 0, len(parameters))
 	if err == nil {
 		Parameters2Save = append(Parameters2Save, d)
 	}
@@ -438,17 +472,17 @@ func GenerateExecuteSave(parameters []DDNS.Parameters) error {
 	return nil
 }
 
-func Display(request DDNS.Request) {
+func Display(request Core.Request) {
 	_, _ = log.InfoPP.Fprintln(output, fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
-	serviceInfo := request.Status().MG.GetMsgOf(DDNS.Info)
+	serviceInfo := request.Status().MG.GetMsgOf(Core.Info)
 	if len(serviceInfo) > 0 {
 		for _, i := range serviceInfo {
 			_, _ = log.SuccessPP.Fprintln(output, i)
 		}
 	}
 
-	serviceErr := request.Status().MG.GetMsgOf(DDNS.Error)
-	serviceWarn := request.Status().MG.GetMsgOf(DDNS.Warn)
+	serviceErr := request.Status().MG.GetMsgOf(Core.Error)
+	serviceWarn := request.Status().MG.GetMsgOf(Core.Warn)
 	if len(serviceErr) > 0 {
 		for _, e := range serviceErr {
 			_, _ = log.ErrPP.Fprintln(output, e)
@@ -461,16 +495,16 @@ func Display(request DDNS.Request) {
 	}
 }
 
-func DisplayAll(requests ...DDNS.Request) {
+func DisplayAll(requests ...Core.Request) {
 	for _, request := range requests {
 		Display(request)
 		_, _ = fmt.Fprintln(output)
 	}
 }
 
-func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
-	if DDNS.IsConfigExist(DDNS.GetConfigureLocation()) {
-		log.Warnf("configure at %s already exist", DDNS.GetConfigureLocation())
+func GenerateConfigure(configFactoryList []Core.ConfigFactory) error {
+	if Core.IsConfigExist(Core.GetConfigureLocation()) {
+		log.Warnf("configure at %s already exist", Core.GetConfigureLocation())
 		return errors.New("configure already exist")
 	}
 	log.Debugf("start generating default configure")
@@ -479,27 +513,27 @@ func GenerateConfigure(configFactoryList []DDNS.ConfigFactory) error {
 		log.Error(err.Error())
 		return err
 	}
-	log.Infof("generate a default config file at %s", DDNS.GetConfigureLocation())
+	log.Infof("generate a default config file at %s", Core.GetConfigureLocation())
 	return nil
 }
 
-func ExecuteRequests(requests ...DDNS.Request) {
+func ExecuteRequests(requests ...Core.Request) {
 	log.Info("start executing requests")
 	var wg sync.WaitGroup
 
-	deal := func(err error, request DDNS.Request) {
+	deal := func(err error, request Core.Request) {
 
-		if err != nil || (request).Status().Status != DDNS.Success {
+		if err != nil || (request).Status().Status != Core.Success {
 			log.ErrorRaw(fmt.Sprintf("error executing request, %v", err))
 			Retry(request, retryAttempt)
 		}
 
 		status := ""
 		res := (request).Status()
-		if res.Status == DDNS.Success {
+		if res.Status == Core.Success {
 			status = "Success"
 			log.InfoRaw(fmt.Sprintf("name:%s, status:%s  msg:%s", res.Name, status, res.MG))
-		} else if res.Status == DDNS.Failed {
+		} else if res.Status == Core.Failed {
 			errMsg := fmt.Sprintf("error executing request, %v", err)
 
 			log.ErrorRaw(errMsg)
@@ -508,13 +542,11 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			if retryAttempt != 0 {
 				log.ErrorRaw(fmt.Sprintf("all retry failed, skip %s:%s", (request).GetName(), (request).Target()))
 			}
-		} else if res.Status == DDNS.NotExecute {
+		} else if res.Status == Core.NotExecute {
 			log.Fatal("request not executed")
 		}
 
 	}
-
-	p, _ := ants.NewPool(len(requests), ants.WithNonblocking(true), ants.WithPreAlloc(true))
 
 	defer ants.Release()
 	if proxyEnable {
@@ -522,11 +554,11 @@ func ExecuteRequests(requests ...DDNS.Request) {
 			request := request
 			wg.Add(1)
 
-			_ = p.Submit(func() {
+			_ = Core.MainGoroutinePool.Submit(func() {
 				var err error
 				defer wg.Done()
 				log.Tracef("request: %s", request.GetName())
-				throughProxy, ok := request.(DDNS.ThroughProxy)
+				throughProxy, ok := request.(Core.ThroughProxy)
 				if ok {
 					err = throughProxy.RequestThroughProxy()
 				} else {
@@ -545,7 +577,7 @@ func ExecuteRequests(requests ...DDNS.Request) {
 		for _, request := range requests {
 			request := request
 			wg.Add(1)
-			_ = p.Submit(func() {
+			_ = Core.MainGoroutinePool.Submit(func() {
 				defer wg.Done()
 				var err error
 				log.Tracef("request: %s", request.GetName())
@@ -563,14 +595,14 @@ func ExecuteRequests(requests ...DDNS.Request) {
 	log.Info("all requests finished")
 }
 
-func Retry(request DDNS.Request, i uint8) {
+func Retry(request Core.Request, i uint8) {
 	for j := uint8(1); j <= i; j++ {
 		errMsg := fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j)
 		log.WarnRaw(errMsg)
 		request.Status().MG.AddError(fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j))
 
 		if proxyEnable {
-			throughProxy, ok := request.(DDNS.ThroughProxy)
+			throughProxy, ok := request.(Core.ThroughProxy)
 			if ok {
 				err := throughProxy.RequestThroughProxy()
 				if err != nil {
@@ -593,17 +625,17 @@ func Retry(request DDNS.Request, i uint8) {
 	}
 }
 
-func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
+func GenerateRequests(parameters []Core.Parameters) []Core.Request {
 	log.Info("start generating requests")
 	var errCount uint8 = 0
-	requests := make([]DDNS.Request, 0, len(parameters))
+	requests := make([]Core.Request, 0, len(parameters))
 	for _, parameter := range parameters {
 		if parameter.GetName() == Device.ServiceName {
 			continue // skip
 		}
 
 		log.Infof("service: %s", parameter.GetName())
-		request, err := parameter.(DDNS.Service).ToRequest()
+		request, err := parameter.(Core.Service).ToRequest()
 		if err != nil {
 			errCount++
 			log.Errorf("error generating request for %s:%s ", parameter.GetName(), err.Error())
@@ -615,8 +647,8 @@ func GenerateRequests(parameters []DDNS.Parameters) []DDNS.Request {
 	return requests
 }
 
-func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
-	var infos []DDNS.ConfigStr
+func GenerateDefaultConfigure(ConfigFactories ...Core.ConfigFactory) error {
+	var infos []Core.ConfigStr
 	var err error
 	for _, factory := range ConfigFactories {
 		info, errTemp := factory.Get().GenerateDefaultConfigInfo()
@@ -626,17 +658,17 @@ func GenerateDefaultConfigure(ConfigFactories ...DDNS.ConfigFactory) error {
 		}
 		infos = append(infos, info)
 	}
-	errTemp := DDNS.ConfigureWriter(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY, infos...)
+	errTemp := Core.ConfigureWriter(Core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY, infos...)
 	err = errors.Join(err, errTemp)
 	if err != nil {
 		return err
 	}
-	log.Info("write default configure to ", DDNS.GetConfigureLocation())
+	log.Info("write default configure to ", Core.GetConfigureLocation())
 	return nil
 }
 
 // RunPerTime run ddns per time
-func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Parameters) {
+func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []Core.Parameters) {
 
 	log.Infof("run ddns per %d seconds", Time)
 
@@ -667,10 +699,10 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []DDNS.Para
 }
 
 // SaveConfig save parameters to file with flag
-func SaveConfig(FileName string, flag int, parameters ...DDNS.Parameters) error {
+func SaveConfig(FileName string, flag int, parameters ...Core.Parameters) error {
 	var err error
 	n := make(map[string]uint)
-	ConfigStrings := make([]DDNS.ConfigStr, 0, len(parameters))
+	ConfigStrings := make([]Core.ConfigStr, 0, len(parameters))
 	for _, parameter := range parameters {
 		var no uint
 		if parameter.GetName() == Device.ServiceName {
@@ -687,34 +719,34 @@ func SaveConfig(FileName string, flag int, parameters ...DDNS.Parameters) error 
 			ConfigStrings = append(ConfigStrings, ConStr)
 		}
 	}
-	err = errors.Join(err, DDNS.ConfigureWriter(FileName, flag, ConfigStrings...))
+	err = errors.Join(err, Core.ConfigureWriter(FileName, flag, ConfigStrings...))
 	return err
 }
 
-func SaveFromParameters(parameters ...DDNS.Parameters) error {
+func SaveFromParameters(parameters ...Core.Parameters) error {
 	// todo Merge Parameters that differ only by subdomain
-	err := SaveConfig(DDNS.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
+	err := SaveConfig(Core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
 		log.Errorf("error saving config: %s", err.Error())
 		return fmt.Errorf("error saving config: %w", err)
 	}
-	log.Infof("save config to %s", DDNS.GetConfigureLocation())
+	log.Infof("save config to %s", Core.GetConfigureLocation())
 	return nil
 }
 
 func CheckVersionUpgrade(msg chan<- string) {
 	// start checking version upgrade
-	hasUpgrades, v, url, err := DDNS.CheckUpdate()
+	hasUpgrades, v, url, err := Core.CheckUpdate()
 	defer close(msg)
 	defer func() {
 		log.Tracef("check version upgrade finished")
 	}()
 	if err != nil {
-		if errors.Is(err, DDNS.NoCompatibleVersionError) {
+		if errors.Is(err, Core.NoCompatibleVersionError) {
 			// "no suitable version"
 			if hasUpgrades {
 				msg <- fmt.Sprintf("new version %s is available", v.Info())
-				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s ", DDNS.RepoURLs())
+				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s ", Core.RepoURLs())
 			} else {
 				// "already the latest version"
 				msg <- ""
@@ -738,238 +770,4 @@ func CheckVersionUpgrade(msg chan<- string) {
 		msg <- ""
 		return
 	}
-}
-
-type ServiceCronJob struct {
-	ps           []DDNS.Parameters
-	GlobalDevice *Device.Device
-	wg           *sync.WaitGroup
-	times        int // times to run
-}
-
-func (r *ServiceCronJob) SetTimes(times int) {
-	r.times = times
-	r.wg.Add(times)
-}
-
-func (r *ServiceCronJob) SetWg(wg *sync.WaitGroup) {
-	r.wg = wg
-}
-
-func NewServiceCronJob(g *Device.Device, ps ...DDNS.Parameters) *ServiceCronJob {
-	return &ServiceCronJob{ps: ps, GlobalDevice: g}
-}
-
-func (r *ServiceCronJob) Run() {
-	if r.times == 0 {
-		return
-	}
-	defer r.wg.Done()
-	defer func() { r.times-- }()
-	ps := r.ps
-	gd := r.GlobalDevice
-	ModeController(ps, gd)
-}
-
-func ModeController(ps []DDNS.Parameters, GlobalDevice *Device.Device) {
-	switch runMode {
-	case run:
-		err := RunDDNS(ps)
-		if err != nil {
-			log.Error("error running ddns: ", log.String("error", err.Error()))
-		}
-	case runApi:
-		err := RunGetFromApi(ps)
-		if err != nil {
-			log.Error("error running api: ", log.String("error", err.Error()))
-		}
-	case runAuto:
-		if GlobalDevice == nil {
-			log.Error("error running auto: ", log.String("error", "no global device"))
-			panic("no global device")
-		}
-
-		err := RunAuto(*GlobalDevice, ps)
-		if err != nil {
-			log.Error("error running auto: ", log.String("error", err.Error()))
-		}
-	case runAutoOverride:
-		if GlobalDevice == nil {
-			log.Error("error running auto: ", log.String("error", "no global device"))
-			panic("no global device")
-		}
-
-		err := RunOverride(*GlobalDevice, ps)
-		if err != nil {
-			log.Error("error running override: ", log.String("error", err.Error()))
-		}
-	default:
-		panic("unknown run mode")
-	}
-}
-
-type BindDeviceService map[string][]*DDNS.Service
-
-var MainBinder = make(BindDeviceService, 20)
-
-func (b *BindDeviceService) Bind(Device string, Service *DDNS.Service) (ok bool) {
-	(*b)[Device] = append((*b)[Device], Service)
-	return true
-}
-
-func OnChange(ps []DDNS.Parameters, GlobalDevice *Device.Device) {
-	if GlobalDevice == nil {
-		panic("no global device")
-	}
-	ModeController(ps, GlobalDevice)
-	StartIpChangeDaemon()
-}
-
-func StartIpChangeDaemon() {
-	defer func() {
-		if err := recover(); err != nil {
-			panic(fmt.Sprint("error running ip change daemon", err))
-		}
-	}()
-	c := cron.New()
-	wg := sync.WaitGroup{}
-
-	if TimesLimitation == 0 {
-		TimesLimitation = MAXTIMES
-	}
-
-	for d, services := range MainBinder {
-		changedSignal := make([]chan string, len(services))
-		for i := range changedSignal {
-			changedSignal[i] = make(chan string, TimesLimitation)
-		}
-		wg.Add(len(services))
-		_, _ = c.AddFunc("@every 10s", func() {
-			log.Info("checking ip change for device", log.String("device", d).String())
-			for i := 0; i < 2; i++ {
-				var t Net.Type
-				switch i {
-				case 0:
-					t = Net.A
-					ip, err := Net.GetIpByType(d, t)
-					if err != nil {
-						log.Error("error getting ip", log.String("error", err.Error()).String())
-						continue
-					}
-					handledIp, err := Net.HandleIp(ip)
-					if err != nil {
-						log.Error("error handle ip: ", log.String("error", err.Error()).String())
-						continue
-					}
-
-					if OldIp, ok := Device2Ips[d]; ok {
-						if OldIp.GetFirst() == handledIp[0] {
-							log.Info("ip not changed", "ip", OldIp.GetFirst())
-							continue
-						}
-						log.Info("ip changed", log.String("old", OldIp.GetFirst()).String(), log.String("new", handledIp[0]).String())
-						*OldIp.First = handledIp[0]
-						for _, s := range changedSignal {
-							s <- handledIp[0]
-						}
-					}
-				case 1:
-					t = Net.AAAA
-					ip, err := Net.GetIpByType(d, t)
-					if err != nil {
-						log.Error("error getting ip", log.String("error", err.Error()).String())
-						continue
-					}
-					handledIp, err := Net.HandleIp(ip)
-					if err != nil {
-						log.Error("error handle ip: ", log.String("error", err.Error()).String())
-						continue
-					}
-					if len(handledIp) == 0 {
-						log.Info("no ip left, please check ip handler or network")
-						continue
-					}
-
-					if OldIp, ok := Device2Ips[d]; ok {
-						if OldIp.GetSecond() == handledIp[0] {
-							log.Info("ip not changed", "ip", OldIp.GetSecond())
-							continue
-						}
-						log.Info("ip changed", log.String("old", OldIp.GetSecond()).String(), log.String("new", handledIp[0]).String())
-						*OldIp.Second = handledIp[0]
-						for _, s := range changedSignal {
-							s <- handledIp[0]
-						}
-					}
-				default:
-					panic("unknown type")
-				}
-			}
-		})
-
-		// todo add config save
-
-		for i, service := range services {
-			times := TimesLimitation
-			service := service
-			i := i
-			go func() {
-				defer wg.Done()
-				for j := 0; j < times; j++ {
-					newIp := <-changedSignal[i]
-					_type := strconv.Itoa(int(Net.WhichType(newIp)))
-					if (*service).GetType() == _type {
-						(*service).SetValue(newIp)
-						request, err := (*service).ToRequest()
-						if err != nil {
-							_, _ = log.ErrPP.Fprintln(output, err.Error())
-							continue
-						}
-
-						var retryTimes uint8 = 0
-						if proxyEnable {
-							_, _ = log.InfoPP.Fprintln(output, "try to request through proxy")
-							for {
-								err := request.(DDNS.ThroughProxy).RequestThroughProxy()
-								if err != nil {
-									retryTimes++
-									_, _ = log.ErrPP.Fprintln(output, err.Error())
-									if retryTimes == retryAttempt {
-										_, _ = log.ErrPP.Fprintln(output, err.Error())
-										break
-									} else {
-										_, _ = log.InfoPP.Fprintln(output, "retrying")
-									}
-								}
-							}
-						} else {
-							_, _ = log.InfoPP.Fprintln(output, "make request")
-							for {
-								err := request.MakeRequest()
-								if err != nil {
-									retryTimes++
-									_, _ = log.ErrPP.Fprintln(output, err.Error())
-									if retryTimes == retryAttempt {
-										_, _ = log.ErrPP.Fprintln(output, err.Error())
-										break
-									} else {
-										_, _ = log.InfoPP.Fprintln(output, "retrying")
-									}
-								}
-							}
-						}
-						Display(request)
-					} else {
-						_, _ = log.InfoPP.Fprintln(output, "ip type not match")
-						j--
-						continue
-					}
-				}
-			}()
-		}
-	}
-	c.Run()
-	wg.Wait()
-	_, _ = log.DebugPP.Fprintln(output, "all services finished")
-
 }

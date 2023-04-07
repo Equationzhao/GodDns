@@ -57,7 +57,7 @@ func (p *Parameters) GetType() string {
 }
 
 // SaveConfig return DDNS.ConfigStr
-func (p *Parameters) SaveConfig(No uint) (DDNS.ConfigStr, error) {
+func (p *Parameters) SaveConfig(No uint) (Core.ConfigStr, error) {
 	return configInstance.GenerateConfigInfo(p, No)
 }
 
@@ -95,7 +95,7 @@ type ExternalParameter struct {
 }
 
 // ToRequest Convert to DDNS.Request
-func (p *Parameters) ToRequest() (DDNS.Request, error) {
+func (p *Parameters) ToRequest() (Core.Request, error) {
 	r := new(Request)
 	err := r.Init(*p)
 	if err != nil {

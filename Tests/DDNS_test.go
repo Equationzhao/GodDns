@@ -9,7 +9,7 @@ import (
 )
 
 func TestConfigFileLocation(t *testing.T) {
-	fmt.Println(DDNS.GetConfigureLocation())
+	fmt.Println(Core.GetConfigureLocation())
 }
 
 func TestCreateDefaultConfig(t *testing.T) {
@@ -19,14 +19,14 @@ func TestCreateDefaultConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	location, err := DDNS.GetDefaultConfigurationLocation()
+	location, err := Core.GetDefaultConfigurationLocation()
 	if err != nil {
 		t.Error(err)
 	}
 
 	_, err = os.Stat(location)
 	if err != nil {
-		err = DDNS.ConfigureWriter(location, os.O_CREATE, config)
+		err = Core.ConfigureWriter(location, os.O_CREATE, config)
 		if err != nil {
 			t.Error(err)
 		}
@@ -35,13 +35,13 @@ func TestCreateDefaultConfig(t *testing.T) {
 }
 
 func TestStatus_AppendMsg(t *testing.T) {
-	s := &DDNS.Status{
+	s := &Core.Status{
 		Name:   "test",
-		MG:     DDNS.NewDefaultMsgGroup(),
-		Status: DDNS.Success,
+		MG:     Core.NewDefaultMsgGroup(),
+		Status: Core.Success,
 	}
 
-	s.AppendMsg(DDNS.NewStringMsg(DDNS.Info).AppendAssign("hello"))
+	s.AppendMsg(Core.NewStringMsg(Core.Info).AppendAssign("hello"))
 	s.MG.AddInfo("world")
 
 	if s.MG.GetInfo()[0].String() != "hello" {
@@ -55,16 +55,16 @@ func TestStatus_AppendMsg(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	t.Log(DDNS.NowVersion)
-	t.Log(DDNS.NowVersionInfo())
+	t.Log(Core.NowVersion)
+	t.Log(Core.NowVersionInfo())
 
-	latest, _, err := DDNS.GetLatestVersionInfo()
+	latest, _, err := Core.GetLatestVersionInfo()
 	if err != nil {
 		t.Error(err)
 	}
 	t.Logf("latest version: v%s", latest)
 
-	if DDNS.Version.Compare(latest, DDNS.NowVersion) > 0 {
+	if Core.Version.Compare(latest, Core.NowVersion) > 0 {
 		t.Log("new version available")
 	} else {
 		t.Log("already latest version")
@@ -73,6 +73,6 @@ func TestVersion(t *testing.T) {
 }
 
 func TestFeedback(t *testing.T) {
-	str := DDNS.Feedback()
+	str := Core.Feedback()
 	t.Log(str)
 }

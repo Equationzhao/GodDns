@@ -1,6 +1,6 @@
-// Package DDNS
+// Package Core
 // software version info
-package DDNS
+package Core
 
 import (
 	"GodDns/Util"
@@ -95,7 +95,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 6,
+	patch: 7,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub

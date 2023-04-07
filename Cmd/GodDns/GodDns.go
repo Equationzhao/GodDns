@@ -7,10 +7,12 @@ import (
 	"GodDns/Net"
 	"errors"
 	"fmt"
+	"github.com/panjf2000/ants/v2"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"runtime/pprof"
+	"syscall"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -19,12 +21,12 @@ import (
 )
 
 var output = os.Stdout
-var returnCode = 0
 
 const MAXRETRY = 255
 const MINTIMEGAP = 5
 const MAXTIMES = 2628000
-const defaultRetryAttempt = 3
+const DEFAULTMEMGAPTIME = 10 * time.Second
+const DEFAULTRETRYATTEMPT = 3
 
 const (
 	run             = "run"
@@ -33,12 +35,16 @@ const (
 	runAutoOverride = "run-auto-override"
 )
 
+func init() {
+	Core.MainGoroutinePool, _ = ants.NewPool(200, ants.WithNonblocking(true))
+}
+
 // global variables
 var (
 	Time              uint64 = 0
 	TimesLimitation          = 0 // 0 means no limitation
 	ApiName                  = ""
-	retryAttempt      uint8  = defaultRetryAttempt
+	retryAttempt      uint8  = DEFAULTRETRYATTEMPT
 	config                   = ""
 	defaultLocation          = ""
 	logLevel                 = ""
@@ -48,7 +54,7 @@ var (
 	runMode                  = ""
 	isLogSet                 = false
 	onChange                 = false
-
+	errLimit          uint8  = 0
 	// cleanUp         func()
 )
 
@@ -87,7 +93,7 @@ var (
 		Destination: &Time,
 		Action: func(context *cli.Context, u uint64) error {
 			if u < MINTIMEGAP {
-				returnCode = 2
+				Core.ReturnCode = 2
 				return fmt.Errorf("time gap is too short, should be more than %d seconds", MINTIMEGAP)
 			}
 			return nil
@@ -104,8 +110,8 @@ var (
 		Destination: &TimesLimitation,
 		Action: func(context *cli.Context, i int) error {
 			t := context.Uint64("time")
-			if t == 0 || onChange {
-				returnCode = 2
+			if t == 0 && !onChange {
+				Core.ReturnCode = 2
 				return errors.New("time limitation must be used with time flag or on-change flag")
 			}
 			return nil
@@ -115,7 +121,7 @@ var (
 
 	retryFlag = &cli.UintFlag{
 		Name:  "retry",
-		Value: defaultRetryAttempt,
+		Value: DEFAULTRETRYATTEMPT,
 		Usage: "retry `times`",
 		Action: func(context *cli.Context, u uint) error {
 			if u > MAXRETRY {
@@ -162,7 +168,7 @@ var (
 		Action: func(context *cli.Context, s string) error {
 			if s != "" {
 				if s == "enable" {
-					if Net.GlobalProxys.GetProxyIter().Len() == 0 {
+					if Net.GlobalProxies.GetProxyIter().Len() == 0 {
 						return fmt.Errorf("no proxy url found, please set proxy url in config/env/flag first")
 					}
 					proxyEnable = true
@@ -171,7 +177,7 @@ var (
 					return nil
 				} else if Net.IsProxyValid(s) {
 					proxyEnable = true
-					Net.AddProxy2Top(Net.GlobalProxys, s)
+					Net.AddProxy2Top(Net.GlobalProxies, s)
 					return nil
 				} else {
 					return errors.New("invalid proxy url")
@@ -191,14 +197,16 @@ var (
 		Category:    "RUN",
 	}
 
-	cpuProflingFlag = &cli.BoolFlag{
-		Name:    "cpu-profile",
-		Aliases: []string{"cpuprofile"},
-		Value:   false,
-		Usage:   "enable cpu profiling",
+	cpuProfilingFlag = &cli.BoolFlag{
+		Name:        "cpu-profile",
+		Aliases:     []string{"cpuprofile", "cpu", "cp"},
+		Value:       false,
+		DefaultText: "disabled",
+		Usage:       "enable cpu profiling",
+		Category:    "PERFORMANCE",
 		Action: func(context *cli.Context, b bool) error {
 			if b {
-				filename := "goddns-cpu-" + time.Now().Format("2006010203040506") + "prof"
+				filename := "goddns-cpu-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
 				prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 				if err != nil {
 					return err
@@ -207,6 +215,63 @@ var (
 				if err != nil {
 					return err
 				}
+			}
+			return nil
+		},
+	}
+
+	memProfilingFlag = &cli.StringFlag{
+		Name:        "mem-profile",
+		Aliases:     []string{"memprofile", "mem", "mp"},
+		Value:       "",
+		DefaultText: "disabled",
+		Usage:       "enable memory profiling per `time`",
+		Category:    "PERFORMANCE",
+		Action: func(context *cli.Context, t string) error {
+			d := DEFAULTMEMGAPTIME
+			switch t {
+			case "", "enable", "enabled", "true":
+				break
+			case "disable", "disabled", "false":
+				return nil
+			default:
+				var err error
+				if d, err = time.ParseDuration(t); err != nil {
+					return err
+				}
+			}
+
+			tt := time.Tick(d)
+
+			_ = Core.MainGoroutinePool.Submit(func() {
+				for range tt {
+					filename := "goddns-mem-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
+					prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+					if err != nil {
+						log.Error(err)
+					}
+					err = pprof.WriteHeapProfile(prof)
+					if err != nil {
+						log.Error(err)
+					}
+				}
+			})
+
+			return nil
+		},
+	}
+
+	errLimitFlag = &cli.UintFlag{
+		Name:        "err-limit",
+		Aliases:     []string{"el", "EL"},
+		Value:       0,
+		DefaultText: "infinity",
+		Usage:       "run ddns up to `n` times when error occurs",
+		Action: func(context *cli.Context, u uint) error {
+			errLimit = uint8(u)
+
+			if errLimit > retryAttempt {
+				return fmt.Errorf("too little err-limit, should be more than retry times(%d)", retryAttempt)
 			}
 			return nil
 		},
@@ -223,8 +288,10 @@ func init() {
 
 	cli.VersionPrinter = func(c *cli.Context) {
 		msg := make(chan string, 2)
-		go CheckVersionUpgrade(msg)
-		fmt.Println(DDNS.NowVersionInfo())
+		_ = Core.MainGoroutinePool.Submit(func() {
+			CheckVersionUpgrade(msg)
+		})
+		fmt.Println(Core.NowVersionInfo())
 
 		fmt.Println(func() string {
 			{
@@ -257,7 +324,7 @@ func init() {
 	}
 
 	var err error
-	defaultLocation, err = DDNS.GetDefaultConfigurationLocation()
+	defaultLocation, err = Core.GetDefaultConfigurationLocation()
 	if err != nil {
 		defaultLocation = "./DDNS.conf"
 	}
@@ -292,30 +359,26 @@ func checkLog(l string) error {
 func main() {
 
 	defer func() {
-		os.Exit(returnCode)
+		os.Exit(Core.ReturnCode)
 	}()
 	defer pprof.StopCPUProfile()
-	defer func() {
-		if err := recover(); err != nil {
-			panicInfo(err)
-		}
-	}()
+	defer Core.CatchPanic(output)
 
-	var parameters []DDNS.Parameters
+	var parameters []Core.Parameters
 	var GlobalDevice Device.Device
-	configFactoryList := DDNS.ConfigFactoryList
+	configFactoryList := Core.ConfigFactoryList
 
-	location, err := DDNS.GetProgramConfigLocation()
+	location, err := Core.GetProgramConfigLocation()
 	if err != nil {
 		_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
 	} else {
-		if DDNS.IsConfigExist(location) {
-			programConfig, fatal, warn := DDNS.LoadProgramConfig(location)
+		if Core.IsConfigExist(location) {
+			programConfig, fatal, warn := Core.LoadProgramConfig(location)
 			if fatal != nil {
 				// default setup
 				_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
 				_, _ = log.ErrPP.Fprintln(output, fatal)
-				DDNS.DefaultConfig.Setup()
+				Core.DefaultConfig.Setup()
 			} else {
 				if warn != nil {
 					_, _ = log.WarnPP.Fprintln(output, warn)
@@ -325,8 +388,8 @@ func main() {
 		} else {
 			// create Config here
 			_, _ = log.ErrPP.Fprintln(output, "no config at ", location, " try to generate a default config")
-			err := DDNS.DefaultConfig.GenerateConfigFile()
-			DDNS.DefaultConfig.Setup()
+			err := Core.DefaultConfig.GenerateConfigFile()
+			Core.DefaultConfig.Setup()
 			if err != nil {
 				_, _ = log.ErrPP.Fprintln(output, "failed to generate default program config at ", location)
 			} else {
@@ -336,14 +399,14 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:     DDNS.FullName,
+		Name:     Core.FullName,
 		Usage:    "A DDNS tool written in Go",
-		Version:  DDNS.NowVersion.Info(),
+		Version:  Core.NowVersion.Info(),
 		Compiled: time.Now(),
 		Authors: []*cli.Author{
 			{
-				Name:  DDNS.Author,
-				Email: DDNS.FeedbackEmail(),
+				Name:  Core.Author,
+				Email: Core.FeedbackEmail(),
 			},
 		},
 		Suggest:              true,
@@ -360,9 +423,9 @@ func main() {
 						return err
 					}
 					if config != "" {
-						DDNS.UpdateConfigureLocation(config)
+						Core.UpdateConfigureLocation(config)
 					} else {
-						DDNS.UpdateConfigureLocation(defaultLocation)
+						Core.UpdateConfigureLocation(defaultLocation)
 					}
 
 					parametersTemp, err := ReadConfig(configFactoryList)
@@ -383,7 +446,7 @@ func main() {
 						return nil
 					}
 
-					return RunDDNS(parameters)
+					return ModeController(parameters, nil)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -404,7 +467,8 @@ func main() {
 					logFlag,
 					configFlag,
 					proxyFlag,
-					cpuProflingFlag,
+					cpuProfilingFlag,
+					memProfilingFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
@@ -414,14 +478,15 @@ func main() {
 						Flags: []cli.Flag{
 							parallelFlag,
 							timeFlag,
+							onChangeFlag,
 							timesLimitationFlag,
 							retryFlag,
 							silentFlag,
 							logFlag,
 							configFlag,
 							proxyFlag,
-							cpuProflingFlag,
-							onChangeFlag,
+							cpuProfilingFlag,
+							memProfilingFlag,
 						},
 						Action: func(context *cli.Context) error {
 
@@ -431,9 +496,9 @@ func main() {
 							}
 
 							if config != "" {
-								DDNS.UpdateConfigureLocation(config)
+								Core.UpdateConfigureLocation(config)
 							} else {
-								DDNS.UpdateConfigureLocation(defaultLocation)
+								Core.UpdateConfigureLocation(defaultLocation)
 							}
 
 							parametersTemp, err := ReadConfig(configFactoryList)
@@ -449,6 +514,7 @@ func main() {
 							runMode = runAuto
 							if onChange {
 								OnChange(parameters, &GlobalDevice)
+								return nil
 							}
 
 							if Time != 0 {
@@ -457,7 +523,7 @@ func main() {
 								return nil
 							}
 
-							return RunAuto(GlobalDevice, parameters)
+							return ModeController(parameters, &GlobalDevice)
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -467,14 +533,15 @@ func main() {
 								Flags: []cli.Flag{
 									parallelFlag,
 									timeFlag,
+									onChangeFlag,
 									timesLimitationFlag,
 									retryFlag,
 									silentFlag,
 									logFlag,
 									configFlag,
 									proxyFlag,
-									cpuProflingFlag,
-									onChangeFlag,
+									cpuProfilingFlag,
+									memProfilingFlag,
 								},
 								Action: func(context *cli.Context) error {
 
@@ -484,9 +551,9 @@ func main() {
 									}
 
 									if config != "" {
-										DDNS.UpdateConfigureLocation(config)
+										Core.UpdateConfigureLocation(config)
 									} else {
-										DDNS.UpdateConfigureLocation(defaultLocation)
+										Core.UpdateConfigureLocation(defaultLocation)
 									}
 
 									parametersTemp, err := ReadConfig(configFactoryList)
@@ -502,6 +569,7 @@ func main() {
 									runMode = runAutoOverride
 									if onChange {
 										OnChange(parameters, &GlobalDevice)
+										return nil
 									}
 
 									if Time != 0 {
@@ -510,7 +578,7 @@ func main() {
 										return nil
 									}
 
-									return RunOverride(GlobalDevice, parameters)
+									return ModeController(parameters, &GlobalDevice)
 								},
 							},
 						},
@@ -529,9 +597,9 @@ func main() {
 					}
 
 					if config != "" {
-						DDNS.UpdateConfigureLocation(config)
+						Core.UpdateConfigureLocation(config)
 					} else {
-						DDNS.UpdateConfigureLocation(defaultLocation)
+						Core.UpdateConfigureLocation(defaultLocation)
 					}
 					return GenerateConfigure(configFactoryList)
 				},
@@ -539,46 +607,39 @@ func main() {
 					silentFlag,
 					logFlag,
 					configFlag,
-					cpuProflingFlag,
+					cpuProfilingFlag,
+					memProfilingFlag,
 				},
 			},
 		},
 	}
 
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-	e := make(chan error, 1)
-	go func() {
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+	_ = Core.MainGoroutinePool.Submit(func() {
 		defer func() {
 			if err := recover(); err != nil {
-				panicInfo(err)
-				e <- errors.New(fmt.Sprint(err))
+				Core.MainPanicHandler.Receive(err, debug.Stack())
+				Core.PrintPanic(output, Core.Errchan)
 			}
 		}()
-		e <- app.Run(os.Args)
-	}()
+		Core.Errchan <- app.Run(os.Args)
+	})
 
 	select {
-	case err = <-e:
+	case err = <-Core.Errchan:
 		if err != nil {
-			if returnCode == 0 {
-				returnCode = 1
+			if Core.ReturnCode == 0 {
+				Core.ReturnCode = 1
 			}
 			if isLogSet {
 				log.Errorf("fatal: %s", err)
 			} else {
-				_, _ = log.ErrPP.Fprintf(output, "fatal: %s", err.Error())
+				_, _ = log.ErrPP.Fprintln(output, "fatal: ", err.Error())
 			}
 		}
 	case <-interrupt:
 		log.Warn("interrupted by user")
 	}
-}
-
-func panicInfo(err any) {
-	_, _ = fmt.Fprintln(output, "panic: ", err)
-	_, _ = fmt.Fprintln(output, "version: ", DDNS.NowVersion)
-	_, _ = fmt.Fprintln(output, string(debug.Stack()))
-	_, _ = fmt.Fprintln(output, "please report this issue to ", DDNS.IssueURL(), "or send email to", DDNS.FeedbackEmail())
-	returnCode = 1
 }

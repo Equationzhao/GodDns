@@ -16,11 +16,11 @@ func (p *Parameter) GetName() string {
 	return serviceName
 }
 
-func (p *Parameter) SaveConfig(No uint) (DDNS.ConfigStr, error) {
+func (p *Parameter) SaveConfig(No uint) (Core.ConfigStr, error) {
 	return configInstance.GenerateConfigInfo(p, No)
 }
 
-func (p *Parameter) ToRequest() (DDNS.Request, error) {
+func (p *Parameter) ToRequest() (Core.Request, error) {
 	request := Request{
 		Parameter: *p,
 	}
@@ -52,7 +52,7 @@ func (p *Parameter) IsTypeSet() bool {
 	return p.Type == "AAAA" || p.Type == "A"
 }
 
-func (r *Request) ToParameters() DDNS.Service {
+func (r *Request) ToParameters() Core.Service {
 	return &r.Parameter
 }
 
@@ -68,7 +68,7 @@ func (r *Request) MakeRequest() error {
 	panic("implement me")
 }
 
-func (r *Request) Status() DDNS.Status {
+func (r *Request) Status() Core.Status {
 	return r.status
 }
 
@@ -80,7 +80,7 @@ func (c Config) GetName() string {
 
 // GenerateDefaultConfigInfo generate default config info
 // used to generate default config file
-func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
+func (c Config) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
 	// use GenerateConfigInfo to generate default config
 	return c.GenerateConfigInfo(&Parameter{
 		Token:     "defaultToken",
@@ -93,7 +93,7 @@ func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 }
 
 // ReadConfig read config file from ini.Section
-func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 	// parameters' field names or key names in config file(if you modify the name by setting tag "KeyValue")
 	names := [6]string{"Token", "Domain", "SubDomain", "RecordID", "IpToSet", "Type"}
 
@@ -101,7 +101,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	var subdomains []string
 	for _, name := range names {
 		if !sec.HasKey(name) {
-			return nil, DDNS.NewMissKeyErr(name, serviceName)
+			return nil, Core.NewMissKeyErr(name, serviceName)
 		} else {
 			switch name {
 			case "SubDomain":
@@ -127,7 +127,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	}
 
 	// if subdomain value-string contains multiple subdomains, generate multiple parameters
-	ps := make([]DDNS.Parameters, 0, len(subdomains))
+	ps := make([]Core.Parameters, 0, len(subdomains))
 	for _, subdomain := range subdomains {
 		if subdomain == "" {
 			continue
@@ -145,13 +145,13 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	return ps, nil
 }
 
-func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, u uint) (DDNS.ConfigStr, error) {
+func (c Config) GenerateConfigInfo(parameters Core.Parameters, u uint) (Core.ConfigStr, error) {
 	// the first line is Section name
 	// if it's the first section, the name looks like [example]
 	// if it's not the first section, the name looks like [example#1] [example#2] ...
-	head := DDNS.ConfigHead(parameters, u)
+	head := Core.ConfigHead(parameters, u)
 
-	body := Util.Convert2KeyValue(DDNS.Format, parameters)
+	body := Util.Convert2KeyValue(Core.Format, parameters)
 	// the default Convert will convert struct to key-value string like
 
 	//	type B struct {
@@ -188,7 +188,7 @@ func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, u uint) (DDNS.Con
 
 	tail := "\n\n"
 
-	return DDNS.ConfigStr{
+	return Core.ConfigStr{
 		Name:    serviceName,
 		Content: head + body + tail,
 	}, nil
@@ -199,11 +199,11 @@ func (c ConfigFactory) GetName() string {
 }
 
 // Get return a singleton Config
-func (c ConfigFactory) Get() DDNS.Config {
+func (c ConfigFactory) Get() Core.Config {
 	return &configInstance
 }
 
-func (c ConfigFactory) New() *DDNS.Config {
-	var config DDNS.Config = &Config{}
+func (c ConfigFactory) New() *Core.Config {
+	var config Core.Config = &Config{}
 	return &config
 }

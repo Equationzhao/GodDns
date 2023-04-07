@@ -21,7 +21,7 @@ var ConfigInstance Device
 var ConfigFactoryInstance ConfigFactory
 
 func init() {
-	DDNS.ConfigFactoryList = append(DDNS.ConfigFactoryList, ConfigFactoryInstance)
+	Core.ConfigFactoryList = append(Core.ConfigFactoryList, ConfigFactoryInstance)
 }
 
 // Device contains a slice of device
@@ -38,7 +38,7 @@ func (d Device) GetDevices() []string {
 // SaveConfig saves the config of Device
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
-func (d Device) SaveConfig(No uint) (DDNS.ConfigStr, error) {
+func (d Device) SaveConfig(No uint) (Core.ConfigStr, error) {
 	return d.GenerateConfigInfo(d, No)
 }
 
@@ -46,7 +46,7 @@ func (d Device) SaveConfig(No uint) (DDNS.ConfigStr, error) {
 // depends on GenerateConfigInfo
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
-func (d Device) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
+func (d Device) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
 	return d.GenerateConfigInfo(Device{
 		Devices: []string{"interface1", "interface2", "..."},
 	}, 0)
@@ -55,7 +55,7 @@ func (d Device) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 // ReadConfig reads the config of Device
 // returns a Device which contains the config and nil
 // if section [Device] has no value named "device", return nil and an error
-func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
+func (d Device) ReadConfig(sec ini.Section) ([]Core.Parameters, error) { // todo
 	deviceList, err := sec.GetKey("device")
 	if err != nil {
 		return nil, err
@@ -65,18 +65,18 @@ func (d Device) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) { // todo
 	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> Fields " " -> []string
 	d.Devices = strings.Fields(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]")) // remove [] and remove " "
 
-	ps := []DDNS.Parameters{d}
+	ps := []Core.Parameters{d}
 	return ps, nil
 }
 
 // GenerateConfigInfo generates the config of Device
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
-func (d Device) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
-	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
-	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+func (d Device) GenerateConfigInfo(parameters Core.Parameters, No uint) (Core.ConfigStr, error) {
+	buffer := bytes.NewBufferString(Core.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(Core.Format, parameters))
 	buffer.Write([]byte{'\n', '\n'})
-	return DDNS.ConfigStr{
+	return Core.ConfigStr{
 		Name:    ServiceName,
 		Content: buffer.String(),
 	}, nil
@@ -88,7 +88,7 @@ func (d Device) GetName() string {
 }
 
 // Config returns a Config of Device
-func (d Device) Config() DDNS.Config {
+func (d Device) Config() Core.Config {
 	return d
 }
 
@@ -102,12 +102,12 @@ func (d ConfigFactory) GetName() string {
 }
 
 // Get single instance
-func (d ConfigFactory) Get() DDNS.Config {
+func (d ConfigFactory) Get() Core.Config {
 	return &ConfigInstance
 }
 
 // New instance
-func (d ConfigFactory) New() *DDNS.Config {
-	var res DDNS.Config = ConfigInstance
+func (d ConfigFactory) New() *Core.Config {
+	var res Core.Config = ConfigInstance
 	return &res
 }

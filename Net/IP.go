@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-resty/resty/v2"
-	"github.com/rdegges/go-ipify"
 	"net"
 	"net/netip"
 	"regexp"
@@ -73,26 +72,25 @@ func (a *Apis) GetMap() map[string]Api {
 
 // getIPFromIpify get ip from ipify
 func getIPFromIpify(Type uint8) (string, error) {
-
+	ApiUri := ""
 	switch Type {
 	case 6:
-		ipify.API_URI = "https://api6.ipify.org"
+		ApiUri = "https://api6.ipify.org"
 	case 4:
-		ipify.API_URI = "https://api.ipify.org"
+		ApiUri = "https://api.ipify.org"
 	default:
 		return "", NewUnknownType(Type)
 	}
-	ip, err := ipify.GetIp()
-	if err != nil {
+	res, err := resty.New().R().Get(ApiUri)
+	if err != nil || res.String() == "" {
 		return "", err
 	}
-	return ip, nil
+	return res.String(), nil
 }
 
 // getIPFromIdentMe get ip from ident.me
 func getIPFromIdentMe(Type uint8) (string, error) {
 	ApiUri := ""
-
 	switch Type {
 	case 6:
 		ApiUri = "https://v6.ident.me"
@@ -101,12 +99,10 @@ func getIPFromIdentMe(Type uint8) (string, error) {
 	default:
 		return "", NewUnknownType(Type)
 	}
-	r := resty.New()
-	res, err := r.R().Get(ApiUri)
+	res, err := resty.New().R().Get(ApiUri)
 	if err != nil || res.String() == "" {
 		return "", err
 	}
-
 	return res.String(), nil
 }
 

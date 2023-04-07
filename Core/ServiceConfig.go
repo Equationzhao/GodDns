@@ -1,6 +1,6 @@
 // Package DDNS
 // basic interfaces and tools for DDNS service
-package DDNS
+package Core
 
 import (
 	log "GodDns/Log"

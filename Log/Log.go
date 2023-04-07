@@ -41,7 +41,6 @@ func init() {
 		StructName:      pp.Bold | pp.BackgroundMagenta | pp.Black,
 		ObjectLength:    pp.Bold | pp.BackgroundMagenta | pp.Black,
 	})
-	DebugPP.WithLineInfo = true
 
 	ErrPP.SetColorScheme(pp.ColorScheme{
 		Bool:            pp.Bold | pp.Red,
