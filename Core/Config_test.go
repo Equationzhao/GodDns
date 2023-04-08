@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
@@ -265,5 +266,18 @@ func TestMyApiGet(t *testing.T) {
 		}
 		t.Log(ip6)
 	}
+
+}
+
+func TestConfigureReader(t *testing.T) {
+	n := 100000
+	var reader []Parameters
+	L, _ := GetDefaultConfigurationLocation()
+	tn := time.Now()
+	for i := 0; i <= n; i++ {
+		reader, _, _ = ConfigureReader(L, ConfigFactoryList...)
+		_ = reader
+	}
+	t.Log(time.Since(tn))
 
 }

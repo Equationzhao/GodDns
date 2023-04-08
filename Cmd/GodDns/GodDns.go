@@ -5,19 +5,17 @@ import (
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Net"
+	_ "GodDns/Service" // register all services
 	"errors"
 	"fmt"
 	"github.com/panjf2000/ants/v2"
+	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"runtime/pprof"
 	"syscall"
 	"time"
-
-	"github.com/urfave/cli/v2"
-
-	_ "GodDns/Service" // register all services
 )
 
 var output = os.Stdout
@@ -25,7 +23,6 @@ var output = os.Stdout
 const MAXRETRY = 255
 const MINTIMEGAP = 5
 const MAXTIMES = 2628000
-const DEFAULTMEMGAPTIME = 10 * time.Second
 const DEFAULTRETRYATTEMPT = 3
 
 const (
@@ -55,7 +52,7 @@ var (
 	isLogSet                 = false
 	onChange                 = false
 	errLimit          uint8  = 0
-	// cleanUp         func()
+	memProfiling             = false
 )
 
 // Flags
@@ -220,45 +217,14 @@ var (
 		},
 	}
 
-	memProfilingFlag = &cli.StringFlag{
+	memProfilingFlag = &cli.BoolFlag{
 		Name:        "mem-profile",
 		Aliases:     []string{"memprofile", "mem", "mp"},
-		Value:       "",
+		Value:       false,
 		DefaultText: "disabled",
-		Usage:       "enable memory profiling per `time`",
+		Usage:       "enable memory profiling",
 		Category:    "PERFORMANCE",
-		Action: func(context *cli.Context, t string) error {
-			d := DEFAULTMEMGAPTIME
-			switch t {
-			case "", "enable", "enabled", "true":
-				break
-			case "disable", "disabled", "false":
-				return nil
-			default:
-				var err error
-				if d, err = time.ParseDuration(t); err != nil {
-					return err
-				}
-			}
-
-			tt := time.Tick(d)
-
-			_ = Core.MainGoroutinePool.Submit(func() {
-				for range tt {
-					filename := "goddns-mem-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
-					prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
-					if err != nil {
-						log.Error(err)
-					}
-					err = pprof.WriteHeapProfile(prof)
-					if err != nil {
-						log.Error(err)
-					}
-				}
-			})
-
-			return nil
-		},
+		Destination: &memProfiling,
 	}
 
 	errLimitFlag = &cli.UintFlag{
@@ -359,6 +325,18 @@ func checkLog(l string) error {
 func main() {
 
 	defer func() {
+		if memProfiling {
+			filename := "goddns-mem-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
+			prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+			if err != nil {
+				log.Error(err)
+			}
+			err = pprof.WriteHeapProfile(prof)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+
 		os.Exit(Core.ReturnCode)
 	}()
 	defer pprof.StopCPUProfile()

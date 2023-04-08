@@ -87,8 +87,8 @@ OPTIONS:
    
    PERFORMANCE
 
-   --cpu-profile, --cpuprofile, --cpu, --cp                      enable cpu profiling (default: disabled)
-   --mem-profile time, --memprofile time, --mem time, --mp time  enable memory profiling per time (default: disabled)
+   --cpu-profile, --cpuprofile, --cpu, --cp  enable cpu profiling (default: disabled)
+   --mem-profile, --memprofile, --mem, --mp  enable memory profiling (default: disabled)
    
    RUN
 

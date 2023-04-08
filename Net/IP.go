@@ -12,8 +12,9 @@ import (
 const ipv4Regex = `^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})`
 const ipv6Regex = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$`
 
-var Ipv4Pattern = regexp.MustCompile(ipv4Regex)
-var Ipv6Pattern = regexp.MustCompile(ipv6Regex)
+// var Ipv4Pattern = regexp.MustCompile(ipv4Regex)
+// var Ipv6Pattern = regexp.MustCompile(ipv6Regex)
+
 var IpPattern = regexp.MustCompile(ipv4Regex + "|" + ipv6Regex)
 
 // Api is a type = function that return a string and an error
@@ -162,10 +163,8 @@ func GetIpByType(NameToMatch string, Type uint8) ([]string, error) {
 // ---------------------------------------------------------- //
 
 const (
-	A              uint8 = 4
-	AAAA           uint8 = 6
-	DefaultTypeStr       = "A"
-	DefaultType          = A
+	A    uint8 = 4
+	AAAA uint8 = 6
 )
 
 type Type = uint8

@@ -7,10 +7,12 @@ import (
 	"sync"
 )
 
+const DEFAULTGOPOOLSIZE = 100
+
 var MainGoroutinePool *ants.Pool
 
 func init() {
-	MainGoroutinePool, _ = ants.NewPool(200, ants.WithNonblocking(true))
+	MainGoroutinePool, _ = ants.NewPool(DEFAULTGOPOOLSIZE, ants.WithNonblocking(true))
 }
 
 // MainClientPool is a global ClientPool
