@@ -1,30 +1,32 @@
 package main
 
 import (
-	"GodDns/Core"
-	"GodDns/Device"
-	"GodDns/Log"
-	log "GodDns/Log"
-	"GodDns/Net"
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"GodDns/core"
+
+	"GodDns/Device"
+	"GodDns/Log"
+	log "GodDns/Log"
+	"GodDns/Net"
+	"github.com/robfig/cron/v3"
 )
 
-type BindDeviceService map[string][]*Core.Service
+type BindDeviceService map[string][]*core.Service
 
 var MainBinder = make(BindDeviceService, 20)
 
-func (b *BindDeviceService) Bind(Device string, Service *Core.Service) (ok bool) {
+func (b *BindDeviceService) Bind(Device string, Service *core.Service) (ok bool) {
 	(*b)[Device] = append((*b)[Device], Service)
 	return true
 }
 
-func OnChange(ps *[]Core.Parameters, GlobalDevice *Device.Device) {
-	defer Core.CatchPanic(output)
+func OnChange(ps *[]core.Parameters, GlobalDevice *Device.Device) {
+	defer core.CatchPanic(output)
 
 	if GlobalDevice == nil {
 		panic("no global device")
@@ -36,8 +38,7 @@ func OnChange(ps *[]Core.Parameters, GlobalDevice *Device.Device) {
 	StartIpChangeDaemon(ps)
 }
 
-func StartIpChangeDaemon(ps *[]Core.Parameters) {
-
+func StartIpChangeDaemon(ps *[]core.Parameters) {
 	type result int
 	const (
 		done result = iota
@@ -45,7 +46,7 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 		errorOccur
 		timeout
 	)
-	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 	if err != nil {
 		log.Debug(err)
 	}
@@ -60,7 +61,7 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 	}
 
 	save := make(chan struct{})
-	_ = Core.MainGoroutinePool.Submit(func() {
+	_ = core.MainGoroutinePool.Submit(func() {
 		for {
 			<-save
 			err := SaveFromParameters(*ps...)
@@ -78,7 +79,7 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 		serviceResult := make(chan result, len(services))
 		wg.Add(len(services))
 		_, _ = c.AddFunc("@every 10s", func() {
-			defer Core.CatchPanic(output)
+			defer core.CatchPanic(output)
 			Log.Info("checking ip change for device", Log.String("device", d).String())
 			res := [4]int{0, 0, 0, 0}
 			for i := 0; i < 2; i++ {
@@ -111,7 +112,7 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 						timeoutChan := time.After(30 * time.Second)
 						total := len(services)
 						countDone := make(chan struct{}, 1)
-						_ = Core.MainGoroutinePool.Submit(func() {
+						_ = core.MainGoroutinePool.Submit(func() {
 							defer func() {
 								countDone <- struct{}{}
 							}()
@@ -165,7 +166,7 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 						timeoutChan := time.After(30 * time.Second)
 						total := len(services)
 						countDone := make(chan struct{}, 1)
-						_ = Core.MainGoroutinePool.Submit(func() {
+						_ = core.MainGoroutinePool.Submit(func() {
 							defer func() {
 								countDone <- struct{}{}
 							}()
@@ -196,15 +197,14 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 			if res[done] != 0 {
 				save <- struct{}{}
 			}
-
 		})
 
 		for i, service := range services {
 			times := TimesLimitation
 			service := service
 			i := i
-			_ = Core.MainGoroutinePool.Submit(func() {
-				defer Core.CatchPanic(output)
+			_ = core.MainGoroutinePool.Submit(func() {
+				defer core.CatchPanic(output)
 				defer wg.Done()
 				for j := 0; j < times; j++ {
 					newIp := <-changedSignal[i]
@@ -219,7 +219,7 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 
 						if proxyEnable {
 							_, _ = Log.InfoPP.Fprintln(output, "try to request through proxy")
-							err := request.(Core.ThroughProxy).RequestThroughProxy()
+							err := request.(core.ThroughProxy).RequestThroughProxy()
 							if err != nil {
 								_, _ = Log.ErrPP.Fprintln(output, err.Error())
 								Retry(request, retryAttempt)
@@ -234,11 +234,11 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 						}
 
 						switch request.Status().Status {
-						case Core.Success:
+						case core.Success:
 							serviceResult <- done
-						case Core.Failed:
+						case core.Failed:
 							serviceResult <- errorOccur
-						case Core.NotExecute:
+						case core.NotExecute:
 							serviceResult <- errorOccur
 							// todo timeout
 						}
@@ -259,5 +259,4 @@ func StartIpChangeDaemon(ps *[]Core.Parameters) {
 	wg.Wait()
 
 	_, _ = Log.DebugPP.Fprintln(output, "all services finished")
-
 }

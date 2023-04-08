@@ -115,7 +115,7 @@ GLOBAL OPTIONS:
 
 ## Configuration
 
-[Program Config](Core/README.md)
+[Program Config](core/README.md)
 
 [Service Config](Service/README.md)
 

@@ -1,14 +1,16 @@
-package Core
+package core
 
 import (
-	"GodDns/Net"
-	sonic "GodDns/Util/Json"
 	"encoding/json"
-	jsoniter "github.com/json-iterator/go"
 	"net/url"
 	"regexp"
 	"testing"
 	"time"
+
+	"GodDns/Net"
+	sonic "GodDns/Util/Json"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
@@ -16,34 +18,36 @@ func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
 	t.Log(l())
 }
 
-var result = map[string]any{}
-var s = struct {
-	Code int `json:"code"`
-	Data struct {
-		IpInfo []struct {
-			Value  string `json:"value"`
-			Region string `json:"region"`
-		} `json:"ipInfo"`
-	} `json:"data"`
-}{
-	Code: 123,
-	Data: struct {
-		IpInfo []struct {
-			Value  string `json:"value"`
-			Region string `json:"region"`
-		} `json:"ipInfo"`
+var (
+	result = map[string]any{}
+	s      = struct {
+		Code int `json:"code"`
+		Data struct {
+			IpInfo []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			} `json:"ipInfo"`
+		} `json:"data"`
 	}{
-		IpInfo: []struct {
-			Value  string `json:"value"`
-			Region string `json:"region"`
+		Code: 123,
+		Data: struct {
+			IpInfo []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			} `json:"ipInfo"`
 		}{
-			{
-				Value:  "1.2.3.4",
-				Region: "CN",
+			IpInfo: []struct {
+				Value  string `json:"value"`
+				Region string `json:"region"`
+			}{
+				{
+					Value:  "1.2.3.4",
+					Region: "CN",
+				},
 			},
 		},
-	},
-}
+	}
+)
 
 func BenchmarkStdJson(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -131,7 +135,6 @@ func TestJsonHandler(t *testing.T) {
 	if code.(float64) != 123 {
 		t.Error("json handler failed")
 	}
-
 }
 
 func TestURLParse(t *testing.T) {
@@ -184,7 +187,6 @@ func TestConfigStr(t *testing.T) {
 }
 
 func TestLoadProxy(t *testing.T) {
-
 	ps, err := loadProxy("[https://ip.3322.net https://speed.neu6.edu.cn/getIP.php https://myip.ipip.net/s ]")
 	if err != nil {
 		t.Error(err)
@@ -266,7 +268,6 @@ func TestMyApiGet(t *testing.T) {
 		}
 		t.Log(ip6)
 	}
-
 }
 
 func TestConfigureReader(t *testing.T) {
@@ -279,5 +280,4 @@ func TestConfigureReader(t *testing.T) {
 		_ = reader
 	}
 	t.Log(time.Since(tn))
-
 }

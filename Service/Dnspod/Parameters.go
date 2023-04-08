@@ -2,8 +2,8 @@ package Dnspod
 
 import "C"
 import (
-	"GodDns/Core"
 	"GodDns/Net"
+	"GodDns/core"
 )
 
 const serviceName = "Dnspod"
@@ -57,7 +57,7 @@ func (p *Parameters) GetType() string {
 }
 
 // SaveConfig return DDNS.ConfigStr
-func (p *Parameters) SaveConfig(No uint) (Core.ConfigStr, error) {
+func (p *Parameters) SaveConfig(No uint) (core.ConfigStr, error) {
 	return configInstance.GenerateConfigInfo(p, No)
 }
 
@@ -85,17 +85,16 @@ func GenerateDefaultConfigInfo() Parameters {
 		Value:        "1.2.3.4",
 		TTL:          600,
 		Type:         "A/AAAA/4/6",
+		Device:       "your device/net interface name",
 	}
 }
 
-type PublicParameter struct {
-}
+type PublicParameter struct{}
 
-type ExternalParameter struct {
-}
+type ExternalParameter struct{}
 
 // ToRequest Convert to DDNS.Request
-func (p *Parameters) ToRequest() (Core.Request, error) {
+func (p *Parameters) ToRequest() (core.Request, error) {
 	r := new(Request)
 	err := r.Init(*p)
 	if err != nil {

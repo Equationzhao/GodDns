@@ -1,10 +1,11 @@
-package Core
+package core
 
 import (
+	"sync"
+
 	"GodDns/Util/Json"
 	"github.com/go-resty/resty/v2"
 	"github.com/panjf2000/ants/v2"
-	"sync"
 )
 
 const DEFAULTGOPOOLSIZE = 100
@@ -33,5 +34,4 @@ func init() {
 	for i := 0; i < DEFAULTPOOLSIZE; i++ {
 		MainClientPool.Put(MainClientPool.New())
 	}
-
 }

@@ -3,14 +3,27 @@ package Net
 import (
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
+	"math"
 	"net"
 	"net/netip"
 	"regexp"
+
+	"github.com/go-resty/resty/v2"
 )
 
-const ipv4Regex = `^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})`
-const ipv6Regex = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$`
+const (
+	ipv4Regex = `^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})`
+	ipv6Regex = `
+				^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:)
+				{1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}
+				(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|
+				([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}
+				(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|
+				:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+
+				|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|
+				(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.)
+				{3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$`
+)
 
 // var Ipv4Pattern = regexp.MustCompile(ipv4Regex)
 // var Ipv6Pattern = regexp.MustCompile(ipv6Regex)
@@ -45,7 +58,7 @@ var ApiMap = Apis{
 
 // GetApiName return the names of apis
 func (a *Apis) GetApiName() []string {
-	var res = make([]string, 0, len(a.a))
+	res := make([]string, 0, len(a.a))
 	for s := range a.a {
 		res = append(res, s)
 	}
@@ -73,11 +86,11 @@ func (a *Apis) GetMap() map[string]Api {
 
 // getIPFromIpify get ip from ipify
 func getIPFromIpify(Type uint8) (string, error) {
-	ApiUri := ""
+	var ApiUri string
 	switch Type {
-	case 6:
+	case AAAA:
 		ApiUri = "https://api6.ipify.org"
-	case 4:
+	case A:
 		ApiUri = "https://api.ipify.org"
 	default:
 		return "", NewUnknownType(Type)
@@ -91,11 +104,11 @@ func getIPFromIpify(Type uint8) (string, error) {
 
 // getIPFromIdentMe get ip from ident.me
 func getIPFromIdentMe(Type uint8) (string, error) {
-	ApiUri := ""
+	var ApiUri string
 	switch Type {
-	case 6:
+	case AAAA:
 		ApiUri = "https://v6.ident.me"
-	case 4:
+	case A:
 		ApiUri = "https://v4.ident.me"
 	default:
 		return "", NewUnknownType(Type)
@@ -110,7 +123,7 @@ func getIPFromIdentMe(Type uint8) (string, error) {
 // -------------------------------------------------------- //
 
 // GetIp return Ip list of corresponding interface and nil error when error occurs, return nil and error
-func GetIp(NameToMatch string) ([]string, error) {
+func GetIp(nameToMatch string) ([]string, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -119,8 +132,7 @@ func GetIp(NameToMatch string) ([]string, error) {
 	var ips []string
 
 	for _, i := range interfaces {
-
-		if i.Name == NameToMatch {
+		if i.Name == nameToMatch {
 			address, err := i.Addrs()
 			if err != nil {
 				return nil, err
@@ -140,11 +152,11 @@ func GetIp(NameToMatch string) ([]string, error) {
 // Type: 4 for ipv4, 6 for ipv6 (use constant A and AAAA)
 // return: ip list, error
 // when error occurs, return nil and error
-func GetIpByType(NameToMatch string, Type uint8) ([]string, error) {
+func GetIpByType(nameToMatch string, Type uint8) ([]string, error) {
 	if Type != A && Type != AAAA {
 		return nil, fmt.Errorf("invalid type: %d", Type)
 	} else {
-		ips, err := GetIp(NameToMatch)
+		ips, err := GetIp(nameToMatch)
 		res := make([]string, 0, len(ips))
 		if err != nil {
 			return nil, err
@@ -185,7 +197,6 @@ func (u UnknownType) Error() string {
 // parameter: ip
 // if ip is an ipv4 address return 4, if it's an ipv6 address return 6, else return 0
 func WhichType(ip string) uint8 {
-
 	addr, err := netip.ParseAddr(ip)
 	if err != nil {
 		return 0
@@ -202,7 +213,6 @@ func WhichType(ip string) uint8 {
 // WhichTypeStr get the type of ip in string
 // parameter: ip
 func WhichTypeStr(ip string) string {
-
 	addr, err := netip.ParseAddr(ip)
 	if err != nil {
 		return ""
@@ -247,47 +257,47 @@ func TypeEqual(t1, t2 any) bool {
 	case string:
 		v1 = TypeStrToUint8(v)
 	case uint8:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = v
 	case uint:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case uint16:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case uint32:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case uint64:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case int:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case int16:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case int32:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
 	case int64:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v1 = uint8(v)
@@ -299,47 +309,47 @@ func TypeEqual(t1, t2 any) bool {
 	case string:
 		v2 = TypeStrToUint8(v)
 	case uint8:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = v
 	case uint:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case uint16:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case uint32:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case uint64:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case int:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case int16:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case int32:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
 	case int64:
-		if moreThan(v, 255) {
+		if moreThan(v, math.MaxUint8) {
 			return false
 		}
 		v2 = uint8(v)
@@ -351,7 +361,6 @@ func TypeEqual(t1, t2 any) bool {
 		return false
 	}
 	return v1 == v2
-
 }
 
 // Type2Num Convert type string to number string
@@ -415,19 +424,19 @@ func IsIpValid(ip string) bool {
 // if CaseA or CaseAAAA is nil, return error
 // if ip is invalid, return error
 // if ip is valid but can't match any type, panic
-func basicHandler(ip string, CaseA IpHandler, CaseAAAA IpHandler) (string, error) {
-	if CaseA == nil {
+func basicHandler(ip string, caseA IpHandler, caseAAAA IpHandler) (string, error) {
+	if caseA == nil {
 		return "", errors.New("bad handler for ipv4")
 	}
-	if CaseAAAA == nil {
+	if caseAAAA == nil {
 		return "", errors.New("bad handler for ipv6") // todo add handler info in error message
 	}
 
 	switch WhichType(ip) {
 	case A:
-		return CaseA(ip)
+		return caseA(ip)
 	case AAAA:
-		return CaseAAAA(ip)
+		return caseAAAA(ip)
 	default:
 		if IsIpValid(ip) {
 			panic("ip is valid but can't match any type")
@@ -573,8 +582,7 @@ var RemoveInvalid IpHandler = func(ip string) (string, error) {
 	}
 }
 
-type selector struct {
-}
+type selector struct{}
 
 func (s selector) _select(no uint64) IpHandler {
 	count := uint64(0)
@@ -604,17 +612,14 @@ func NewSelector(no uint64) IpHandler {
 // handle ip with handlers
 // join errors together when error handling
 func HandleIp(ips []string, handlers ...IpHandler) (res []string, errs error) {
-
 	for _, ipHandler := range handlers {
 		var temp []string = nil
 		for _, ip := range ips {
 			After, err := ipHandler(ip)
 			if err != nil {
 				errs = errors.Join(errs, err)
-			} else {
-				if After != "" {
-					temp = append(temp, After)
-				}
+			} else if After != "" {
+				temp = append(temp, After)
 			}
 		}
 		ips = temp

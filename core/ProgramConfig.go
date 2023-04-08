@@ -1,23 +1,25 @@
-// Package Core is the core package of GodDns, it contains the basic interfaces and tools for DDNS service.
-package Core
+// Package core is the core package of GodDns, it contains the basic interfaces and tools for DDNS service.
+package core
 
 import (
-	log "GodDns/Log"
-	"GodDns/Net"
-	"GodDns/Util"
-	"GodDns/Util/Collections"
-	json "GodDns/Util/Json"
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"gopkg.in/ini.v1"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	log "GodDns/Log"
+	"GodDns/Net"
+	"GodDns/Util"
+	"GodDns/Util/Collections"
+	json "GodDns/Util/Json"
+
+	"github.com/go-resty/resty/v2"
+	"gopkg.in/ini.v1"
 )
 
 const URLPattern = `(http|https)://[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?`
@@ -40,9 +42,9 @@ func getDefaultProgramConfigurationLocation() func() (string, error) {
 	}
 }
 
-type proxys []url.URL
+type proxies []url.URL
 
-func (p proxys) Convert2KeyValue(format string) string {
+func (p proxies) Convert2KeyValue(format string) string {
 	v := "["
 	for _, proxy := range p {
 		v += proxy.String() + " "
@@ -58,7 +60,7 @@ type ProgramConfig struct {
 	// 2. custom apis
 	// 3. custom services Vscode-like ?
 	// ...
-	proxy proxys
+	proxy proxies
 	ags   []ApiGenerator
 }
 
@@ -70,11 +72,9 @@ func (p *ProgramConfig) Convert2KeyValue(format string) (content string) {
 		buffer.WriteString(api.Convert2KeyValue(format))
 	}
 	return buffer.String()
-
 }
 
 func (p *ProgramConfig) ConfigStr() ConfigStr {
-
 	return ConfigStr{
 		Name:    "ProgramSettings",
 		Content: p.Convert2KeyValue(Format),
@@ -95,7 +95,6 @@ func (p *ProgramConfig) Setup() {
 		api := ag.Generate()
 		Net.ApiMap.Add2Apis(ag.apiName, api)
 	}
-
 }
 
 var DefaultConfig = ProgramConfig{
@@ -176,7 +175,9 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 			}
 		default:
 			// load apis
-			if strings.HasPrefix(section.Name(), "Api.") || strings.HasPrefix(section.Name(), "api.") || strings.HasPrefix(section.Name(), "API.") {
+			if strings.HasPrefix(section.Name(), "Api.") ||
+				strings.HasPrefix(section.Name(), "api.") ||
+				strings.HasPrefix(section.Name(), "API.") {
 				if len(section.Name()) == 4 {
 					Warn = errors.Join(Warn, fmt.Errorf("invalid api name: `%s`", section.Name()))
 					continue
@@ -190,7 +191,6 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 			} else {
 				Warn = errors.Join(Warn, fmt.Errorf("unknown section: %s", section.Name()))
 			}
-
 		}
 	}
 
@@ -229,8 +229,7 @@ type methodHandler interface {
 	Do(string) (string, error)
 }
 
-type GetHandler struct {
-}
+type GetHandler struct{}
 
 func (g GetHandler) Do(s string) (string, error) {
 	c := MainClientPool.Get().(*resty.Client)
@@ -246,8 +245,7 @@ func (g GetHandler) Do(s string) (string, error) {
 	return res.String(), nil
 }
 
-type PostHandler struct {
-}
+type PostHandler struct{}
 
 func (p PostHandler) Do(s string) (string, error) {
 	c := MainClientPool.Get().(*resty.Client)
@@ -378,8 +376,7 @@ func (a *ApiGenerator) Generate() Net.Api {
 	}
 }
 
-type jsonHandler struct {
-}
+type jsonHandler struct{}
 
 func (j jsonHandler) HandleResponse(source string, toGet string) (target any, err error) {
 	// if response:
@@ -434,8 +431,7 @@ func (j jsonHandler) HandleResponse(source string, toGet string) (target any, er
 	return target, nil
 }
 
-type txtHandler struct {
-}
+type txtHandler struct{}
 
 // HandleResponse handle text type response, the second param is the no of ip to get
 // if response is:
@@ -464,7 +460,6 @@ func (a *ApiGenerator) Validate() (err error) {
 // return error if missing key
 // return error if api setting is invalid
 func LoadApiFromConfig(sec *ini.Section) (ApiGenerator, error) {
-
 	Ag := ApiGenerator{}
 
 	names := []string{"A", "AAAA", "HTTPMethod", "Response", "Value"}
@@ -504,5 +499,4 @@ func LoadApiFromConfig(sec *ini.Section) (ApiGenerator, error) {
 	}
 
 	return Ag, nil
-
 }

@@ -25,7 +25,6 @@ func TestGetClientIpByType(t *testing.T) {
 }
 
 func TestWhichType(t *testing.T) {
-
 	ip := "192.168.1"
 	t.Log(WhichType(ip))
 
@@ -71,7 +70,6 @@ func TestGetIPFromIdentMe(t *testing.T) {
 }
 
 func TestTypeEqual(t *testing.T) {
-
 	t.Log(TypeEqual(256, 256))
 
 	t.Log(TypeEqual("A", "A"))
@@ -97,7 +95,6 @@ func TestTypeEqual(t *testing.T) {
 	t.Log(TypeEqual(6, 6))
 	t.Log(TypeEqual(6, AAAA))
 	t.Log(TypeEqual(6, "AAAA"))
-
 }
 
 func TestAdd2APIMap(t *testing.T) {
@@ -111,7 +108,6 @@ func TestAdd2APIMap(t *testing.T) {
 		t.Error(err)
 	}
 	ip, err := s.Get(4)
-
 	if err != nil {
 		t.Error(err)
 	}

@@ -1,15 +1,16 @@
 package Tests_test
 
 import (
-	DDNS "GodDns/Core"
-	"GodDns/Service/Dnspod"
-	"GodDns/Service/DnspodYunApi"
-	"GodDns/Util"
 	"io"
 	"net/url"
 	"os"
 	"strconv"
 	"testing"
+
+	"GodDns/Service/Dnspod"
+	"GodDns/Service/DnspodYunApi"
+	"GodDns/Util"
+	DDNS "GodDns/core"
 
 	"github.com/sirupsen/logrus"
 )
@@ -56,7 +57,6 @@ func init() {
 	pWithoutTag.Value = p.Value
 	pWithoutTag.TTL = p.TTL
 	pWithoutTag.Type = p.Type
-
 }
 
 func TestConfigFileGenerator(t *testing.T) {
@@ -77,7 +77,6 @@ func TestConfigFileGenerator(t *testing.T) {
 }
 
 func TestConvert2KeyValue(t *testing.T) {
-
 	type B struct {
 		X string
 		x string
@@ -102,7 +101,6 @@ func TestConvert2KeyValue(t *testing.T) {
 	t.Log("\n", Util.Convert2KeyValue("%s: %s", a))
 
 	t.Log("\n", Util.Convert2KeyValue("%s = %v", &p))
-
 }
 
 type TestStruct struct {
@@ -358,7 +356,6 @@ func TestGetVariable(t *testing.T) {
 	if err == nil {
 		t.FailNow()
 	}
-
 }
 
 func TestSetVariable(t *testing.T) {
@@ -380,11 +377,10 @@ func TestSetVariable(t *testing.T) {
 	if err == nil {
 		t.FailNow()
 	}
-
 }
 
 func testSetLog() (func() error, error) {
-	file, err := os.OpenFile("test.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile("test.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
@@ -418,7 +414,6 @@ func TestLog(t *testing.T) {
 			logrus.Error(err)
 		}
 	}()
-
 }
 
 func TestGetTypeName(t *testing.T) {
@@ -438,11 +433,9 @@ func TestGetTypeName(t *testing.T) {
 
 	t.Log(Util.GetTypeName(b))
 	t.Log(Util.GetTypeName(c))
-
 }
 
 func BenchmarkConvert2XWWWFORMURLENCODED(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		s := Util.Convert2XWWWFormUrlencoded(p)
 		_ = s
@@ -450,7 +443,6 @@ func BenchmarkConvert2XWWWFORMURLENCODED(b *testing.B) {
 }
 
 func BenchmarkURLEncode(b *testing.B) {
-
 	for i := 0; i < b.N; i++ {
 		v := url.Values{}
 		v.Add("login_token", p.LoginToken)

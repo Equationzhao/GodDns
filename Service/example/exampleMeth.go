@@ -2,12 +2,14 @@
 package example
 
 import (
-	"GodDns/Core"
+	"strings"
+
+	"GodDns/core"
+
 	"GodDns/Net"
 	"GodDns/Util"
 	"GodDns/Util/Collections"
 	"gopkg.in/ini.v1"
-	"strings"
 )
 
 // /////////// Pointer methods /////////// //
@@ -16,11 +18,11 @@ func (p *Parameter) GetName() string {
 	return serviceName
 }
 
-func (p *Parameter) SaveConfig(No uint) (Core.ConfigStr, error) {
+func (p *Parameter) SaveConfig(No uint) (core.ConfigStr, error) {
 	return configInstance.GenerateConfigInfo(p, No)
 }
 
-func (p *Parameter) ToRequest() (Core.Request, error) {
+func (p *Parameter) ToRequest() (core.Request, error) {
 	request := Request{
 		Parameter: *p,
 	}
@@ -52,7 +54,7 @@ func (p *Parameter) IsTypeSet() bool {
 	return p.Type == "AAAA" || p.Type == "A"
 }
 
-func (r *Request) ToParameters() Core.Service {
+func (r *Request) ToParameters() core.Service {
 	return &r.Parameter
 }
 
@@ -68,7 +70,7 @@ func (r *Request) MakeRequest() error {
 	panic("implement me")
 }
 
-func (r *Request) Status() Core.Status {
+func (r *Request) Status() core.Status {
 	return r.status
 }
 
@@ -80,7 +82,7 @@ func (c Config) GetName() string {
 
 // GenerateDefaultConfigInfo generate default config info
 // used to generate default config file
-func (c Config) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
+func (c Config) GenerateDefaultConfigInfo() (core.ConfigStr, error) {
 	// use GenerateConfigInfo to generate default config
 	return c.GenerateConfigInfo(&Parameter{
 		Token:     "defaultToken",
@@ -93,7 +95,7 @@ func (c Config) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
 }
 
 // ReadConfig read config file from ini.Section
-func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]core.Parameters, error) {
 	// parameters' field names or key names in config file(if you modify the name by setting tag "KeyValue")
 	names := [6]string{"Token", "Domain", "SubDomain", "RecordID", "IpToSet", "Type"}
 
@@ -101,7 +103,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 	var subdomains []string
 	for _, name := range names {
 		if !sec.HasKey(name) {
-			return nil, Core.NewMissKeyErr(name, serviceName)
+			return nil, core.NewMissKeyErr(name, serviceName)
 		} else {
 			switch name {
 			case "SubDomain":
@@ -127,7 +129,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 	}
 
 	// if subdomain value-string contains multiple subdomains, generate multiple parameters
-	ps := make([]Core.Parameters, 0, len(subdomains))
+	ps := make([]core.Parameters, 0, len(subdomains))
 	for _, subdomain := range subdomains {
 		if subdomain == "" {
 			continue
@@ -145,13 +147,13 @@ func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 	return ps, nil
 }
 
-func (c Config) GenerateConfigInfo(parameters Core.Parameters, u uint) (Core.ConfigStr, error) {
+func (c Config) GenerateConfigInfo(parameters core.Parameters, u uint) (core.ConfigStr, error) {
 	// the first line is Section name
 	// if it's the first section, the name looks like [example]
 	// if it's not the first section, the name looks like [example#1] [example#2] ...
-	head := Core.ConfigHead(parameters, u)
+	head := core.ConfigHead(parameters, u)
 
-	body := Util.Convert2KeyValue(Core.Format, parameters)
+	body := Util.Convert2KeyValue(core.Format, parameters)
 	// the default Convert will convert struct to key-value string like
 
 	//	type B struct {
@@ -188,7 +190,7 @@ func (c Config) GenerateConfigInfo(parameters Core.Parameters, u uint) (Core.Con
 
 	tail := "\n\n"
 
-	return Core.ConfigStr{
+	return core.ConfigStr{
 		Name:    serviceName,
 		Content: head + body + tail,
 	}, nil
@@ -199,11 +201,11 @@ func (c ConfigFactory) GetName() string {
 }
 
 // Get return a singleton Config
-func (c ConfigFactory) Get() Core.Config {
+func (c ConfigFactory) Get() core.Config {
 	return &configInstance
 }
 
-func (c ConfigFactory) New() *Core.Config {
-	var config Core.Config = &Config{}
+func (c ConfigFactory) New() *core.Config {
+	var config core.Config = &Config{}
 	return &config
 }

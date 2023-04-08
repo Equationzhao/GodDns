@@ -1,6 +1,6 @@
 // Package DDNS
 // basic interfaces and tools for DDNS service
-package Core
+package core
 
 import (
 	"fmt"

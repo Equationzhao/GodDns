@@ -1,10 +1,11 @@
 package main
 
 import (
-	DDNS "GodDns/Core"
+	"sync"
+
 	"GodDns/Device"
 	log "GodDns/Log"
-	"sync"
+	DDNS "GodDns/core"
 )
 
 type ServiceCronJob struct {

@@ -3,10 +3,11 @@
 package Device
 
 import (
-	"GodDns/Core"
-	"GodDns/Util"
 	"bytes"
 	"strings"
+
+	"GodDns/Util"
+	"GodDns/core"
 
 	"gopkg.in/ini.v1"
 )
@@ -21,7 +22,7 @@ var ConfigInstance Device
 var ConfigFactoryInstance ConfigFactory
 
 func init() {
-	Core.ConfigFactoryList = append(Core.ConfigFactoryList, ConfigFactoryInstance)
+	core.ConfigFactoryList = append(core.ConfigFactoryList, ConfigFactoryInstance)
 }
 
 // Device contains a slice of device
@@ -38,15 +39,15 @@ func (d Device) GetDevices() []string {
 // SaveConfig saves the config of Device
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
-func (d Device) SaveConfig(No uint) (Core.ConfigStr, error) {
-	return d.GenerateConfigInfo(d, No)
+func (d Device) SaveConfig(no uint) (core.ConfigStr, error) {
+	return d.GenerateConfigInfo(d, no)
 }
 
 // GenerateDefaultConfigInfo generates the default config of Device
 // depends on GenerateConfigInfo
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
-func (d Device) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
+func (d Device) GenerateDefaultConfigInfo() (core.ConfigStr, error) {
 	return d.GenerateConfigInfo(Device{
 		Devices: []string{"interface1", "interface2", "..."},
 	}, 0)
@@ -55,31 +56,29 @@ func (d Device) GenerateDefaultConfigInfo() (Core.ConfigStr, error) {
 // ReadConfig reads the config of Device
 // returns a Device which contains the config and nil
 // if section [Device] has no value named "device", return nil and an error
-func (d Device) ReadConfig(sec ini.Section) ([]Core.Parameters, error) { // todo
+func (d Device) ReadConfig(sec ini.Section) ([]core.Parameters, error) { // todo
 	deviceList, err := sec.GetKey("device")
 	if err != nil {
 		return nil, err
 	}
 
 	// convert to []string
-	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...] -> trim "[]" -> DeviceName1 DeviceName2 ... -> Fields " " -> []string
-	d.Devices = strings.Fields(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]")) // remove [] and remove " "
+	// [DeviceName1,DeviceName2,...] -> replace "," -> [DeviceName1 DeviceName2 ...]
+	// -> trim "[]" -> DeviceName1 DeviceName2 ... -> Fields " " -> []string
 
-	ps := []Core.Parameters{d}
-	return ps, nil
+	// remove [] and remove " "
+	d.Devices = strings.Fields(strings.Trim(strings.ReplaceAll(deviceList.String(), ",", " "), "[]"))
+	return []core.Parameters{d}, nil
 }
 
 // GenerateConfigInfo generates the config of Device
 // returns a ConfigStr which contains the name and content of config and nil
 // should not return error
-func (d Device) GenerateConfigInfo(parameters Core.Parameters, No uint) (Core.ConfigStr, error) {
-	buffer := bytes.NewBufferString(Core.ConfigHead(parameters, No))
-	buffer.WriteString(Util.Convert2KeyValue(Core.Format, parameters))
+func (d Device) GenerateConfigInfo(parameters core.Parameters, no uint) (core.ConfigStr, error) {
+	buffer := bytes.NewBufferString(core.ConfigHead(parameters, no))
+	buffer.WriteString(Util.Convert2KeyValue(core.Format, parameters))
 	buffer.Write([]byte{'\n', '\n'})
-	return Core.ConfigStr{
-		Name:    ServiceName,
-		Content: buffer.String(),
-	}, nil
+	return core.ConfigStr{Name: ServiceName, Content: buffer.String()}, nil
 }
 
 // GetName returns the ServiceName "Device"
@@ -88,13 +87,12 @@ func (d Device) GetName() string {
 }
 
 // Config returns a Config of Device
-func (d Device) Config() Core.Config {
+func (d Device) Config() core.Config {
 	return d
 }
 
 // ConfigFactory is a factory to make a Config of Device
-type ConfigFactory struct {
-}
+type ConfigFactory struct{}
 
 // GetName returns the ServiceName "Device"
 func (d ConfigFactory) GetName() string {
@@ -102,12 +100,12 @@ func (d ConfigFactory) GetName() string {
 }
 
 // Get single instance
-func (d ConfigFactory) Get() Core.Config {
+func (d ConfigFactory) Get() core.Config {
 	return &ConfigInstance
 }
 
 // New instance
-func (d ConfigFactory) New() *Core.Config {
-	var res Core.Config = ConfigInstance
+func (d ConfigFactory) New() *core.Config {
+	var res core.Config = ConfigInstance
 	return &res
 }

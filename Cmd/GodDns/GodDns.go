@@ -1,29 +1,33 @@
 package main
 
 import (
-	"GodDns/Core"
-	"GodDns/Device"
-	log "GodDns/Log"
-	"GodDns/Net"
-	_ "GodDns/Service" // register all services
 	"errors"
 	"fmt"
-	"github.com/panjf2000/ants/v2"
-	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"runtime/pprof"
 	"syscall"
 	"time"
+
+	"GodDns/core"
+
+	"GodDns/Device"
+	log "GodDns/Log"
+	"GodDns/Net"
+	_ "GodDns/Service" // register all services
+	"github.com/panjf2000/ants/v2"
+	"github.com/urfave/cli/v2"
 )
 
 var output = os.Stdout
 
-const MAXRETRY = 255
-const MINTIMEGAP = 5
-const MAXTIMES = 2628000
-const DEFAULTRETRYATTEMPT = 3
+const (
+	MAXRETRY            = 255
+	MINTIMEGAP          = 5
+	MAXTIMES            = 2628000
+	DEFAULTRETRYATTEMPT = 3
+)
 
 const (
 	run             = "run"
@@ -33,7 +37,7 @@ const (
 )
 
 func init() {
-	Core.MainGoroutinePool, _ = ants.NewPool(200, ants.WithNonblocking(true))
+	core.MainGoroutinePool, _ = ants.NewPool(200, ants.WithNonblocking(true))
 }
 
 // global variables
@@ -89,7 +93,7 @@ var (
 		Destination: &Time,
 		Action: func(context *cli.Context, u uint64) error {
 			if u < MINTIMEGAP {
-				Core.ReturnCode = 2
+				core.ReturnCode = 2
 				return fmt.Errorf("time gap is too short, should be more than %d seconds", MINTIMEGAP)
 			}
 			return nil
@@ -107,7 +111,7 @@ var (
 		Action: func(context *cli.Context, i int) error {
 			t := context.Uint64("time")
 			if t == 0 && !onChange {
-				Core.ReturnCode = 2
+				core.ReturnCode = 2
 				return errors.New("time limitation must be used with time flag or on-change flag")
 			}
 			return nil
@@ -203,7 +207,7 @@ var (
 		Action: func(context *cli.Context, b bool) error {
 			if b {
 				filename := "goddns-cpu-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
-				prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+				prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0o644)
 				if err != nil {
 					return err
 				}
@@ -237,10 +241,10 @@ func init() {
 
 	cli.VersionPrinter = func(c *cli.Context) {
 		msg := make(chan string, 2)
-		_ = Core.MainGoroutinePool.Submit(func() {
+		_ = core.MainGoroutinePool.Submit(func() {
 			CheckVersionUpgrade(msg)
 		})
-		fmt.Println(Core.NowVersionInfo())
+		fmt.Println(core.NowVersionInfo())
 
 		fmt.Println(func() string {
 			{
@@ -262,7 +266,6 @@ func init() {
 				return
 			}
 		}
-
 	}
 
 	cli.HelpFlag = &cli.BoolFlag{
@@ -273,11 +276,10 @@ func init() {
 	}
 
 	var err error
-	defaultLocation, err = Core.GetDefaultConfigurationLocation()
+	defaultLocation, err = core.GetDefaultConfigurationLocation()
 	if err != nil {
 		defaultLocation = "./DDNS.conf"
 	}
-
 }
 
 func checkLog(l string) error {
@@ -291,7 +293,7 @@ func checkLog(l string) error {
 	case "Warn", "warn", "WARN":
 		fallthrough
 	case "Error", "error", "ERROR":
-		_, err := log.InitLog("DDNS.log", 0666, l, output)
+		_, err := log.InitLog("DDNS.log", 0o666, l, output)
 		if err != nil {
 			log.Error("failed to init log file ", log.String("error", err.Error()))
 			return err
@@ -306,11 +308,10 @@ func checkLog(l string) error {
 
 // todo return config setting command `GodDns config -service=cloudflare`
 func main() {
-
 	defer func() {
 		if memProfiling {
 			filename := "goddns-mem-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
-			prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+			prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0o644)
 			if err != nil {
 				log.Error(err)
 			}
@@ -320,26 +321,26 @@ func main() {
 			}
 		}
 
-		os.Exit(Core.ReturnCode)
+		os.Exit(core.ReturnCode)
 	}()
 	defer pprof.StopCPUProfile()
-	defer Core.CatchPanic(output)
+	defer core.CatchPanic(output)
 
-	var parameters []Core.Parameters
+	var parameters []core.Parameters
 	var GlobalDevice Device.Device
-	configFactoryList := Core.ConfigFactoryList
+	configFactoryList := core.ConfigFactoryList
 
-	location, err := Core.GetProgramConfigLocation()
+	location, err := core.GetProgramConfigLocation()
 	if err != nil {
 		_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
 	} else {
-		if Core.IsConfigExist(location) {
-			programConfig, fatal, warn := Core.LoadProgramConfig(location)
+		if core.IsConfigExist(location) {
+			programConfig, fatal, warn := core.LoadProgramConfig(location)
 			if fatal != nil {
 				// default setup
 				_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
 				_, _ = log.ErrPP.Fprintln(output, fatal)
-				Core.DefaultConfig.Setup()
+				core.DefaultConfig.Setup()
 			} else {
 				if warn != nil {
 					_, _ = log.WarnPP.Fprintln(output, warn)
@@ -349,8 +350,8 @@ func main() {
 		} else {
 			// create Config here
 			_, _ = log.ErrPP.Fprintln(output, "no config at ", location, " try to generate a default config")
-			err := Core.DefaultConfig.GenerateConfigFile()
-			Core.DefaultConfig.Setup()
+			err := core.DefaultConfig.GenerateConfigFile()
+			core.DefaultConfig.Setup()
 			if err != nil {
 				_, _ = log.ErrPP.Fprintln(output, "failed to generate default program config at ", location)
 			} else {
@@ -360,14 +361,14 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:     Core.FullName,
+		Name:     core.FullName,
 		Usage:    "A DDNS tool written in Go",
-		Version:  Core.NowVersion.Info(),
+		Version:  core.NowVersion.Info(),
 		Compiled: time.Now(),
 		Authors: []*cli.Author{
 			{
-				Name:  Core.Author,
-				Email: Core.FeedbackEmail(),
+				Name:  core.Author,
+				Email: core.FeedbackEmail(),
 			},
 		},
 		Suggest:              true,
@@ -384,9 +385,9 @@ func main() {
 						return err
 					}
 					if config != "" {
-						Core.UpdateConfigureLocation(config)
+						core.UpdateConfigureLocation(config)
 					} else {
-						Core.UpdateConfigureLocation(defaultLocation)
+						core.UpdateConfigureLocation(defaultLocation)
 					}
 
 					parametersTemp, err := ReadConfig(configFactoryList)
@@ -450,16 +451,15 @@ func main() {
 							memProfilingFlag,
 						},
 						Action: func(context *cli.Context) error {
-
 							err := checkLog(logLevel)
 							if err != nil {
 								return err
 							}
 
 							if config != "" {
-								Core.UpdateConfigureLocation(config)
+								core.UpdateConfigureLocation(config)
 							} else {
-								Core.UpdateConfigureLocation(defaultLocation)
+								core.UpdateConfigureLocation(defaultLocation)
 							}
 
 							parametersTemp, err := ReadConfig(configFactoryList)
@@ -505,16 +505,15 @@ func main() {
 									memProfilingFlag,
 								},
 								Action: func(context *cli.Context) error {
-
 									err := checkLog(logLevel)
 									if err != nil {
 										return err
 									}
 
 									if config != "" {
-										Core.UpdateConfigureLocation(config)
+										core.UpdateConfigureLocation(config)
 									} else {
-										Core.UpdateConfigureLocation(defaultLocation)
+										core.UpdateConfigureLocation(defaultLocation)
 									}
 
 									parametersTemp, err := ReadConfig(configFactoryList)
@@ -547,7 +546,6 @@ func main() {
 				},
 			},
 			{
-
 				Name:    "generate",
 				Aliases: []string{"g", "G"},
 				Usage:   "generate a default configuration file",
@@ -558,9 +556,9 @@ func main() {
 					}
 
 					if config != "" {
-						Core.UpdateConfigureLocation(config)
+						core.UpdateConfigureLocation(config)
 					} else {
-						Core.UpdateConfigureLocation(defaultLocation)
+						core.UpdateConfigureLocation(defaultLocation)
 					}
 					return GenerateConfigure(configFactoryList)
 				},
@@ -578,21 +576,21 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	_ = Core.MainGoroutinePool.Submit(func() {
+	_ = core.MainGoroutinePool.Submit(func() {
 		defer func() {
 			if err := recover(); err != nil {
-				Core.MainPanicHandler.Receive(err, debug.Stack())
-				Core.PrintPanic(output, Core.Errchan)
+				core.MainPanicHandler.Receive(err, debug.Stack())
+				core.PrintPanic(output, core.Errchan)
 			}
 		}()
-		Core.Errchan <- app.Run(os.Args)
+		core.Errchan <- app.Run(os.Args)
 	})
 
 	select {
-	case err = <-Core.Errchan:
+	case err = <-core.Errchan:
 		if err != nil {
-			if Core.ReturnCode == 0 {
-				Core.ReturnCode = 1
+			if core.ReturnCode == 0 {
+				core.ReturnCode = 1
 			}
 			if isLogSet {
 				log.Errorf("fatal: %s", err)

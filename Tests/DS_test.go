@@ -1,10 +1,11 @@
 package Tests
 
 import (
-	"GodDns/Util/Collections"
 	"fmt"
 	"math/rand"
 	"testing"
+
+	"GodDns/Util/Collections"
 )
 
 func TestRemoveDuplicate(t *testing.T) {
@@ -40,7 +41,6 @@ func TestRemoveDuplicate(t *testing.T) {
 }
 
 func TestPair(t *testing.T) {
-
 	p := Collections.NewPair[int, string](0, "")
 	p.Set(1, "a")
 	if *p.First != 1 || *p.Second != "a" {
@@ -91,7 +91,6 @@ func TestPair(t *testing.T) {
 	if &a != p.First || &b != p.Second {
 		t.Error("EmplacePair error")
 	}
-
 }
 
 func TestSet(t *testing.T) {

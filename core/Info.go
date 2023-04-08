@@ -1,14 +1,15 @@
 // Package Core
 // software version info
-package Core
+package core
 
 import (
-	"GodDns/Util"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"GodDns/Util"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -191,7 +192,8 @@ func GetLatestVersionInfo() (Version, string, error) {
 
 	os, arch := Util.OSDetect()
 	for _, asset := range versionResponse.Assets {
-		if strings.Contains(strings.ToLower(asset.Name), strings.ToLower(os)) && strings.Contains(strings.ToLower(asset.Name), strings.ToLower(arch)) {
+		if strings.Contains(strings.ToLower(asset.Name), strings.ToLower(os)) &&
+			strings.Contains(strings.ToLower(asset.Name), strings.ToLower(arch)) {
 			// todo check compatibility, like x86 is compatible with amd64
 			return latest, asset.BrowserDownloadUrl, nil
 		}
@@ -201,8 +203,7 @@ func GetLatestVersionInfo() (Version, string, error) {
 }
 
 // NoCompatibleVersion no compatible version of new release
-type NoCompatibleVersion struct {
-}
+type NoCompatibleVersion struct{}
 
 // NoCompatibleVersionError is the error of no compatible version
 var NoCompatibleVersionError = NoCompatibleVersion{}

@@ -1,15 +1,15 @@
-package Core
+package core
 
 import (
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
 func TestPool(t *testing.T) {
-
 	c := atomic.Int32{}
 	for i := 0; i < 5000; i++ {
 		go func() {
@@ -40,7 +40,6 @@ func TestNoPool(t *testing.T) {
 			}
 			_ = response
 			c.Add(1)
-
 		}()
 	}
 	time.Sleep(10 * time.Second)
@@ -64,7 +63,6 @@ func BenchmarkClientPool(b *testing.B) {
 }
 
 func BenchmarkNopool(b *testing.B) {
-
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			{

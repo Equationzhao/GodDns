@@ -12,6 +12,7 @@ require (
 require (
 	github.com/beevik/etree v1.1.0
 	github.com/bytedance/sonic v1.8.6
+	github.com/json-iterator/go v1.1.12
 	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/panjf2000/ants/v2 v2.7.2
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.624
@@ -23,7 +24,6 @@ require (
 require (
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect

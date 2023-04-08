@@ -1,12 +1,14 @@
 package Dnspod
 
 import (
-	DDNS "GodDns/Core"
-	"GodDns/Util"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"testing"
 	"time"
+
+	"GodDns/Util"
+	DDNS "GodDns/core"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestXWWWFORMURLENCODED(t *testing.T) {
@@ -24,11 +26,9 @@ func TestXWWWFORMURLENCODED(t *testing.T) {
 		Type:         "A",
 	}
 	fmt.Println(Util.Convert2XWWWFormUrlencoded(p))
-
 }
 
 func TestRequest_GetRecordId(t *testing.T) {
-
 	p := Parameters{
 		LoginToken:   "TOKEN",
 		Format:       "json",
@@ -59,7 +59,6 @@ func TestRequest_GetRecordId(t *testing.T) {
 	}
 
 	t.Log(status)
-
 }
 
 func TestRequest_MakeRequest(t *testing.T) {

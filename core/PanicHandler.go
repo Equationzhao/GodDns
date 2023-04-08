@@ -1,4 +1,4 @@
-package Core
+package core
 
 import (
 	"bytes"
@@ -9,8 +9,7 @@ import (
 	"sync"
 )
 
-type PanicErr struct {
-}
+type PanicErr struct{}
 
 var ReturnCode = 0
 

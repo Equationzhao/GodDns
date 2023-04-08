@@ -1,8 +1,9 @@
 package Net
 
 import (
-	"GodDns/Util"
 	"net/url"
+
+	"GodDns/Util"
 )
 
 type proxy = string

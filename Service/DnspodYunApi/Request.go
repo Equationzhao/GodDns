@@ -1,22 +1,24 @@
 package DnspodYunApi
 
 import (
-	"GodDns/Core"
+	"fmt"
+	"strconv"
+
+	"GodDns/core"
+
 	log "GodDns/Log"
 	json "GodDns/Util/Json"
-	"fmt"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	dnspod "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod/v20210323"
-	"strconv"
 )
 
 const api = "dnspod.tencentcloudapi.com"
 
 type Request struct {
 	Parameters DnspodYun
-	status     Core.Status
+	status     core.Status
 }
 
 // Target return target domain
@@ -24,11 +26,11 @@ func (r *Request) Target() string {
 	return r.Parameters.SubDomain + "." + r.Parameters.Domain
 }
 
-func newStatus() *Core.Status {
-	return &Core.Status{
+func newStatus() *core.Status {
+	return &core.Status{
 		Name:   serviceName,
-		MG:     Core.NewDefaultMsgGroup(),
-		Status: Core.NotExecute,
+		MG:     core.NewDefaultMsgGroup(),
+		Status: core.NotExecute,
 	}
 }
 
@@ -36,7 +38,7 @@ func (r *Request) Init(yun DnspodYun) {
 	r.Parameters = yun
 }
 
-func (r *Request) ToParameters() Core.Service {
+func (r *Request) ToParameters() core.Service {
 	return &r.Parameters
 }
 
@@ -66,11 +68,11 @@ func (r *Request) MakeRequest() error {
 	var responseRecordId *dnspod.DescribeRecordListResponse
 	// 返回的resp是一个DescribeRecordListResponse的实例，与请求对象对应
 	errChan := make(chan error, 1)
-	_ = Core.MainGoroutinePool.Submit(func() {
+	_ = core.MainGoroutinePool.Submit(func() {
 		_responseRecordId, err := client.DescribeRecordList(requestRecord)
 		if _, ok := err.(*errors.TencentCloudSDKError); ok {
 			log.Debugf("an API error has returned: %s", err.Error())
-			r.status.Status = Core.Failed
+			r.status.Status = core.Failed
 			r.status.MG.AddError(err.(*errors.TencentCloudSDKError).Message)
 			errChan <- err
 		} else if err != nil {
@@ -104,7 +106,7 @@ func (r *Request) MakeRequest() error {
 	responseDDNS, err := client.ModifyDynamicDNS(requestDDNS)
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
 		log.Debugf("an API error has returned: %s", err.Error())
-		r.status.Status = Core.Failed
+		r.status.Status = core.Failed
 		r.status.MG.AddError(err.(*errors.TencentCloudSDKError).Message)
 		return fmt.Errorf("an API error has returned: %w", err)
 	} else if err != nil {
@@ -115,18 +117,18 @@ func (r *Request) MakeRequest() error {
 	err = json.UnmarshalString(responseDDNS.ToJsonString(), &res)
 	if err != nil {
 		log.Debugf("error unmarshalling response %v: %s", responseDDNS.ToJsonString(), err.Error())
-		r.status.Status = Core.Failed
+		r.status.Status = core.Failed
 
 		return fmt.Errorf("error umarshaling response %v: %w", responseDDNS.ToJsonString(), err)
 	}
 
 	// set status
-	r.status.Status = Core.Success
+	r.status.Status = core.Success
 	r.status.MG.AddInfo(fmt.Sprintf("operation success %s %s", r.Parameters.getTotalDomain(), r.Parameters.Value))
 	return nil
 }
 
-func (r *Request) Status() Core.Status {
+func (r *Request) Status() core.Status {
 	return r.status
 }
 

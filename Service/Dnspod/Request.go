@@ -1,16 +1,18 @@
 package Dnspod
 
 import (
-	"GodDns/Core"
-	log "GodDns/Log"
-	"GodDns/Net"
-	json "GodDns/Util/Json"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"net/url"
 	"strconv"
 	"time"
+
+	"GodDns/core"
+
+	log "GodDns/Log"
+	"GodDns/Net"
+	json "GodDns/Util/Json"
+	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -30,7 +32,7 @@ type empty struct{}
 // Request implements DDNS.Request
 type Request struct {
 	parameters Parameters
-	status     Core.Status
+	status     core.Status
 }
 
 // Target return target domain
@@ -39,20 +41,20 @@ func (r *Request) Target() string {
 }
 
 // Status return DDNS.Status which contains execution result etc.
-func (r *Request) Status() Core.Status {
+func (r *Request) Status() core.Status {
 	return r.status
 }
 
-func newStatus() *Core.Status {
-	return &Core.Status{
+func newStatus() *core.Status {
+	return &core.Status{
 		Name:   serviceName,
-		Status: Core.NotExecute,
-		MG:     Core.NewDefaultMsgGroup(),
+		Status: core.NotExecute,
+		MG:     core.NewDefaultMsgGroup(),
 	}
 }
 
 // ToParameters return DDNS.Parameters
-func (r *Request) ToParameters() Core.Service {
+func (r *Request) ToParameters() core.Service {
 	return &r.parameters
 }
 
@@ -99,11 +101,10 @@ func (r *Request) encodeURL() (content string) {
 }
 
 func (r *Request) RequestThroughProxy() error {
-
 	done := make(chan empty)
 	status := newStatus()
 	var err error
-	_ = Core.MainGoroutinePool.Submit(func() {
+	_ = core.MainGoroutinePool.Submit(func() {
 		*status, err = r.GetRecordIdByProxy()
 		done <- empty{}
 	})
@@ -113,9 +114,9 @@ func (r *Request) RequestThroughProxy() error {
 	content := ""
 	select {
 	case <-done:
-		if err != nil || status.Status != Core.Success {
+		if err != nil || status.Status != core.Success {
 			r.status.Name = serviceName
-			r.status.Status = Core.Failed
+			r.status.Status = core.Failed
 			for _, i := range status.MG.GetInfo() {
 				r.status.MG.AddInfo(i.String())
 			}
@@ -135,7 +136,7 @@ func (r *Request) RequestThroughProxy() error {
 		content = r.encodeURL()
 
 	case <-time.After(time.Second * 20):
-		r.status.Status = Core.Timeout
+		r.status.Status = core.Timeout
 		r.status.MG.AddError("GetRecordId timeout")
 		return errors.New("GetRecordId timeout")
 	}
@@ -143,8 +144,8 @@ func (r *Request) RequestThroughProxy() error {
 	log.Debugf("content:%s", content)
 
 	iter := Net.GlobalProxies.GetProxyIter()
-	client := Core.MainClientPool.Get().(*resty.Client)
-	defer Core.MainClientPool.Put(client)
+	client := core.MainClientPool.Get().(*resty.Client)
+	defer core.MainClientPool.Put(client)
 	req := client.R()
 	for iter.NotLast() {
 		proxy := iter.Next()
@@ -163,7 +164,7 @@ func (r *Request) RequestThroughProxy() error {
 	}
 	r.status = *code2status(s.Status.Code)
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
-	if r.status.Status == Core.Success {
+	if r.status.Status == core.Success {
 		r.status.MG.AddInfo(resultMsg)
 	} else {
 		r.status.MG.AddError(resultMsg)
@@ -181,7 +182,7 @@ func (r *Request) MakeRequest() error {
 	done := make(chan struct{})
 	status := newStatus()
 	var err error
-	_ = Core.MainGoroutinePool.Submit(func() {
+	_ = core.MainGoroutinePool.Submit(func() {
 		*status, err = r.GetRecordId()
 		done <- empty{}
 	})
@@ -191,9 +192,9 @@ func (r *Request) MakeRequest() error {
 	content := ""
 	select {
 	case <-done:
-		if err != nil || status.Status != Core.Success {
+		if err != nil || status.Status != core.Success {
 			r.status.Name = serviceName
-			r.status.Status = Core.Failed
+			r.status.Status = core.Failed
 			for _, i := range status.MG.GetInfo() {
 				r.status.MG.AddInfo(i.String())
 			}
@@ -212,14 +213,14 @@ func (r *Request) MakeRequest() error {
 		content = r.encodeURL()
 
 	case <-time.After(time.Second * 20):
-		r.status.Status = Core.Timeout
+		r.status.Status = core.Timeout
 		r.status.MG.AddError("GetRecordId timeout")
 		return errors.New("GetRecordId timeout")
 	}
 
 	log.Debugf("content:%s", content)
-	client := Core.MainClientPool.Get().(*resty.Client)
-	defer Core.MainClientPool.Put(client)
+	client := core.MainClientPool.Get().(*resty.Client)
+	defer core.MainClientPool.Put(client)
 	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
@@ -227,7 +228,7 @@ func (r *Request) MakeRequest() error {
 	log.Debugf("after marshall:%+v", s)
 	r.status = *code2status(s.Status.Code)
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
-	if r.status.Status == Core.Success {
+	if r.status.Status == core.Success {
 		r.status.MG.AddInfo(resultMsg)
 	} else {
 		r.status.MG.AddError(resultMsg)
@@ -237,13 +238,12 @@ func (r *Request) MakeRequest() error {
 	} else {
 		return nil
 	}
-
 }
 
 // GetRecordId make request to Dnspod to get RecordId and set ExternalParameter.RecordId
-func (r *Request) GetRecordId() (Core.Status, error) {
+func (r *Request) GetRecordId() (core.Status, error) {
 	if r.status.MG == nil {
-		r.status.MG = Core.NewDefaultMsgGroup()
+		r.status.MG = core.NewDefaultMsgGroup()
 	}
 
 	s := &resOfRecordId{}
@@ -253,8 +253,8 @@ func (r *Request) GetRecordId() (Core.Status, error) {
 	log.Debugf("content:%s", content)
 
 	// make request to "https://dnsapi.cn/Record.List" to get record id
-	client := Core.MainClientPool.Get().(*resty.Client)
-	defer Core.MainClientPool.Put(client)
+	client := core.MainClientPool.Get().(*resty.Client)
+	defer core.MainClientPool.Put(client)
 	_, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
 
 	log.Debugf("after marshall:%s", s)
@@ -279,7 +279,6 @@ func (r *Request) GetRecordId() (Core.Status, error) {
 	}
 
 	id, err := strconv.Atoi(s.Records[0].Id)
-
 	if err != nil {
 		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return status, err
@@ -290,17 +289,17 @@ func (r *Request) GetRecordId() (Core.Status, error) {
 	return status, nil
 }
 
-func (r *Request) GetRecordIdByProxy() (Core.Status, error) {
+func (r *Request) GetRecordIdByProxy() (core.Status, error) {
 	if r.status.MG == nil {
-		r.status.MG = Core.NewDefaultMsgGroup()
+		r.status.MG = core.NewDefaultMsgGroup()
 	}
 	s := &resOfRecordId{}
 
 	content := r.encodeURLWithoutID()
 	log.Debugf("content:%s", content)
 
-	client := Core.MainClientPool.Get().(*resty.Client)
-	defer Core.MainClientPool.Put(client)
+	client := core.MainClientPool.Get().(*resty.Client)
+	defer core.MainClientPool.Put(client)
 	res := client.R().SetHeader("Content-Type", "application/x-www-form-urlencoded")
 	// make request to "https://dnsapi.cn/Record.List" to get record id
 	iter := Net.GlobalProxies.GetProxyIter()
@@ -334,7 +333,6 @@ func (r *Request) GetRecordIdByProxy() (Core.Status, error) {
 	}
 
 	id, err := strconv.Atoi(s.Records[0].Id)
-
 	if err != nil {
 		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return *status, err

@@ -19,7 +19,6 @@ func OSDetect() (os string, arch string) {
 	case "386":
 		arch = "x86"
 	default:
-
 	}
 
 	return
@@ -33,7 +32,8 @@ type ConvertableKeyValue interface {
 // Convert2KeyValue Convert any type to key-value according to the format
 // if the type implements ConvertableKeyValue, use its method
 // else use reflection
-// if the type has a tag named "KeyValue", use it as key (the first word is key, the rest content after the first ',' is comments)
+// if the type has a tag named "KeyValue",
+// use it as key (the first word is key, the rest content after the first ',' is comments)
 // else if the type has a tag named "json", use it as key (use the first word before the first ',' as key)
 // else use the field name as key
 // example:
@@ -59,7 +59,6 @@ type ConvertableKeyValue interface {
 //		Type: type
 //		B: {123 321}
 func Convert2KeyValue(format string, i any) string {
-
 	if _, ok := i.(ConvertableKeyValue); ok {
 		return i.(ConvertableKeyValue).Convert2KeyValue(format)
 	}
@@ -119,7 +118,6 @@ func Convert2KeyValue(format string, i any) string {
 			content.WriteString(fmt.Sprintf(format, name, vfiledi))
 			content.WriteByte('\n')
 		}
-
 	}
 	return content.String()
 }
@@ -238,7 +236,11 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 				k := iter.Key()
 				switch v.Interface().(type) {
 				// basic type
-				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128, bool, []byte, []rune, uintptr, nil:
+				case string, int, int8, int16, int32, int64,
+					uint, uint8, uint16, uint32, uint64,
+					float32, float64,
+					complex64, complex128,
+					bool, []byte, []rune, uintptr, nil:
 					if l > 0 {
 						// not the last element
 						// content.WriteString(fmt.Sprintf("%s=%s&", k, url.QueryEscape(fmt.Sprint(v))))
@@ -305,7 +307,10 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 				continue
 			}
 
-			pieces = append(pieces, fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface()))))
+			pieces = append(pieces,
+				fmt.Sprintf("%s=%s",
+					url.QueryEscape(name),
+					url.QueryEscape(fmt.Sprintf("%v", v.Field(i).Interface()))))
 		}
 		content.WriteString(strings.Join(pieces, "&"))
 
@@ -356,21 +361,17 @@ func GetVariable(i any, name string) (any, error) {
 	}
 
 	if v.Kind() == reflect.Struct {
-
 		// check whether the struct has the variable && the variable is exported
 		if v.FieldByName(name).IsValid() {
-
 			// check whether the variable is exported
 			if v.FieldByName(name).CanInterface() {
 				return v.FieldByName(name).Interface(), nil
 			} else {
 				return nil, fmt.Errorf("field `%s` is unexported", name)
 			}
-
 		} else {
 			return nil, fmt.Errorf("no such field `%s`", name)
 		}
-
 	} else {
 		// not a struct
 		return nil, fmt.Errorf("not a struct")
@@ -381,7 +382,6 @@ func GetVariable(i any, name string) (any, error) {
 // can only set exported variable
 // ptr2i must be a pointer to struct otherwise it will return an error because the field can't be set
 func SetVariable(ptr2i any, name string, value any) error {
-
 	v := reflect.ValueOf(ptr2i)
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
@@ -398,14 +398,12 @@ func SetVariable(ptr2i any, name string, value any) error {
 				if v.FieldByName(name).Type() == reflect.TypeOf(value) {
 					v.FieldByName(name).Set(reflect.ValueOf(value))
 					return nil
-
 				} else {
 					return fmt.Errorf("type of value to set is not the same as the type of field `%s`", name)
 				}
 			} else {
 				return fmt.Errorf("field `%s` is unexported", name)
 			}
-
 		} else {
 			return fmt.Errorf("no such field `%s`", name)
 		}
@@ -413,7 +411,6 @@ func SetVariable(ptr2i any, name string, value any) error {
 		// not a struct
 		return fmt.Errorf("not a struct")
 	}
-
 }
 
 // GetTypeName Get type name of variable

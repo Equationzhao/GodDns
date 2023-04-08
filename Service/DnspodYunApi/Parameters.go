@@ -2,12 +2,12 @@
 package DnspodYunApi
 
 import (
-	"GodDns/Core"
 	"GodDns/Net"
+	"GodDns/core"
 )
 
 type DnspodYun struct {
-	Core.DefaultMsgGroup `json:"-" xwwwformurlencoded:"-" KeyValue:"-"`
+	core.DefaultMsgGroup `json:"-" xwwwformurlencoded:"-" KeyValue:"-"`
 	SecretID             string
 	SecretKey            string
 	Domain               string
@@ -28,11 +28,11 @@ func (s *DnspodYun) IsDeviceSet() bool {
 	return s.device != ""
 }
 
-func (s *DnspodYun) SaveConfig(No uint) (Core.ConfigStr, error) {
+func (s *DnspodYun) SaveConfig(No uint) (core.ConfigStr, error) {
 	return configInstance.GenerateConfigInfo(s, No)
 }
 
-func (s *DnspodYun) ToRequest() (Core.Request, error) {
+func (s *DnspodYun) ToRequest() (core.Request, error) {
 	r := new(Request)
 	r.Init(*s)
 	return r, nil

@@ -1,24 +1,26 @@
 package main
 
 import (
-	"GodDns/Core"
-	"GodDns/Device"
-	log "GodDns/Log"
-	"GodDns/Net"
-	"GodDns/Util/Collections"
 	"errors"
 	"fmt"
-	"github.com/panjf2000/ants/v2"
-	"github.com/robfig/cron/v3"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"GodDns/core"
+
+	"GodDns/Device"
+	log "GodDns/Log"
+	"GodDns/Net"
+	"GodDns/Util/Collections"
+	"github.com/panjf2000/ants/v2"
+	"github.com/robfig/cron/v3"
 )
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
 
-func ModeController(ps *[]Core.Parameters, GlobalDevice *Device.Device) error {
+func ModeController(ps *[]core.Parameters, GlobalDevice *Device.Device) error {
 	switch runMode {
 	case run:
 		err := RunDDNS(ps)
@@ -52,7 +54,7 @@ func ModeController(ps *[]Core.Parameters, GlobalDevice *Device.Device) error {
 	return nil
 }
 
-func RunDDNS(parameters *[]Core.Parameters) error {
+func RunDDNS(parameters *[]core.Parameters) error {
 	log.Debugf("run ddns")
 	// run ddns here
 
@@ -87,8 +89,8 @@ func (d *d2i) Add(device string, ip string, t Net.Type) {
 	}
 }
 
-func ReadConfig(configs []Core.ConfigFactory) ([]Core.Parameters, error) {
-	parameters, fileErr, configErrs := Core.ConfigureReader(Core.GetConfigureLocation(), configs...)
+func ReadConfig(configs []core.ConfigFactory) ([]core.Parameters, error) {
+	parameters, fileErr, configErrs := core.ConfigureReader(core.GetConfigureLocation(), configs...)
 	if fileErr != nil {
 		log.Errorf("error reading config: %s", fileErr.Error())
 
@@ -108,8 +110,7 @@ func ReadConfig(configs []Core.ConfigFactory) ([]Core.Parameters, error) {
 
 // RunGetFromApi get ip address from api
 // require parameters contain Device.Device
-func RunGetFromApi(parameters *[]Core.Parameters) error {
-
+func RunGetFromApi(parameters *[]core.Parameters) error {
 	// if api is api name , get api from map
 	// if api is url , try to make request to url  http://example.com/api?ip=4 or http://example.com/api?ip=6
 
@@ -128,7 +129,7 @@ func RunGetFromApi(parameters *[]Core.Parameters) error {
 	ip6, _ip6 := "", ""
 
 	var err1 error
-	_ = Core.MainGoroutinePool.Submit(func() {
+	_ = core.MainGoroutinePool.Submit(func() {
 		_ip4, err1 = api.Get(4)
 		if err1 != nil {
 			ip4Done <- false
@@ -140,11 +141,9 @@ func RunGetFromApi(parameters *[]Core.Parameters) error {
 	})
 
 	var err2 error
-	_ = Core.MainGoroutinePool.Submit(func() {
-
+	_ = core.MainGoroutinePool.Submit(func() {
 		_ip6, err2 = api.Get(6)
 		if err2 != nil {
-
 			ip6Done <- false
 		} else {
 			ip6 = _ip6
@@ -191,7 +190,7 @@ func RunGetFromApi(parameters *[]Core.Parameters) error {
 
 	for _, parameter := range *parameters {
 		if parameter.GetName() != Device.ServiceName {
-			if d, ok := parameter.(Core.Service); ok {
+			if d, ok := parameter.(core.Service); ok {
 				if d.IsTypeSet() {
 					if Net.TypeEqual(d.GetType(), Net.A) {
 						d.SetValue(ip4)
@@ -208,7 +207,7 @@ func RunGetFromApi(parameters *[]Core.Parameters) error {
 	return GenerateExecuteSave(parameters)
 }
 
-func RunAuto(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
+func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 	log.Info("get ip address automatically")
 	// get ip addr automatically
 
@@ -221,9 +220,7 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
 	// First is device, second is ip
 	ip6 := Collections.Pair[string, string]{}
 
-	var (
-		err1, err2 error
-	)
+	var err1, err2 error
 
 	var ip4s []string = nil
 	var ip6s []string = nil
@@ -261,7 +258,7 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
 
 	o4 := sync.Once{}
 	o6 := sync.Once{}
-	set := func(parameter Core.Service) error {
+	set := func(parameter core.Service) error {
 		switch parameter.GetType() {
 		case "4":
 			if ip4.First != nil {
@@ -289,7 +286,7 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
 	}
 
 	for _, parameter := range *parameters {
-		if service, ok := parameter.(Core.Service); ok {
+		if service, ok := parameter.(core.Service); ok {
 			// if parameter implements DeviceOverridable interface, set the ip address
 			if err := set(service); err != nil {
 				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), service.GetName())
@@ -298,27 +295,26 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
 	}
 
 	return GenerateExecuteSave(parameters)
-
 }
 
 // GetGlobalDevice get the global device
 // if not found, fatal
-func GetGlobalDevice(parameters []Core.Parameters) (Device.Device, error) {
-	deviceInterface, err := Core.Find(parameters, Device.ServiceName)
+func GetGlobalDevice(parameters []core.Parameters) (Device.Device, error) {
+	deviceInterface, err := core.Find(parameters, Device.ServiceName)
 	if err != nil {
-		log.Errorf("Section [Devices] not found, check configuration at %s", Core.GetConfigureLocation())
-		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", Core.GetConfigureLocation())
+		log.Errorf("Section [Devices] not found, check configuration at %s", core.GetConfigureLocation())
+		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", core.GetConfigureLocation())
 	}
 
 	GlobalDevice, ok := deviceInterface.(Device.Device)
 	if !ok {
-		log.Errorf("Section [Devices] is not a device, check configuration at %s", Core.GetConfigureLocation())
-		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", Core.GetConfigureLocation())
+		log.Errorf("Section [Devices] is not a device, check configuration at %s", core.GetConfigureLocation())
+		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", core.GetConfigureLocation())
 	}
 	return GlobalDevice, nil
 }
 
-func RunOverride(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
+func RunOverride(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 	// override the ip address here
 	// use the Key `Devices` and `Type` of the Service if exist
 	log.Info("-O is set, override the ip address")
@@ -328,7 +324,7 @@ func RunOverride(GlobalDevice Device.Device, parameters *[]Core.Parameters) erro
 		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
-			if d, ok := parameter.(Core.DeviceOverridable); ok {
+			if d, ok := parameter.(core.DeviceOverridable); ok {
 				log.Debugf("Parameter %s implements DeviceOverridable interface", d.GetName())
 
 				var tempDeviceName string
@@ -365,30 +361,27 @@ func RunOverride(GlobalDevice Device.Device, parameters *[]Core.Parameters) erro
 
 				log.Infof("override %s with %s", d.GetName(), ips[0])
 				d.SetValue(ips[0])
-				s := parameter.(Core.Service)
+				s := parameter.(core.Service)
 				MainBinder.Bind(tempDeviceName, &s)
 			} else {
 				// Service is not DeviceOverridable, use ip got from Devices Section
-				err := set(GlobalDevice, parameter.(Core.Service))
+				err := set(GlobalDevice, parameter.(core.Service))
 				if err != nil {
 					errCount++
-					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(Core.Service).GetIP())
+					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(core.Service).GetIP())
 					continue
 				}
-				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(Core.Service).GetIP())
+				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(core.Service).GetIP())
 			}
-
 		}
 	} // loop ends
 
 	log.Infof("finish overriding ip with %d error(s)", errCount)
 
 	return GenerateExecuteSave(parameters)
-
 }
 
-func set(GlobalDevice Device.Device, ParameterToSet Core.Service) error {
-
+func set(GlobalDevice Device.Device, ParameterToSet core.Service) error {
 	Type := ParameterToSet.GetType() // Type is "4" or "6" or ""
 
 	ip := Collections.Pair[string, string]{} // First is device, second is ip
@@ -448,14 +441,13 @@ func set(GlobalDevice Device.Device, ParameterToSet Core.Service) error {
 	} else {
 		return err
 	}
-
 }
 
-func GenerateExecuteSave(parameters *[]Core.Parameters) error {
+func GenerateExecuteSave(parameters *[]core.Parameters) error {
 	requests := GenerateRequests(parameters)
 
-	d, err := Core.Find(*parameters, Device.ServiceName)
-	Parameters2Save := make([]Core.Parameters, 0, len(*parameters))
+	d, err := core.Find(*parameters, Device.ServiceName)
+	Parameters2Save := make([]core.Parameters, 0, len(*parameters))
 	if err == nil {
 		Parameters2Save = append(Parameters2Save, d)
 	}
@@ -475,17 +467,17 @@ func GenerateExecuteSave(parameters *[]Core.Parameters) error {
 	return nil
 }
 
-func Display(request Core.Request) {
+func Display(request core.Request) {
 	_, _ = log.InfoPP.Fprintln(output, fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
-	serviceInfo := request.Status().MG.GetMsgOf(Core.Info)
+	serviceInfo := request.Status().MG.GetMsgOf(core.Info)
 	if len(serviceInfo) > 0 {
 		for _, i := range serviceInfo {
 			_, _ = log.SuccessPP.Fprintln(output, i)
 		}
 	}
 
-	serviceErr := request.Status().MG.GetMsgOf(Core.Error)
-	serviceWarn := request.Status().MG.GetMsgOf(Core.Warn)
+	serviceErr := request.Status().MG.GetMsgOf(core.Error)
+	serviceWarn := request.Status().MG.GetMsgOf(core.Warn)
 	if len(serviceErr) > 0 {
 		for _, e := range serviceErr {
 			_, _ = log.ErrPP.Fprintln(output, e)
@@ -498,16 +490,16 @@ func Display(request Core.Request) {
 	}
 }
 
-func DisplayAll(requests ...Core.Request) {
+func DisplayAll(requests ...core.Request) {
 	for _, request := range requests {
 		Display(request)
 		_, _ = fmt.Fprintln(output)
 	}
 }
 
-func GenerateConfigure(configFactoryList []Core.ConfigFactory) error {
-	if Core.IsConfigExist(Core.GetConfigureLocation()) {
-		log.Warnf("configure at %s already exist", Core.GetConfigureLocation())
+func GenerateConfigure(configFactoryList []core.ConfigFactory) error {
+	if core.IsConfigExist(core.GetConfigureLocation()) {
+		log.Warnf("configure at %s already exist", core.GetConfigureLocation())
 		return errors.New("configure already exist")
 	}
 	log.Debugf("start generating default configure")
@@ -516,28 +508,26 @@ func GenerateConfigure(configFactoryList []Core.ConfigFactory) error {
 		log.Error(err.Error())
 		return err
 	}
-	log.Infof("generate a default config file at %s", Core.GetConfigureLocation())
+	log.Infof("generate a default config file at %s", core.GetConfigureLocation())
 	return nil
 }
 
-func ExecuteRequests(requests ...Core.Request) {
-
+func ExecuteRequests(requests ...core.Request) {
 	log.Info("start executing requests")
 	var wg sync.WaitGroup
 
-	deal := func(err error, request Core.Request) {
-
-		if err != nil || (request).Status().Status != Core.Success {
+	deal := func(err error, request core.Request) {
+		if err != nil || (request).Status().Status != core.Success {
 			log.ErrorRaw(fmt.Sprintf("error executing request, %v", err))
 			Retry(request, retryAttempt)
 		}
 
 		status := ""
 		res := (request).Status()
-		if res.Status == Core.Success {
+		if res.Status == core.Success {
 			status = "Success"
 			log.InfoRaw(fmt.Sprintf("name:%s, status:%s  msg:%s", res.Name, status, res.MG))
-		} else if res.Status == Core.Failed {
+		} else if res.Status == core.Failed {
 			errMsg := fmt.Sprintf("error executing request, %v", err)
 
 			log.ErrorRaw(errMsg)
@@ -546,10 +536,9 @@ func ExecuteRequests(requests ...Core.Request) {
 			if retryAttempt != 0 {
 				log.ErrorRaw(fmt.Sprintf("all retry failed, skip %s:%s", (request).GetName(), (request).Target()))
 			}
-		} else if res.Status == Core.NotExecute {
+		} else if res.Status == core.NotExecute {
 			log.Fatal("request not executed")
 		}
-
 	}
 
 	defer ants.Release()
@@ -558,11 +547,11 @@ func ExecuteRequests(requests ...Core.Request) {
 			request := request
 			wg.Add(1)
 
-			_ = Core.MainGoroutinePool.Submit(func() {
+			_ = core.MainGoroutinePool.Submit(func() {
 				var err error
 				defer wg.Done()
 				log.Tracef("request: %s", request.GetName())
-				throughProxy, ok := request.(Core.ThroughProxy)
+				throughProxy, ok := request.(core.ThroughProxy)
 				if ok {
 					err = throughProxy.RequestThroughProxy()
 				} else {
@@ -581,7 +570,7 @@ func ExecuteRequests(requests ...Core.Request) {
 		for _, request := range requests {
 			request := request
 			wg.Add(1)
-			_ = Core.MainGoroutinePool.Submit(func() {
+			_ = core.MainGoroutinePool.Submit(func() {
 				defer wg.Done()
 				var err error
 				log.Tracef("request: %s", request.GetName())
@@ -599,14 +588,14 @@ func ExecuteRequests(requests ...Core.Request) {
 	log.Info("all requests finished")
 }
 
-func Retry(request Core.Request, i uint8) {
+func Retry(request core.Request, i uint8) {
 	for j := uint8(1); j <= i; j++ {
 		errMsg := fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j)
 		log.WarnRaw(errMsg)
 		request.Status().MG.AddError(fmt.Sprintf("retrying %s:%s, attempt %d", request.GetName(), request.Target(), j))
 
 		if proxyEnable {
-			throughProxy, ok := request.(Core.ThroughProxy)
+			throughProxy, ok := request.(core.ThroughProxy)
 			if ok {
 				err := throughProxy.RequestThroughProxy()
 				if err != nil {
@@ -629,17 +618,17 @@ func Retry(request Core.Request, i uint8) {
 	}
 }
 
-func GenerateRequests(parameters *[]Core.Parameters) []Core.Request {
+func GenerateRequests(parameters *[]core.Parameters) []core.Request {
 	log.Info("start generating requests")
 	var errCount uint8 = 0
-	requests := make([]Core.Request, 0, len(*parameters))
+	requests := make([]core.Request, 0, len(*parameters))
 	for _, parameter := range *parameters {
 		if parameter.GetName() == Device.ServiceName {
 			continue // skip
 		}
 
 		log.Infof("service: %s", parameter.GetName())
-		request, err := parameter.(Core.Service).ToRequest()
+		request, err := parameter.(core.Service).ToRequest()
 		if err != nil {
 			errCount++
 			log.Errorf("error generating request for %s:%s ", parameter.GetName(), err.Error())
@@ -651,8 +640,8 @@ func GenerateRequests(parameters *[]Core.Parameters) []Core.Request {
 	return requests
 }
 
-func GenerateDefaultConfigure(ConfigFactories ...Core.ConfigFactory) error {
-	var infos []Core.ConfigStr
+func GenerateDefaultConfigure(ConfigFactories ...core.ConfigFactory) error {
+	var infos []core.ConfigStr
 	var err error
 	for _, factory := range ConfigFactories {
 		info, errTemp := factory.Get().GenerateDefaultConfigInfo()
@@ -662,21 +651,20 @@ func GenerateDefaultConfigure(ConfigFactories ...Core.ConfigFactory) error {
 		}
 		infos = append(infos, info)
 	}
-	errTemp := Core.ConfigureWriter(Core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY, infos...)
+	errTemp := core.ConfigureWriter(core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY, infos...)
 	err = errors.Join(err, errTemp)
 	if err != nil {
 		return err
 	}
-	log.Info("write default configure to ", Core.GetConfigureLocation())
+	log.Info("write default configure to ", core.GetConfigureLocation())
 	return nil
 }
 
 // RunPerTime run ddns per time
-func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []Core.Parameters) {
-
+func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []core.Parameters) {
 	log.Infof("run ddns per %d seconds", Time)
 
-	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 	if err != nil {
 		log.Debug(err)
 	}
@@ -699,14 +687,13 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []Core.Para
 	c.Start()
 	wg.Wait()
 	log.Info("all jobs finished", log.Int("total execution time", TimesLimitation).String())
-
 }
 
 // SaveConfig save parameters to file with flag
-func SaveConfig(FileName string, flag int, parameters ...Core.Parameters) error {
+func SaveConfig(FileName string, flag int, parameters ...core.Parameters) error {
 	var err error
 	n := make(map[string]uint)
-	ConfigStrings := make([]Core.ConfigStr, 0, len(parameters))
+	ConfigStrings := make([]core.ConfigStr, 0, len(parameters))
 	for _, parameter := range parameters {
 		var no uint
 		if parameter.GetName() == Device.ServiceName {
@@ -723,41 +710,40 @@ func SaveConfig(FileName string, flag int, parameters ...Core.Parameters) error 
 			ConfigStrings = append(ConfigStrings, ConStr)
 		}
 	}
-	err = errors.Join(err, Core.ConfigureWriter(FileName, flag, ConfigStrings...))
+	err = errors.Join(err, core.ConfigureWriter(FileName, flag, ConfigStrings...))
 	return err
 }
 
-func SaveFromParameters(parameters ...Core.Parameters) error {
+func SaveFromParameters(parameters ...core.Parameters) error {
 	// todo Merge Parameters that differ only by subdomain
-	err := SaveConfig(Core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
+	err := SaveConfig(core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {
 		log.Errorf("error saving config: %s", err.Error())
 		return fmt.Errorf("error saving config: %w", err)
 	}
-	log.Infof("save config to %s", Core.GetConfigureLocation())
+	log.Infof("save config to %s", core.GetConfigureLocation())
 	return nil
 }
 
 func CheckVersionUpgrade(msg chan<- string) {
 	// start checking version upgrade
-	hasUpgrades, v, url, err := Core.CheckUpdate()
+	hasUpgrades, v, url, err := core.CheckUpdate()
 	defer close(msg)
 	defer func() {
 		log.Tracef("check version upgrade finished")
 	}()
 	if err != nil {
-		if errors.Is(err, Core.NoCompatibleVersionError) {
+		if errors.Is(err, core.NoCompatibleVersionError) {
 			// "no suitable version"
 			if hasUpgrades {
 				msg <- fmt.Sprintf("new version %s is available", v.Info())
-				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s ", Core.RepoURLs())
+				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s ", core.RepoURLs())
 			} else {
 				// "already the latest version"
 				msg <- ""
 				msg <- ""
 				return
 			}
-
 		}
 		// error checking version upgrade
 		msg <- ""

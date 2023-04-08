@@ -2,11 +2,12 @@ package Log
 
 import (
 	"fmt"
-	"github.com/k0kubun/pp/v3"
-	log "golang.org/x/exp/slog"
 	"io"
 	"os"
 	"time"
+
+	"github.com/k0kubun/pp/v3"
+	log "golang.org/x/exp/slog"
 )
 
 var (
@@ -21,8 +22,10 @@ var (
 	DebugPP = pp.New()
 )
 
-var output []io.Writer
-var level log.Level
+var (
+	output []io.Writer
+	level  log.Level
+)
 
 func init() {
 	pp.Default.SetColoringEnabled(false)
@@ -86,7 +89,6 @@ func init() {
 		StructName:      pp.Bold | pp.Green,
 		ObjectLength:    pp.Bold | pp.Green,
 	})
-
 }
 
 // TxtTo sets the output destination for a new logger and return it
@@ -103,7 +105,6 @@ func TxtTo(opts log.HandlerOptions, writer ...io.Writer) *log.Logger {
 // return a function to close the log file
 // if error occurs, return error
 func InitLog(filename string, filePerm os.FileMode, loglevel string, _output ...io.Writer) (func(), error) {
-
 	switch loglevel {
 	// case "Panic", "panic", "PANIC":
 	// 	level = log.PanicLevel
@@ -161,12 +162,10 @@ func InitLog(filename string, filePerm os.FileMode, loglevel string, _output ...
 }
 
 func toOutput(l log.Level, v ...any) {
-
 	if l >= level {
 		if output != nil {
 			mw := io.MultiWriter(output...)
 			switch l {
-
 			case log.LevelError:
 				_, _ = ErrPP.Fprintln(mw, v...)
 			case log.LevelInfo:
@@ -204,6 +203,7 @@ func (l *Logger) WithGroup(g string) *Logger {
 	newLogger = newLogger.WithGroup(g)
 	return (*Logger)(newLogger)
 }
+
 func (l *Logger) Raw() *log.Logger {
 	return (*log.Logger)(l)
 }
@@ -311,36 +311,36 @@ func Fatalf(format string, v ...any) {
 	os.Exit(1)
 }
 
-func String(Key string, Value string) log.Attr {
-	return log.String(Key, Value)
+func String(key string, value string) log.Attr {
+	return log.String(key, value)
 }
 
-func Time(Key string, Value time.Time) log.Attr {
-	return log.Time(Key, Value)
+func Time(key string, value time.Time) log.Attr {
+	return log.Time(key, value)
 }
 
-func Duration(Key string, Value time.Duration) log.Attr {
-	return log.Duration(Key, Value)
+func Duration(key string, value time.Duration) log.Attr {
+	return log.Duration(key, value)
 }
 
-func Any(Key string, Value any) log.Attr {
-	return log.Any(Key, Value)
+func Any(key string, value any) log.Attr {
+	return log.Any(key, value)
 }
 
-func Bool(Key string, Value bool) log.Attr {
-	return log.Bool(Key, Value)
+func Bool(key string, value bool) log.Attr {
+	return log.Bool(key, value)
 }
 
-func Float64(Key string, Value float64) log.Attr {
-	return log.Float64(Key, Value)
+func Float64(key string, value float64) log.Attr {
+	return log.Float64(key, value)
 }
 
-func Group(Key string, as ...log.Attr) log.Attr {
-	return log.Group(Key, as...)
+func Group(key string, as ...log.Attr) log.Attr {
+	return log.Group(key, as...)
 }
 
-func Int(Key string, Value int) log.Attr {
-	return log.Int(Key, Value)
+func Int(key string, value int) log.Attr {
+	return log.Int(key, value)
 }
 
 func Int64(key string, value int64) log.Attr {
