@@ -23,7 +23,7 @@ func (b *BindDeviceService) Bind(Device string, Service *Core.Service) (ok bool)
 	return true
 }
 
-func OnChange(ps []Core.Parameters, GlobalDevice *Device.Device) {
+func OnChange(ps *[]Core.Parameters, GlobalDevice *Device.Device) {
 	defer Core.CatchPanic(output)
 
 	if GlobalDevice == nil {
@@ -36,7 +36,7 @@ func OnChange(ps []Core.Parameters, GlobalDevice *Device.Device) {
 	StartIpChangeDaemon(ps)
 }
 
-func StartIpChangeDaemon(ps []Core.Parameters) {
+func StartIpChangeDaemon(ps *[]Core.Parameters) {
 
 	type result int
 	const (
@@ -63,7 +63,7 @@ func StartIpChangeDaemon(ps []Core.Parameters) {
 	_ = Core.MainGoroutinePool.Submit(func() {
 		for {
 			<-save
-			err := SaveFromParameters(ps...)
+			err := SaveFromParameters(*ps...)
 			if err != nil {
 				_, _ = Log.ErrPP.Fprintln(output, err.Error())
 			}
@@ -193,7 +193,9 @@ func StartIpChangeDaemon(ps []Core.Parameters) {
 				}
 			}
 
-			save <- struct{}{}
+			if res[done] != 0 {
+				save <- struct{}{}
+			}
 
 		})
 

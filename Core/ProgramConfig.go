@@ -399,7 +399,7 @@ func (j jsonHandler) HandleResponse(source string, toGet string) (target any, er
 	// parse resName
 	var result map[string]any
 
-	err = json.Unmarshal([]byte(source), &result)
+	err = json.UnmarshalString(source, &result)
 	if err != nil {
 		return "", err
 	}

@@ -1,4 +1,4 @@
-// Package DDNS
+// Package Core
 // basic interfaces and tools for DDNS service
 package Core
 

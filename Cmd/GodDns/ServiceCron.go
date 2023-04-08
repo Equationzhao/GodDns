@@ -35,7 +35,7 @@ func (r *ServiceCronJob) Run() {
 	defer func() { r.times-- }()
 	ps := r.ps
 	gd := r.GlobalDevice
-	err := ModeController(ps, gd)
+	err := ModeController(&ps, gd)
 	if err != nil {
 		log.Error("error running ddns: ", log.String("error", err.Error()))
 	}

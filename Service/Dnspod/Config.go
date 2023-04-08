@@ -143,7 +143,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]Core.Parameters, error) {
 			Value:        value,
 			TTL:          uint16(ttl),
 			Type:         Type,
-			device:       device,
+			Device:       device,
 		}
 		ps = append(ps, d)
 	}

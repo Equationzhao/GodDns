@@ -18,7 +18,7 @@ import (
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
 
-func ModeController(ps []Core.Parameters, GlobalDevice *Device.Device) error {
+func ModeController(ps *[]Core.Parameters, GlobalDevice *Device.Device) error {
 	switch runMode {
 	case run:
 		err := RunDDNS(ps)
@@ -52,7 +52,7 @@ func ModeController(ps []Core.Parameters, GlobalDevice *Device.Device) error {
 	return nil
 }
 
-func RunDDNS(parameters []Core.Parameters) error {
+func RunDDNS(parameters *[]Core.Parameters) error {
 	log.Debugf("run ddns")
 	// run ddns here
 
@@ -65,7 +65,10 @@ func RunDDNS(parameters []Core.Parameters) error {
 	return GenerateExecuteSave(parameters)
 }
 
+// device name -> [ipv4, ipv6]
 type d2i map[string]Collections.Pair[string, string]
+
+var Device2Ips = make(d2i, 20)
 
 func (d *d2i) Add(device string, ip string, t Net.Type) {
 	switch t {
@@ -82,10 +85,7 @@ func (d *d2i) Add(device string, ip string, t Net.Type) {
 	default:
 		panic("invalid type")
 	}
-
 }
-
-var Device2Ips = make(d2i, 20)
 
 func ReadConfig(configs []Core.ConfigFactory) ([]Core.Parameters, error) {
 	parameters, fileErr, configErrs := Core.ConfigureReader(Core.GetConfigureLocation(), configs...)
@@ -108,7 +108,7 @@ func ReadConfig(configs []Core.ConfigFactory) ([]Core.Parameters, error) {
 
 // RunGetFromApi get ip address from api
 // require parameters contain Device.Device
-func RunGetFromApi(parameters []Core.Parameters) error {
+func RunGetFromApi(parameters *[]Core.Parameters) error {
 
 	// if api is api name , get api from map
 	// if api is url , try to make request to url  http://example.com/api?ip=4 or http://example.com/api?ip=6
@@ -123,12 +123,9 @@ func RunGetFromApi(parameters []Core.Parameters) error {
 
 	log.Debugf("-I is set, get ip address from %s", ApiName)
 
-	ip4Done := make(chan bool, 1)
-	ip6Done := make(chan bool, 1)
-	ip4 := ""
-	_ip4 := ""
-	ip6 := ""
-	_ip6 := ""
+	ip4Done, ip6Done := make(chan bool, 1), make(chan bool, 1)
+	ip4, _ip4 := "", ""
+	ip6, _ip6 := "", ""
 
 	var err1 error
 	_ = Core.MainGoroutinePool.Submit(func() {
@@ -192,7 +189,7 @@ func RunGetFromApi(parameters []Core.Parameters) error {
 		}
 	}
 
-	for _, parameter := range parameters {
+	for _, parameter := range *parameters {
 		if parameter.GetName() != Device.ServiceName {
 			if d, ok := parameter.(Core.Service); ok {
 				if d.IsTypeSet() {
@@ -211,7 +208,7 @@ func RunGetFromApi(parameters []Core.Parameters) error {
 	return GenerateExecuteSave(parameters)
 }
 
-func RunAuto(GlobalDevice Device.Device, parameters []Core.Parameters) error {
+func RunAuto(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
 	log.Info("get ip address automatically")
 	// get ip addr automatically
 
@@ -220,9 +217,9 @@ func RunAuto(GlobalDevice Device.Device, parameters []Core.Parameters) error {
 	devices := GlobalDevice.GetDevices()
 
 	// First is device, second is ip
-	ip4 := Collections.MakePair[string, string]()
+	ip4 := Collections.Pair[string, string]{}
 	// First is device, second is ip
-	ip6 := Collections.MakePair[string, string]()
+	ip6 := Collections.Pair[string, string]{}
 
 	var (
 		err1, err2 error
@@ -240,7 +237,7 @@ func RunAuto(GlobalDevice Device.Device, parameters []Core.Parameters) error {
 			} else {
 				log.Infof("ipv4 from %s: %s", device, ip4sTemp)
 				ip4s, err1 = Net.HandleIp(ip4sTemp)
-				ip4.Set(device, ip4s[0])
+				ip4.Move(&device, &ip4s[0])
 			}
 		}
 
@@ -252,7 +249,7 @@ func RunAuto(GlobalDevice Device.Device, parameters []Core.Parameters) error {
 			} else {
 				log.Infof("ipv6 from %s: %s", device, ip6sTemp)
 				ip6s, err2 = Net.HandleIp(ip6sTemp)
-				ip6.Set(device, ip6s[0])
+				ip6.Move(&device, &ip6s[0])
 			}
 		}
 
@@ -261,40 +258,44 @@ func RunAuto(GlobalDevice Device.Device, parameters []Core.Parameters) error {
 		}
 
 	}
-	Device2Ips.Add(ip4.GetFirst(), ip4.GetSecond(), Net.A)
-	Device2Ips.Add(ip6.GetFirst(), ip6.GetSecond(), Net.AAAA)
 
+	o4 := sync.Once{}
+	o6 := sync.Once{}
 	set := func(parameter Core.Service) error {
 		switch parameter.GetType() {
 		case "4":
-			MainBinder.Bind(ip4.GetFirst(), &parameter)
-			parameter.SetValue(ip4.GetSecond())
-
+			if ip4.First != nil {
+				MainBinder.Bind(ip4.GetFirst(), &parameter)
+				parameter.SetValue(ip4.GetSecond())
+				o4.Do(
+					func() {
+						Device2Ips.Add(ip4.GetFirst(), ip4.GetSecond(), Net.A)
+					})
+			}
 			return err1
 		case "6":
-			MainBinder.Bind(ip6.GetFirst(), &parameter)
-			parameter.SetValue(ip6.GetSecond())
-
+			if ip6.First != nil {
+				MainBinder.Bind(ip6.GetFirst(), &parameter)
+				parameter.SetValue(ip6.GetSecond())
+				o6.Do(
+					func() {
+						Device2Ips.Add(ip6.GetFirst(), ip6.GetSecond(), Net.AAAA)
+					})
+			}
 			return err2
 		default:
 			return fmt.Errorf("unknown type %s", parameter.GetType())
 		}
 	}
 
-	newParameters := make([]Core.Parameters, 0, len(parameters))
-	for _, parameter := range parameters {
+	for _, parameter := range *parameters {
 		if service, ok := parameter.(Core.Service); ok {
 			// if parameter implements DeviceOverridable interface, set the ip address
 			if err := set(service); err != nil {
 				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), service.GetName())
-				continue // skip
 			}
-			newParameters = append(newParameters, service)
-		} else {
-			newParameters = append(newParameters, parameter)
 		}
 	}
-	parameters = newParameters
 
 	return GenerateExecuteSave(parameters)
 
@@ -317,38 +318,38 @@ func GetGlobalDevice(parameters []Core.Parameters) (Device.Device, error) {
 	return GlobalDevice, nil
 }
 
-func RunOverride(GlobalDevice Device.Device, parameters []Core.Parameters) error {
+func RunOverride(GlobalDevice Device.Device, parameters *[]Core.Parameters) error {
 	// override the ip address here
 	// use the Key `Devices` and `Type` of the Service if exist
 	log.Info("-O is set, override the ip address")
 	var errCount uint16
 
-	for _, parameter := range parameters {
+	for _, parameter := range *parameters {
 		// skip the device parameter
 		if parameter.GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
 			if d, ok := parameter.(Core.DeviceOverridable); ok {
-				log.Debugf("Parameter %s implements DeviceOverridable interface", parameter.GetName())
+				log.Debugf("Parameter %s implements DeviceOverridable interface", d.GetName())
 
 				var tempDeviceName string
 
 				// if device is not set, use Type IP value of Global Devices
 				if !d.IsDeviceSet() {
-					err := set(GlobalDevice, parameter)
+					err := set(GlobalDevice, d)
 					if err != nil {
-						log.Errorf("error setting ip address: %s, skip overriding service:%s", err.Error(), parameter.GetName())
+						log.Errorf("error setting ip address: %s, skip overriding service:%s", err.Error(), d.GetName())
 						errCount++
 
 						continue
 					}
-					log.Warnf("Devices of %s is not set, use default value %s", parameter.GetName(), parameter.(Core.DeviceOverridable).GetIP())
+					log.Warnf("Devices of %s is not set, use default value %s", d.GetName(), d.GetIP())
 					continue // skip
 				}
 
 				if !d.IsTypeSet() {
 					errCount++
 
-					log.Errorf("error setting ip address: unknown type, skip service:%s", parameter.GetName())
+					log.Errorf("error setting ip address: unknown type, skip service:%s", d.GetName())
 					continue
 				}
 
@@ -358,15 +359,17 @@ func RunOverride(GlobalDevice Device.Device, parameters []Core.Parameters) error
 				if err != nil {
 					errCount++
 
-					log.Errorf("error getting ip address: %s, skip service:%s", err.Error(), parameter.GetName())
+					log.Errorf("error getting ip address: %s, skip service:%s", err.Error(), d.GetName())
 					continue
 				}
 
-				log.Infof("override %s with %s", parameter.GetName(), ips[0])
-				parameter.(Core.DeviceOverridable).SetValue(ips[0])
+				log.Infof("override %s with %s", d.GetName(), ips[0])
+				d.SetValue(ips[0])
+				s := parameter.(Core.Service)
+				MainBinder.Bind(tempDeviceName, &s)
 			} else {
 				// Service is not DeviceOverridable, use ip got from Devices Section
-				err := set(GlobalDevice, parameter)
+				err := set(GlobalDevice, parameter.(Core.Service))
 				if err != nil {
 					errCount++
 					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(Core.Service).GetIP())
@@ -384,12 +387,11 @@ func RunOverride(GlobalDevice Device.Device, parameters []Core.Parameters) error
 
 }
 
-func set(GlobalDevice Device.Device, ParameterToSet Core.Parameters) error {
+func set(GlobalDevice Device.Device, ParameterToSet Core.Service) error {
 
-	toSet := ParameterToSet.(Core.Service)
-	Type := toSet.GetType() // Type is "4" or "6" or ""
+	Type := ParameterToSet.GetType() // Type is "4" or "6" or ""
 
-	ip := Collections.MakePair[string, string]() // First is device, second is ip
+	ip := Collections.Pair[string, string]{} // First is device, second is ip
 
 	var err error
 	devices := GlobalDevice.GetDevices()
@@ -411,7 +413,7 @@ func set(GlobalDevice Device.Device, ParameterToSet Core.Parameters) error {
 						err = errors.Join(err, errTemp)
 						log.Errorf("error handling ipv4 %s ,%s", device, err)
 					}
-					ip.Set(device, ips[0])
+					ip.Move(&device, &ips[0])
 				}
 			}
 		}
@@ -430,17 +432,18 @@ func set(GlobalDevice Device.Device, ParameterToSet Core.Parameters) error {
 						err = errors.Join(err, errTemp)
 						log.Errorf("error handling ipv4 %s ,%s", device, err)
 					}
-					ip.Set(device, ips[0])
+					ip.Move(&device, &ips[0])
 				}
 			}
 		}
 
 	default:
-		return fmt.Errorf("unknown type %s", ParameterToSet.(Core.Service).GetType())
+		return fmt.Errorf("unknown type %s", ParameterToSet.GetType())
 	}
 
-	if ip.GetFirst() != "" && ip.GetSecond() != "" {
-		ParameterToSet.(Core.Service).SetValue(ip.GetSecond())
+	if ip.First != nil && ip.Second != nil {
+		MainBinder.Bind(ip.GetFirst(), &ParameterToSet)
+		ParameterToSet.SetValue(ip.GetSecond())
 		return nil
 	} else {
 		return err
@@ -448,11 +451,11 @@ func set(GlobalDevice Device.Device, ParameterToSet Core.Parameters) error {
 
 }
 
-func GenerateExecuteSave(parameters []Core.Parameters) error {
+func GenerateExecuteSave(parameters *[]Core.Parameters) error {
 	requests := GenerateRequests(parameters)
 
-	d, err := Core.Find(parameters, Device.ServiceName)
-	Parameters2Save := make([]Core.Parameters, 0, len(parameters))
+	d, err := Core.Find(*parameters, Device.ServiceName)
+	Parameters2Save := make([]Core.Parameters, 0, len(*parameters))
 	if err == nil {
 		Parameters2Save = append(Parameters2Save, d)
 	}
@@ -460,10 +463,10 @@ func GenerateExecuteSave(parameters []Core.Parameters) error {
 	DisplayAll(requests...)
 	for _, request := range requests {
 		// update info from request.parameters
-		s2p := request.ToParameters()
-		Parameters2Save = append(Parameters2Save, s2p)
+		r2p := request.ToParameters()
+		Parameters2Save = append(Parameters2Save, r2p)
 	}
-
+	*parameters = Parameters2Save
 	err = SaveFromParameters(Parameters2Save...)
 
 	if err != nil {
@@ -518,6 +521,7 @@ func GenerateConfigure(configFactoryList []Core.ConfigFactory) error {
 }
 
 func ExecuteRequests(requests ...Core.Request) {
+
 	log.Info("start executing requests")
 	var wg sync.WaitGroup
 
@@ -625,11 +629,11 @@ func Retry(request Core.Request, i uint8) {
 	}
 }
 
-func GenerateRequests(parameters []Core.Parameters) []Core.Request {
+func GenerateRequests(parameters *[]Core.Parameters) []Core.Request {
 	log.Info("start generating requests")
 	var errCount uint8 = 0
-	requests := make([]Core.Request, 0, len(parameters))
-	for _, parameter := range parameters {
+	requests := make([]Core.Request, 0, len(*parameters))
+	for _, parameter := range *parameters {
 		if parameter.GetName() == Device.ServiceName {
 			continue // skip
 		}

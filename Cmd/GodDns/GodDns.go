@@ -38,21 +38,20 @@ func init() {
 
 // global variables
 var (
-	Time              uint64 = 0
-	TimesLimitation          = 0 // 0 means no limitation
-	ApiName                  = ""
-	retryAttempt      uint8  = DEFAULTRETRYATTEMPT
-	config                   = ""
-	defaultLocation          = ""
-	logLevel                 = ""
-	proxy                    = ""
-	proxyEnable              = false
-	parallelExecuting        = false
-	runMode                  = ""
-	isLogSet                 = false
-	onChange                 = false
-	errLimit          uint8  = 0
-	memProfiling             = false
+	Time              uint64
+	TimesLimitation   int // 0 means no limitation
+	ApiName           string
+	retryAttempt      uint8 = DEFAULTRETRYATTEMPT
+	config            string
+	defaultLocation   string
+	logLevel          string
+	proxy             string
+	proxyEnable       bool
+	parallelExecuting bool
+	runMode           string
+	isLogSet          bool
+	onChange          bool
+	memProfiling      bool
 )
 
 // Flags
@@ -225,22 +224,6 @@ var (
 		Usage:       "enable memory profiling",
 		Category:    "PERFORMANCE",
 		Destination: &memProfiling,
-	}
-
-	errLimitFlag = &cli.UintFlag{
-		Name:        "err-limit",
-		Aliases:     []string{"el", "EL"},
-		Value:       0,
-		DefaultText: "infinity",
-		Usage:       "run ddns up to `n` times when error occurs",
-		Action: func(context *cli.Context, u uint) error {
-			errLimit = uint8(u)
-
-			if errLimit > retryAttempt {
-				return fmt.Errorf("too little err-limit, should be more than retry times(%d)", retryAttempt)
-			}
-			return nil
-		},
 	}
 )
 
@@ -419,12 +402,12 @@ func main() {
 					}
 
 					if Time != 0 {
-						_ = RunDDNS(parameters)
+						_ = RunDDNS(&parameters)
 						RunPerTime(Time, nil, parameters)
 						return nil
 					}
 
-					return ModeController(parameters, nil)
+					return ModeController(&parameters, nil)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -491,17 +474,17 @@ func main() {
 
 							runMode = runAuto
 							if onChange {
-								OnChange(parameters, &GlobalDevice)
+								OnChange(&parameters, &GlobalDevice)
 								return nil
 							}
 
 							if Time != 0 {
-								_ = RunAuto(GlobalDevice, parameters)
+								_ = RunAuto(GlobalDevice, &parameters)
 								RunPerTime(Time, &GlobalDevice, parameters)
 								return nil
 							}
 
-							return ModeController(parameters, &GlobalDevice)
+							return ModeController(&parameters, &GlobalDevice)
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -546,17 +529,17 @@ func main() {
 
 									runMode = runAutoOverride
 									if onChange {
-										OnChange(parameters, &GlobalDevice)
+										OnChange(&parameters, &GlobalDevice)
 										return nil
 									}
 
 									if Time != 0 {
-										_ = RunOverride(GlobalDevice, parameters)
+										_ = RunOverride(GlobalDevice, &parameters)
 										RunPerTime(Time, &GlobalDevice, parameters)
 										return nil
 									}
 
-									return ModeController(parameters, &GlobalDevice)
+									return ModeController(&parameters, &GlobalDevice)
 								},
 							},
 						},

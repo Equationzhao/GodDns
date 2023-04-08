@@ -73,10 +73,17 @@ func Convert2KeyValue(format string, i any) string {
 	}
 
 	for i := 0; i < t.NumField(); i++ {
-		if !t.Field(i).IsExported() {
+		tfieldi := t.Field(i)
+		if !tfieldi.IsExported() {
 			continue
 		}
-		name := t.Field(i).Tag.Get("KeyValue") // `name,comments`
+
+		vfiledi := v.Field(i).Interface()
+		if reflect.DeepEqual(vfiledi, reflect.Zero(reflect.TypeOf(vfiledi)).Interface()) {
+			continue
+		}
+
+		name := tfieldi.Tag.Get("KeyValue") // `name,comments`
 		if name == "-" {
 			continue
 		}
@@ -89,7 +96,7 @@ func Convert2KeyValue(format string, i any) string {
 		}
 
 		if name == "" {
-			name = t.Field(i).Tag.Get("json")
+			name = tfieldi.Tag.Get("json")
 			if strings.Contains(name, ",") {
 				name = strings.SplitN(name, ",", 2)[0] // get name, remove ",omitempty"
 			}
@@ -106,10 +113,10 @@ func Convert2KeyValue(format string, i any) string {
 		if comments != "" {
 			content.WriteString(fmt.Sprintf(" # %s", comments))
 			content.WriteByte('\n')
-			content.WriteString(fmt.Sprintf(format, name, v.Field(i).Interface()))
+			content.WriteString(fmt.Sprintf(format, name, vfiledi))
 			content.WriteByte('\n')
 		} else {
-			content.WriteString(fmt.Sprintf(format, name, v.Field(i).Interface()))
+			content.WriteString(fmt.Sprintf(format, name, vfiledi))
 			content.WriteByte('\n')
 		}
 

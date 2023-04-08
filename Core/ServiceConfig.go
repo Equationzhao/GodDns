@@ -186,6 +186,10 @@ Key=value
 ...
 */
 func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters, LoadFileErr error, ReadConfigErrs error) {
+	return configReader(Filename, configs, ps, ReadConfigErrs)
+}
+
+func configReader(Filename string, configs []ConfigFactory, ps []Parameters, ReadConfigErrs error) ([]Parameters, error, error) {
 	cfg, err := ini.Load(Filename)
 
 	if err != nil {
@@ -212,7 +216,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 			// Read corresponding service
 			if match {
 				log.Debugf("read config for %s", c.GetName())
-				temp, err := c.Get().ReadConfig(*sec) // todo read comments: sec.Key("name").Comment
+				temp, err := c.Get().ReadConfig(*sec)
 				if err != nil {
 					errCount++
 					msg := fmt.Errorf("failed to read config for %s : %s", c.GetName(), err.Error())
