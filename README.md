@@ -84,18 +84,27 @@ OPTIONS:
 
    --log level, -l level, -L level, --Log level  level: Trace/Debug/Info/Warn/Error (default: Info)
    --no-output, -s, -S, --silent                 no message output (default: false)
+   
+   PERFORMANCE
 
+   --cpu-profile, --cpuprofile, --cpu, --cp  enable cpu profiling (default: disabled)
+   --mem-profile, --memprofile, --mem, --mp  enable memory profiling (default: disabled)
+   
    RUN
 
    --api ApiName, -i ApiName, -I ApiName     get ip address from provided ApiName, eg: ipify/identMe
    --parallel, --Parallel                    run ddns parallel (default: false)
    --proxy url, -p url, -P url, --Proxy url  set proxy url
    --retry times                             retry times (default: 3)
+    
+   TIMES
 
-   TIME
+   --times-limitation n, --tl n, --TL n  run ddns per time(seconds) up to n times (default: infinity)
 
+   TRIGGER
+
+   --on-change, --oc, --OC                 run ddns automatically when ip changed (default: false)
    --time seconds, -t seconds, -T seconds  run ddns per time(seconds) (default: disabled)
-   --times -limitation n, --tl n, --TL n     run ddns per time(seconds) up to n times (default: infinity)
 
 
 GLOBAL OPTIONS:
@@ -106,18 +115,22 @@ GLOBAL OPTIONS:
 
 ## Configuration
 
-[Program Config](Core/README.md)
+[Program Config](core/README.md)
 
 [Service Config](Service/README.md)
 
 ## Build from source
 
-```powershell
-go build -o GodDns.exe GodDns/Cmd 
-```
+build binary
 
 ```bash
-go build -o GodDns GodDns/Cmd 
+make build
+```
+
+install to $GOPATH/bin
+
+```bash
+make install
 ```
 
 ## TODO

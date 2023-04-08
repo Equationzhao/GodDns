@@ -2,8 +2,8 @@ package Dnspod
 
 import "C"
 import (
-	"GodDns/Core"
 	"GodDns/Net"
+	"GodDns/core"
 )
 
 const serviceName = "Dnspod"
@@ -11,7 +11,7 @@ const serviceName = "Dnspod"
 // Parameters implements DeviceOverridable
 // PublicParameter is public parameter of dnspod
 // ExternalParameter is external parameter of dnspod ddns
-// device is device name when overriding ip with specific device/interface
+// Device is Device name when overriding ip with specific Device/interface
 type Parameters struct {
 	LoginToken   string `json:"login_token,omitempty" xwwwformurlencoded:"login_token" KeyValue:"login_token,get from https://console.dnspod.cn/account/token/token, 'ID,Token'"`
 	Format       string `json:"format,omitempty" xwwwformurlencoded:"format" KeyValue:"format,data format, json(recommended) or xml(not support yet)"`
@@ -24,16 +24,16 @@ type Parameters struct {
 	Value        string `json:"value,omitempty" xwwwformurlencoded:"value" KeyValue:"value,IP address like 6.6.6.6"`
 	TTL          uint16 `json:"ttl,omitempty" xwwwformurlencoded:"ttl" KeyValue:"ttl,Time-To-Live, 600(default)"`
 	Type         string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"type,A/AAAA/4/6"`
-	device       string
+	Device       string `json:"-" xwwwformurlencoded:"-" KeyValue:"device,device/net interface name"`
 }
 
 func (p *Parameters) Target() string {
 	return p.getTotalDomain()
 }
 
-// IsDeviceSet return whether the device is set
+// IsDeviceSet return whether the Device is set
 func (p *Parameters) IsDeviceSet() bool {
-	return p.device != ""
+	return p.Device != ""
 }
 
 // IsTypeSet return whether the type is set correctly
@@ -46,9 +46,9 @@ func (p *Parameters) SetValue(value string) {
 	p.Value = value
 }
 
-// GetDevice return device name
+// GetDevice return Device name
 func (p *Parameters) GetDevice() string {
-	return p.device
+	return p.Device
 }
 
 // GetType return Type like "4" or "6" and "" if invalid type
@@ -57,7 +57,7 @@ func (p *Parameters) GetType() string {
 }
 
 // SaveConfig return DDNS.ConfigStr
-func (p *Parameters) SaveConfig(No uint) (DDNS.ConfigStr, error) {
+func (p *Parameters) SaveConfig(No uint) (core.ConfigStr, error) {
 	return configInstance.GenerateConfigInfo(p, No)
 }
 
@@ -85,17 +85,16 @@ func GenerateDefaultConfigInfo() Parameters {
 		Value:        "1.2.3.4",
 		TTL:          600,
 		Type:         "A/AAAA/4/6",
+		Device:       "your device/net interface name",
 	}
 }
 
-type PublicParameter struct {
-}
+type PublicParameter struct{}
 
-type ExternalParameter struct {
-}
+type ExternalParameter struct{}
 
 // ToRequest Convert to DDNS.Request
-func (p *Parameters) ToRequest() (DDNS.Request, error) {
+func (p *Parameters) ToRequest() (core.Request, error) {
 	r := new(Request)
 	err := r.Init(*p)
 	if err != nil {

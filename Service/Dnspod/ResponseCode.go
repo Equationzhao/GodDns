@@ -1,6 +1,6 @@
 package Dnspod
 
-import "GodDns/Core"
+import "GodDns/core"
 
 const (
 	BanedDomain                    = "-15"
@@ -36,8 +36,8 @@ const (
 
 // code2status
 // convert the code to message and set status.Status
-func code2status(code string) *DDNS.Status {
-	var msg = newStatus()
+func code2status(code string) *core.Status {
+	msg := newStatus()
 	switch code {
 	case Success:
 		msg.MG.AddInfo("接口调用成功")
@@ -97,9 +97,9 @@ func code2status(code string) *DDNS.Status {
 	}
 
 	if code == "1" {
-		msg.Status = DDNS.Success
+		msg.Status = core.Success
 	} else {
-		msg.Status = DDNS.Failed
+		msg.Status = core.Failed
 	}
 
 	return msg

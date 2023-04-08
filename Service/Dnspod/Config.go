@@ -1,14 +1,15 @@
 package Dnspod
 
 import (
-	"GodDns/Core"
-	"GodDns/Net"
-	"GodDns/Util"
-	"GodDns/Util/Collections"
 	"bytes"
 	"strconv"
 	"strings"
 
+	"GodDns/core"
+
+	"GodDns/Net"
+	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"gopkg.in/ini.v1"
 )
 
@@ -17,7 +18,7 @@ type Config struct {
 }
 
 func init() {
-	DDNS.Add2FactoryList(configFactoryInstance)
+	core.Add2FactoryList(configFactoryInstance)
 }
 
 // GetName Get name of service
@@ -28,7 +29,7 @@ func (c Config) GetName() string {
 // GenerateDefaultConfigInfo Create default config
 // Return: DDNS.ConfigStr , error
 // if any error occurs, FileName will be ""
-func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
+func (c Config) GenerateDefaultConfigInfo() (core.ConfigStr, error) {
 	P := GenerateDefaultConfigInfo()
 	return c.GenerateConfigInfo(&P, 0)
 }
@@ -37,7 +38,7 @@ func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
 // Parameters: sec ini.Section
 // Return: DDNS.Parameters and error
 // if any error occurs, returned Parameters will be nil
-func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]core.Parameters, error) {
 	var err error = nil
 
 	// if no error, err=nil
@@ -108,22 +109,16 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 		return nil, err
 	}
 
-	var device = getDefaultDevice()
+	device := getDefaultDevice()
 	if sec.HasKey("device") {
 		device = sec.Key("device").String()
 	}
 
-	var Type = getDefaultType()
+	Type := getDefaultType()
 	if sec.HasKey("type") {
 		Type = Net.Type2Str(sec.Key("type").String())
 	}
 
-	// todo multi-subdomain eg. sub1,sub2
-	// 1. remove ','
-	// 2. split by ' '
-	// 3. remove empty string
-	// 4. remove duplicate subdomain
-	// 5. copy other parameters and modify subdomains
 	subdomain := Unpack(sec, "sub_domain", &err)
 	if err != nil {
 		return nil, err
@@ -132,7 +127,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	subdomains := strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
 	Collections.RemoveDuplicate(&subdomains)
 
-	ps := make([]DDNS.Parameters, 0, len(subdomains))
+	ps := make([]core.Parameters, 0, len(subdomains))
 
 	for _, s := range subdomains {
 		if s == "" {
@@ -150,7 +145,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 			Value:        value,
 			TTL:          uint16(ttl),
 			Type:         Type,
-			device:       device,
+			Device:       device,
 		}
 		ps = append(ps, d)
 	}
@@ -164,8 +159,7 @@ var configFactoryInstance ConfigFactory
 var configInstance Config
 
 // ConfigFactory is a factory that create a new Config
-type ConfigFactory struct {
-}
+type ConfigFactory struct{}
 
 // GetName return the name of dnspod
 func (c ConfigFactory) GetName() string {
@@ -173,25 +167,24 @@ func (c ConfigFactory) GetName() string {
 }
 
 // Get return a singleton Config
-func (c ConfigFactory) Get() DDNS.Config {
+func (c ConfigFactory) Get() core.Config {
 	return &configInstance
 }
 
 // New return a new Config
-func (c ConfigFactory) New() *DDNS.Config {
-	var config DDNS.Config = &Config{}
+func (c ConfigFactory) New() *core.Config {
+	var config core.Config = &Config{}
 	return &config
 }
 
 // GenerateConfigInfo
 // Generate KeyValue style config
-func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, No uint) (DDNS.ConfigStr, error) {
-
-	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, No))
-	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+func (c Config) GenerateConfigInfo(parameters core.Parameters, No uint) (core.ConfigStr, error) {
+	buffer := bytes.NewBufferString(core.ConfigHead(parameters, No))
+	buffer.WriteString(Util.Convert2KeyValue(core.Format, parameters))
 	buffer.Write([]byte{'\n', '\n'})
 
-	return DDNS.ConfigStr{
+	return core.ConfigStr{
 		Name:    "Dnspod",
 		Content: buffer.String(),
 	}, nil

@@ -2,49 +2,50 @@
 package DnspodYunApi
 
 import (
-	"GodDns/Core"
-	"GodDns/Net"
-	"GodDns/Util"
-	"GodDns/Util/Collections"
 	"bytes"
 	"strings"
 
+	"GodDns/core"
+
+	"GodDns/Net"
+	"GodDns/Util"
+	"GodDns/Util/Collections"
 	"gopkg.in/ini.v1"
 )
 
 func init() {
-	DDNS.Add2FactoryList(factoryInstance)
+	core.Add2FactoryList(factoryInstance)
 }
 
 const serviceName = "DnspodYun"
 
-var factoryInstance Factory
-var configInstance Config
+var (
+	factoryInstance Factory
+	configInstance  Config
+)
 
-type Factory struct {
-}
+type Factory struct{}
 
 func (f Factory) GetName() string {
 	return serviceName
 }
 
-func (f Factory) Get() DDNS.Config {
+func (f Factory) Get() core.Config {
 	return &configInstance
 }
 
-func (f Factory) New() *DDNS.Config {
-	var c DDNS.Config = Config{}
+func (f Factory) New() *core.Config {
+	var c core.Config = Config{}
 	return &c
 }
 
-type Config struct {
-}
+type Config struct{}
 
 func (c Config) GetName() string {
 	return serviceName
 }
 
-func (c Config) GenerateDefaultConfigInfo() (DDNS.ConfigStr, error) {
+func (c Config) GenerateDefaultConfigInfo() (core.ConfigStr, error) {
 	p := GenerateDefaultConfigInfo()
 	return c.GenerateConfigInfo(&p, 0)
 }
@@ -63,13 +64,13 @@ func GenerateDefaultConfigInfo() DnspodYun {
 	}
 }
 
-func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
+func (c Config) ReadConfig(sec ini.Section) ([]core.Parameters, error) {
 	names := [9]string{"SecretID", "SecretKey", "Domain", "SubDomain", "RecordId", "RecordLine", "Value", "TTL", "Type"}
 	p := DnspodYun{}
 	var subdomains []string
 	for _, name := range names {
 		if !sec.HasKey(name) {
-			return nil, DDNS.NewMissKeyErr(name, serviceName)
+			return nil, core.NewMissKeyErr(name, serviceName)
 		} else {
 			switch name {
 			case "SubDomain":
@@ -92,7 +93,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 			}
 		}
 	}
-	ps := make([]DDNS.Parameters, 0, len(subdomains))
+	ps := make([]core.Parameters, 0, len(subdomains))
 	for _, subdomain := range subdomains {
 		if subdomain == "" {
 			continue
@@ -113,14 +114,13 @@ func (c Config) ReadConfig(sec ini.Section) ([]DDNS.Parameters, error) {
 	return ps, nil
 }
 
-func (c Config) GenerateConfigInfo(parameters DDNS.Parameters, u uint) (DDNS.ConfigStr, error) {
-	buffer := bytes.NewBufferString(DDNS.ConfigHead(parameters, u))
-	buffer.WriteString(Util.Convert2KeyValue(DDNS.Format, parameters))
+func (c Config) GenerateConfigInfo(parameters core.Parameters, u uint) (core.ConfigStr, error) {
+	buffer := bytes.NewBufferString(core.ConfigHead(parameters, u))
+	buffer.WriteString(Util.Convert2KeyValue(core.Format, parameters))
 	buffer.Write([]byte{'\n', '\n'})
 
-	return DDNS.ConfigStr{
+	return core.ConfigStr{
 		Name:    "Dnspod_yun",
 		Content: buffer.String(),
 	}, nil
-
 }

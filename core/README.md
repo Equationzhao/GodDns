@@ -3,7 +3,7 @@ Program config
 ## Config
 ```ini
 [settings]
-Proxy=[] # not implemented
+Proxy=[socks://localhost:10808 http://127.0.0.1:10809]
 
 
 # when Response=TEXT, Value is the no-th ip in the response

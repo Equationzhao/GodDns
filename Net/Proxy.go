@@ -1,29 +1,30 @@
 package Net
 
 import (
-	"GodDns/Util"
 	"net/url"
+
+	"GodDns/Util"
 )
 
 type proxy = string
 
-type Proxys []proxy
+type Proxies []proxy
 
-var GlobalProxys = &Proxys{}
+var GlobalProxies = &Proxies{}
 
 func IsProxyValid(proxy proxy) bool {
 	_, err := url.Parse(proxy)
 	return err == nil
 }
 
-func AddProxy(target *Proxys, proxy ...proxy) {
+func AddProxy(target *Proxies, proxy ...proxy) {
 	*target = append(*target, proxy...)
 }
 
-func AddProxy2Top(target *Proxys, proxy ...proxy) {
+func AddProxy2Top(target *Proxies, proxy ...proxy) {
 	*target = append(proxy, *target...)
 }
 
-func (p *Proxys) GetProxyIter() *Util.Iter[proxy] {
+func (p *Proxies) GetProxyIter() *Util.Iter[proxy] {
 	return Util.NewIter((*[]proxy)(p))
 }

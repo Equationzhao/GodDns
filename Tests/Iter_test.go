@@ -1,9 +1,10 @@
 package Tests
 
 import (
-	"GodDns/Util"
 	"fmt"
 	"testing"
+
+	"GodDns/Util"
 )
 
 func TestNewIter(t *testing.T) {
@@ -58,5 +59,4 @@ func TestNewIter(t *testing.T) {
 	}
 
 	fmt.Println(s) // no change
-
 }

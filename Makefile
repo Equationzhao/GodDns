@@ -77,4 +77,19 @@ uninstall : ## Uninstall the binary from GOPATH
 
 upx: ## Compress the binary
 	$(info Compressing the binary)
-	upx build/${App}
+	@if [ ${OS} = ${Linux} ]; \
+	then \
+	  	upx build/${App}; \
+	elif [ ${OS} = ${Windows} ]; \
+    then \
+	  	upx build/${App}.exe; \
+  	fi \
+
+
+build-all: ## Build the binary for all the platforms
+	$(info Building the binary for all the platforms)
+	@mkdir "build"
+	@echo "Building for Windows"
+	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o build/${App}-Windows-amd64.exe GodDns/Cmd/GodDns
+	@echo "Building for Linux"
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/${App}-Linux-amd64 GodDns/Cmd/GodDns

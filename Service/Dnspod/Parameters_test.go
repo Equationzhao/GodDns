@@ -24,7 +24,6 @@ func init() {
 }
 
 func TestGenerateConfigInfo(t *testing.T) {
-
 	info, err := p.SaveConfig(0)
 	if err != nil {
 		t.Error(err)

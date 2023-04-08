@@ -1,15 +1,17 @@
 package Tests_test
 
 import (
-	"GodDns/Core"
-	"GodDns/Service/Dnspod"
 	"fmt"
 	"os"
 	"testing"
+
+	"GodDns/core"
+
+	"GodDns/Service/Dnspod"
 )
 
 func TestConfigFileLocation(t *testing.T) {
-	fmt.Println(DDNS.GetConfigureLocation())
+	fmt.Println(core.GetConfigureLocation())
 }
 
 func TestCreateDefaultConfig(t *testing.T) {
@@ -19,29 +21,28 @@ func TestCreateDefaultConfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	location, err := DDNS.GetDefaultConfigurationLocation()
+	location, err := core.GetDefaultConfigurationLocation()
 	if err != nil {
 		t.Error(err)
 	}
 
 	_, err = os.Stat(location)
 	if err != nil {
-		err = DDNS.ConfigureWriter(location, os.O_CREATE, config)
+		err = core.ConfigureWriter(location, os.O_CREATE, config)
 		if err != nil {
 			t.Error(err)
 		}
 	}
-
 }
 
 func TestStatus_AppendMsg(t *testing.T) {
-	s := &DDNS.Status{
+	s := &core.Status{
 		Name:   "test",
-		MG:     DDNS.NewDefaultMsgGroup(),
-		Status: DDNS.Success,
+		MG:     core.NewDefaultMsgGroup(),
+		Status: core.Success,
 	}
 
-	s.AppendMsg(DDNS.NewStringMsg(DDNS.Info).AppendAssign("hello"))
+	s.AppendMsg(core.NewStringMsg(core.Info).AppendAssign("hello"))
 	s.MG.AddInfo("world")
 
 	if s.MG.GetInfo()[0].String() != "hello" {
@@ -55,24 +56,23 @@ func TestStatus_AppendMsg(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	t.Log(DDNS.NowVersion)
-	t.Log(DDNS.NowVersionInfo())
+	t.Log(core.NowVersion)
+	t.Log(core.NowVersionInfo())
 
-	latest, _, err := DDNS.GetLatestVersionInfo()
+	latest, _, err := core.GetLatestVersionInfo()
 	if err != nil {
 		t.Error(err)
 	}
 	t.Logf("latest version: v%s", latest)
 
-	if DDNS.Version.Compare(latest, DDNS.NowVersion) > 0 {
+	if core.Version.Compare(latest, core.NowVersion) > 0 {
 		t.Log("new version available")
 	} else {
 		t.Log("already latest version")
 	}
-
 }
 
 func TestFeedback(t *testing.T) {
-	str := DDNS.Feedback()
+	str := core.Feedback()
 	t.Log(str)
 }

@@ -1,9 +1,10 @@
 package Dnspod
 
 import (
-	"GodDns/Core"
 	"strings"
 	"testing"
+
+	"GodDns/core"
 
 	"gopkg.in/ini.v1"
 )
@@ -18,10 +19,8 @@ func TestConfig_CreateDefaultConfig(t *testing.T) {
 }
 
 func TestConfig_GenerateConfigInfo(t *testing.T) {
-
 	config := Config{}
 	info, err := config.GenerateConfigInfo(&p, 1)
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -29,7 +28,7 @@ func TestConfig_GenerateConfigInfo(t *testing.T) {
 }
 
 func TestConfig_ReadConfig(t *testing.T) {
-	Filename, err := DDNS.GetDefaultConfigurationLocation()
+	Filename, err := core.GetDefaultConfigurationLocation()
 	if err != nil {
 		t.Error(err)
 	}
@@ -49,7 +48,6 @@ func TestConfig_ReadConfig(t *testing.T) {
 		t.Error(err)
 	}
 	t.Log(config)
-
 }
 
 func TestConfigFactory_Get(t *testing.T) {

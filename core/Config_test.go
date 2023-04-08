@@ -1,12 +1,16 @@
-package DDNS
+package core
 
 import (
-	"GodDns/Net"
 	"encoding/json"
-	"github.com/bytedance/sonic"
 	"net/url"
 	"regexp"
 	"testing"
+	"time"
+
+	"GodDns/Net"
+	sonic "GodDns/Util/Json"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
@@ -14,9 +18,9 @@ func TestGetDefaultProgramConfigurationLocation(t *testing.T) {
 	t.Log(l())
 }
 
-func BenchmarkStdJson(b *testing.B) {
-	result := map[string]any{}
-	s := struct {
+var (
+	result = map[string]any{}
+	s      = struct {
 		Code int `json:"code"`
 		Data struct {
 			IpInfo []struct {
@@ -43,7 +47,9 @@ func BenchmarkStdJson(b *testing.B) {
 			},
 		},
 	}
+)
 
+func BenchmarkStdJson(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		bytes, _ := json.Marshal(s)
 		_ = json.Unmarshal(bytes, &result)
@@ -52,38 +58,17 @@ func BenchmarkStdJson(b *testing.B) {
 }
 
 func BenchmarkSonic(b *testing.B) {
-	result := map[string]any{}
-	s := struct {
-		Code int `json:"code"`
-		Data struct {
-			IpInfo []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			} `json:"ipInfo"`
-		} `json:"data"`
-	}{
-		Code: 123,
-		Data: struct {
-			IpInfo []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			} `json:"ipInfo"`
-		}{
-			IpInfo: []struct {
-				Value  string `json:"value"`
-				Region string `json:"region"`
-			}{
-				{
-					Value:  "1.2.3.4",
-					Region: "CN",
-				},
-			},
-		},
-	}
-
 	for i := 0; i < b.N; i++ {
 		bytes, _ := sonic.Marshal(s)
 		_ = sonic.Unmarshal(bytes, &result)
+		_ = result
+	}
+}
+
+func BenchmarkJsoniter(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		bytes, _ := jsoniter.Marshal(s)
+		_ = jsoniter.Unmarshal(bytes, &result)
 		_ = result
 	}
 }
@@ -150,7 +135,6 @@ func TestJsonHandler(t *testing.T) {
 	if code.(float64) != 123 {
 		t.Error("json handler failed")
 	}
-
 }
 
 func TestURLParse(t *testing.T) {
@@ -203,7 +187,6 @@ func TestConfigStr(t *testing.T) {
 }
 
 func TestLoadProxy(t *testing.T) {
-
 	ps, err := loadProxy("[https://ip.3322.net https://speed.neu6.edu.cn/getIP.php https://myip.ipip.net/s ]")
 	if err != nil {
 		t.Error(err)
@@ -285,5 +268,16 @@ func TestMyApiGet(t *testing.T) {
 		}
 		t.Log(ip6)
 	}
+}
 
+func TestConfigureReader(t *testing.T) {
+	n := 100000
+	var reader []Parameters
+	L, _ := GetDefaultConfigurationLocation()
+	tn := time.Now()
+	for i := 0; i <= n; i++ {
+		reader, _, _ = ConfigureReader(L, ConfigFactoryList...)
+		_ = reader
+	}
+	t.Log(time.Since(tn))
 }

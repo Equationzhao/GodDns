@@ -1,10 +1,11 @@
 package Device
 
 import (
-	"GodDns/Core"
 	"strconv"
 	"strings"
 	"testing"
+
+	"GodDns/core"
 )
 
 func TestDevice_GenerateConfigInfo(t *testing.T) {
@@ -14,7 +15,6 @@ func TestDevice_GenerateConfigInfo(t *testing.T) {
 	info, err := d.GenerateConfigInfo(d, 0)
 	if err != nil {
 		t.Error(err)
-
 	}
 	t.Log(info.Content)
 }
@@ -26,7 +26,7 @@ func TestDevice_ReadConfig(t *testing.T) {
 
 	t.Log(d)
 
-	parameters, err, errs := DDNS.ConfigureReader("test.ini", ConfigFactoryInstance)
+	parameters, err, errs := core.ConfigureReader("test.ini", ConfigFactoryInstance)
 
 	if errs != nil {
 		t.Error(errs)
@@ -48,7 +48,6 @@ func TestDevice_ReadConfig(t *testing.T) {
 	} else {
 		t.Error("wrong type ", d)
 	}
-
 }
 
 func TestConvert2StringSlice(t *testing.T) {
@@ -66,5 +65,4 @@ func TestConvert2StringSlice(t *testing.T) {
 			t.Log(d)
 		}
 	}
-
 }

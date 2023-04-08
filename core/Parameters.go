@@ -1,6 +1,6 @@
-// Package DDNS
+// Package Core
 // basic interfaces and tools for DDNS service
-package DDNS
+package core
 
 import (
 	"fmt"
@@ -40,7 +40,6 @@ func Find(parameters []Parameters, toFind string) (Parameters, error) {
 		if d.GetName() == toFind {
 			return d, nil
 		}
-
 	}
 	return nil, fmt.Errorf("%s not found", toFind)
 }

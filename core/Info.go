@@ -1,14 +1,15 @@
-// Package DDNS
+// Package Core
 // software version info
-package DDNS
+package core
 
 import (
-	"GodDns/Util"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"GodDns/Util"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -37,7 +38,7 @@ type Version struct {
 func RepoURLs() []string {
 	var urls []string
 	for _, git := range gits {
-		urls = append(urls, fmt.Sprintf("git@%s:%s/%s.git", git, owner, repo))
+		urls = append(urls, fmt.Sprintf("https://%s:%s/%s.git", git, owner, repo))
 	}
 	return urls
 }
@@ -95,7 +96,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 6,
+	patch: 7,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub
@@ -191,7 +192,8 @@ func GetLatestVersionInfo() (Version, string, error) {
 
 	os, arch := Util.OSDetect()
 	for _, asset := range versionResponse.Assets {
-		if strings.Contains(strings.ToLower(asset.Name), strings.ToLower(os)) && strings.Contains(strings.ToLower(asset.Name), strings.ToLower(arch)) {
+		if strings.Contains(strings.ToLower(asset.Name), strings.ToLower(os)) &&
+			strings.Contains(strings.ToLower(asset.Name), strings.ToLower(arch)) {
 			// todo check compatibility, like x86 is compatible with amd64
 			return latest, asset.BrowserDownloadUrl, nil
 		}
@@ -201,8 +203,7 @@ func GetLatestVersionInfo() (Version, string, error) {
 }
 
 // NoCompatibleVersion no compatible version of new release
-type NoCompatibleVersion struct {
-}
+type NoCompatibleVersion struct{}
 
 // NoCompatibleVersionError is the error of no compatible version
 var NoCompatibleVersionError = NoCompatibleVersion{}

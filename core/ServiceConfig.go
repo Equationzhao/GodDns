@@ -1,16 +1,17 @@
-// Package DDNS
+// Package core
 // basic interfaces and tools for DDNS service
-package DDNS
+package core
 
 import (
-	log "GodDns/Log"
 	"errors"
 	"fmt"
-	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
+
+	log "GodDns/Log"
+	"gopkg.in/ini.v1"
 )
 
 func init() {
@@ -18,8 +19,10 @@ func init() {
 }
 
 // Format define the key=value format of config file
-const Format = "%s=%v"
-const ConfigName = "DDNS.conf"
+const (
+	Format     = "%s=%v"
+	ConfigName = "DDNS.conf"
+)
 
 var configFileLocation string
 
@@ -35,7 +38,6 @@ func Add2FactoryList(factory ...ConfigFactory) {
 var GetDefaultConfigurationLocation = defaultConfigurationLocation()
 
 func defaultConfigurationLocation() func() (string, error) {
-
 	defaultConfiguration, err := defaultConfigurationDirectory()
 	if err != nil {
 		return func() (string, error) {
@@ -54,9 +56,9 @@ func defaultConfigurationLocation() func() (string, error) {
 // defaultConfigurationDirectory get default configuration directory like /home/user/.config/GodDns
 // make dir if not exist
 func defaultConfigurationDirectory() (string, error) {
-	sep := string(filepath.Separator)                                            // get system separator
-	defaultConfiguration, err := os.UserConfigDir()                              // get user config dir
-	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+FullName, 0777)) // create sub directory
+	sep := string(filepath.Separator)                                             // get system separator
+	defaultConfiguration, err := os.UserConfigDir()                               // get user config dir
+	err = errors.Join(err, os.MkdirAll(defaultConfiguration+sep+FullName, 0o777)) // create sub directory
 	return defaultConfiguration + sep + FullName, err
 }
 
@@ -138,17 +140,16 @@ func (m MissingKeyErr) Error() string {
 // ServiceName -> [ServiceName]
 // Key -> Key=value
 // Any Service should use this function to create config file
-func ConfigureWriter(Filename string, flag int, config ...ConfigStr) error { // option: append/w
-	log.Debugf("open file at %s", Filename)
+func ConfigureWriter(filename string, flag int, config ...ConfigStr) error { // option: append/w
+	log.Debugf("open file at %s", filename)
 
-	configure, err := os.OpenFile(Filename, flag, 0777) // os.O_CREATE|os.O_WRONLY
+	configure, err := os.OpenFile(filename, flag, 0o777) // os.O_CREATE|os.O_WRONLY
 
 	if err != nil {
 		return err
 	} else {
-		log.Tracef("open config file at %s", Filename)
+		log.Tracef("open config file at %s", filename)
 		defer func(configure *os.File) {
-
 			err := configure.Close()
 			if err != nil {
 				log.Error("failed to close configure ", log.String("error", err.Error()))
@@ -186,6 +187,10 @@ Key=value
 ...
 */
 func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters, LoadFileErr error, ReadConfigErrs error) {
+	return configReader(Filename, configs, ReadConfigErrs)
+}
+
+func configReader(Filename string, configs []ConfigFactory, ReadConfigErrs error) ([]Parameters, error, error) {
 	cfg, err := ini.Load(Filename)
 
 	if err != nil {
@@ -196,7 +201,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 
 	cfg.BlockMode = false // !make sure read only
 
-	ps = make([]Parameters, 0, 5*len(configs))
+	ps := make([]Parameters, 0, 5*len(configs))
 	var errCount uint8 = 0
 	secs := cfg.Sections()
 	for _, sec := range secs {
@@ -212,7 +217,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 			// Read corresponding service
 			if match {
 				log.Debugf("read config for %s", c.GetName())
-				temp, err := c.Get().ReadConfig(*sec) // todo read comments: sec.Key("name").Comment
+				temp, err := c.Get().ReadConfig(*sec)
 				if err != nil {
 					errCount++
 					msg := fmt.Errorf("failed to read config for %s : %s", c.GetName(), err.Error())
@@ -223,12 +228,7 @@ func ConfigureReader(Filename string, configs ...ConfigFactory) (ps []Parameters
 				log.Tracef("%s : %s", c.GetName(), temp)
 				log.Debugf("succeed to read config for %s", c.GetName())
 				ps = append(ps, temp...)
-			} else {
-				_ = ""
-				// unknown service
-				// todo
-				// look up plugin folder, call external cmd if a same-name executable file or shell script exist
-				// exec.Command()
+				break
 			}
 		}
 	}
