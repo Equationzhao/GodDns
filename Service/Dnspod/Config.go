@@ -2,7 +2,6 @@ package Dnspod
 
 import (
 	"bytes"
-	"strconv"
 	"strings"
 
 	"GodDns/core"
@@ -13,9 +12,7 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-type Config struct {
-	test bool
-}
+type Config struct{}
 
 func init() {
 	core.Add2FactoryList(configFactoryInstance)
@@ -39,117 +36,62 @@ func (c Config) GenerateDefaultConfigInfo() (core.ConfigStr, error) {
 // Return: DDNS.Parameters and error
 // if any error occurs, returned Parameters will be nil
 func (c Config) ReadConfig(sec ini.Section) ([]core.Parameters, error) {
-	var err error = nil
+	names := [11]string{
+		"LoginToken", "Format", "Lang", "ErrorOnEmpty", "Domain",
+		"RecordId", "RecordLine", "Value", "TTL", "Type", "Subdomain",
+	}
 
-	// if no error, err=nil
-	// if error occurs, err=error
-	Unpack := func(sec ini.Section, key string, err *error) string {
-		temp, err_ := sec.GetKey(key)
-		*err = err_
-		if err_ != nil {
-			return ""
+	p := Parameters{}
+	var subdomains []string
+	for _, name := range names {
+		if !sec.HasKey(name) {
+			return nil, core.NewMissKeyErr(name, serviceName)
+		} else {
+			switch name {
+			case "Subdomain":
+				subdomain := sec.Key(name).String()
+				subdomains = strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
+				Collections.RemoveDuplicate(&subdomains)
+			case "TTL":
+				ttl, err := sec.Key(name).Uint64()
+				if err != nil {
+					return nil, err
+				}
+				p.TTL = uint16(ttl)
+			case "Type":
+				p.Type = Net.Type2Str(sec.Key(name).String())
+			default:
+				err := Util.SetVariable(&p, name, sec.Key(name).String())
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
-		return temp.Value()
 	}
 
-	// sec.HasKey
-	// todo sec.Key("login_token").Validate(func(key string) error {
-	// use MissingKeyErr
-
-	loginToken := Unpack(sec, "login_token", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	format := Unpack(sec, "format", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	lang := Unpack(sec, "lang", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	errorOnEmpty := Unpack(sec, "error_on_empty", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	domain := Unpack(sec, "domain", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	recordIdTemp := Unpack(sec, "record_id", &err)
-	if err != nil {
-		return nil, err
-	}
-	recordId, err := strconv.ParseUint(recordIdTemp, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-
-	recordLine := Unpack(sec, "record_line", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	value := Unpack(sec, "value", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	ttlTemp := Unpack(sec, "ttl", &err)
-	if err != nil {
-		return nil, err
-	}
-	ttl, err := strconv.ParseUint(ttlTemp, 10, 16)
-	if err != nil {
-		return nil, err
-	}
-
-	device := getDefaultDevice()
-	if sec.HasKey("device") {
-		device = sec.Key("device").String()
-	}
-
-	Type := getDefaultType()
-	if sec.HasKey("type") {
-		Type = Net.Type2Str(sec.Key("type").String())
-	}
-
-	subdomain := Unpack(sec, "sub_domain", &err)
-	if err != nil {
-		return nil, err
-	}
-
-	subdomains := strings.Fields(strings.ReplaceAll(subdomain, ",", " "))
-	Collections.RemoveDuplicate(&subdomains)
+	// empty if not exist
+	p.Device = sec.Key("Device").String()
 
 	ps := make([]core.Parameters, 0, len(subdomains))
-
-	for _, s := range subdomains {
-		if s == "" {
+	for _, subdomain := range subdomains {
+		if subdomain == "" {
 			continue
 		}
-		d := &Parameters{
-			LoginToken:   loginToken,
-			Format:       format,
-			Lang:         lang,
-			ErrorOnEmpty: errorOnEmpty,
-			Domain:       domain,
-			RecordId:     uint32(recordId),
-			Subdomain:    s,
-			RecordLine:   recordLine,
-			Value:        value,
-			TTL:          uint16(ttl),
-			Type:         Type,
-			Device:       device,
-		}
-		ps = append(ps, d)
+		ps = append(ps, &Parameters{
+			LoginToken:   p.LoginToken,
+			Format:       p.Format,
+			Lang:         p.Lang,
+			ErrorOnEmpty: p.ErrorOnEmpty,
+			Domain:       p.Domain,
+			RecordId:     p.RecordId,
+			Subdomain:    subdomain,
+			RecordLine:   p.RecordLine,
+			Value:        p.Value,
+			TTL:          p.TTL,
+			Type:         p.Type,
+			Device:       p.Device,
+		})
 	}
-
 	return ps, nil
 }
 

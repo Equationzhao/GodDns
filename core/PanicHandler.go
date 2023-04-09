@@ -37,23 +37,41 @@ func PrintPanic(output io.Writer, e chan error) {
 }
 
 type PanicHandler struct {
-	panic  []any
-	m      sync.RWMutex
-	stacks [][]byte
+	panic     []any
+	m         sync.RWMutex
+	stacks    [][]byte
+	handler   func(Panics []any, stack [][]byte)
+	stringify func(Panics []any, stack [][]byte) string
+	toByte    func(Panics []any, stack [][]byte) []byte
+}
+
+func (p *PanicHandler) SetHandler(handler func(Panics []any, stack [][]byte)) {
+	p.handler = handler
+}
+
+func (p *PanicHandler) SetStringify(stringify func(Panics []any, stack [][]byte) string) {
+	p.stringify = stringify
+}
+
+func (p *PanicHandler) SetToByte(toByte func(Panics []any, stack [][]byte) []byte) {
+	p.toByte = toByte
 }
 
 func (p *PanicHandler) Bytes() []byte {
 	p.m.RLock()
 	defer p.m.RUnlock()
-	builder := bytes.Buffer{}
-	for i, v := range p.panic {
-		builder.WriteString(fmt.Sprint(v))
-		builder.WriteString("\nStack:\n")
-		builder.Write(p.stacks[i])
-		builder.WriteByte('\n')
-	}
+	return p.toByte(p.panic, p.stacks)
+}
 
-	return builder.Bytes()
+func toByte(panics []any, stacks [][]byte) []byte {
+	var buffer bytes.Buffer
+	for i, v := range panics {
+		buffer.WriteString(fmt.Sprint(v))
+		buffer.WriteString("\nStack:\n")
+		buffer.Write(stacks[i])
+		buffer.WriteByte('\n')
+	}
+	return buffer.Bytes()
 }
 
 func (p *PanicHandler) Receive(P any, stack []byte) {
@@ -72,11 +90,21 @@ func (p *PanicHandler) Panics() []any {
 func (p *PanicHandler) String() string {
 	p.m.RLock()
 	defer p.m.RUnlock()
+	return p.stringify(p.panic, p.stacks)
+}
+
+func (p *PanicHandler) Handle() {
+	if p.handler != nil {
+		p.handler(p.panic, p.stacks)
+	}
+}
+
+func defaultStringify(panics []any, stacks [][]byte) string {
 	builder := strings.Builder{}
-	for i, v := range p.panic {
+	for i, v := range panics {
 		builder.WriteString(fmt.Sprint(v))
 		builder.WriteString("\nStack:\n")
-		builder.Write(p.stacks[i])
+		builder.Write(stacks[i])
 		builder.WriteByte('\n')
 	}
 
@@ -84,5 +112,11 @@ func (p *PanicHandler) String() string {
 }
 
 func NewPanicHandler() *PanicHandler {
-	return &PanicHandler{stacks: make([][]byte, 0, 20), panic: make([]any, 0, 20), m: sync.RWMutex{}}
+	return &PanicHandler{
+		stacks:    make([][]byte, 0, 20),
+		panic:     make([]any, 0, 20),
+		m:         sync.RWMutex{},
+		stringify: defaultStringify,
+		toByte:    toByte,
+	}
 }

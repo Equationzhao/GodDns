@@ -53,7 +53,9 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 
 	logger := log.NewLogger(cornLogfile)
 	logger = logger.WithGroup("cron-oc:")
-	c := cron.New(cron.WithChain(cron.Recover(logger), cron.DelayIfStillRunning(logger)), cron.WithLogger(cron.VerbosePrintfLogger(logger)))
+	c := cron.New(cron.WithChain(cron.Recover(logger),
+		cron.DelayIfStillRunning(logger)),
+		cron.WithLogger(cron.VerbosePrintfLogger(logger)))
 	wg := sync.WaitGroup{}
 
 	if TimesLimitation == 0 {
@@ -133,7 +135,11 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 						})
 						<-countDone
 						res[timeout] += total
-						Log.Info(fmt.Sprintf("result for %s.%s", d, "ipv4"), Log.Int("done", res[done]).String(), Log.Int("unaffected", res[unaffected]).String(), Log.Int("error", res[errorOccur]).String(), Log.Int("timeout", res[timeout]).String())
+						Log.Info(fmt.Sprintf("result for %s.%s", d, "ipv4"),
+							Log.Int("done", res[done]).String(),
+							Log.Int("unaffected", res[unaffected]).String(),
+							Log.Int("error", res[errorOccur]).String(),
+							Log.Int("timeout", res[timeout]).String())
 					}
 				case 1:
 					t = Net.AAAA
@@ -187,7 +193,11 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 						})
 						<-countDone
 						res[timeout] += total
-						Log.Info(fmt.Sprintf("result for %s.%s", d, "ipv6"), Log.Int("done", res[done]).String(), Log.Int("unaffected", res[unaffected]).String(), Log.Int("error", res[errorOccur]).String(), Log.Int("timeout", res[timeout]).String())
+						Log.Info(fmt.Sprintf("result for %s.%s", d, "ipv6"),
+							Log.Int("done", res[done]).String(),
+							Log.Int("unaffected", res[unaffected]).String(),
+							Log.Int("error", res[errorOccur]).String(),
+							Log.Int("timeout", res[timeout]).String())
 					}
 				default:
 					panic("unknown type")

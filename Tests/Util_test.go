@@ -1,7 +1,6 @@
 package Tests_test
 
 import (
-	"io"
 	"net/url"
 	"os"
 	"strconv"
@@ -11,8 +10,6 @@ import (
 	"GodDns/Service/DnspodYunApi"
 	"GodDns/Util"
 	DDNS "GodDns/core"
-
-	"github.com/sirupsen/logrus"
 )
 
 var p Dnspod.Parameters
@@ -23,7 +20,7 @@ var pWithoutTag = struct {
 	Lang         string
 	ErrorOnEmpty string
 	Domain       string
-	RecordId     uint32
+	RecordId     string
 	Subdomain    string
 	RecordLine   string
 	Value        string
@@ -39,7 +36,7 @@ func init() {
 		Lang:         "en",
 		ErrorOnEmpty: "no",
 		Domain:       "example.com",
-		RecordId:     2,
+		RecordId:     "2",
 		Subdomain:    "s1",
 		RecordLine:   "默认",
 		Value:        "fe80::ad29:79b2:f25b:aec4%36",
@@ -312,7 +309,7 @@ func TestConvert2XWWWFormUrlencoded(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Util.Convert2XWWWFormUrlencoded(tt.args.i); got != tt.want {
-				t.Errorf("Convert2XWWWFormUrlencoded(%s) = %v, want %v", tt.name, got, tt.want)
+				t.Errorf("Convert2XWWWFormUrlencoded(%s) : %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -379,43 +376,6 @@ func TestSetVariable(t *testing.T) {
 	}
 }
 
-func testSetLog() (func() error, error) {
-	file, err := os.OpenFile("test.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	logrus.SetOutput(io.MultiWriter(file, os.Stdout))
-	return func() error {
-		err := file.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	}, nil
-}
-
-func testSetLog2() {
-	logrus.Infof("test2")
-}
-
-func TestLog(t *testing.T) {
-	f, err := testSetLog()
-	if err != nil {
-		logrus.Error(err)
-	}
-
-	logrus.Infof("test")
-	testSetLog2()
-
-	defer func() {
-		err := f()
-		if err != nil {
-			logrus.Error(err)
-		}
-	}()
-}
-
 func TestGetTypeName(t *testing.T) {
 	s := DDNS.Status{
 		Name:   "Test",
@@ -451,8 +411,7 @@ func BenchmarkURLEncode(b *testing.B) {
 		v.Add("error_on_empty", p.ErrorOnEmpty)
 		v.Add("domain", p.Domain)
 		v.Add("sub_domain", p.Subdomain)
-		id := strconv.Itoa(int(p.RecordId))
-		v.Add("record_id", id)
+		v.Add("record_id", p.RecordId)
 		v.Add("record_line", p.RecordLine)
 		v.Add("value", p.Value)
 		ttl := strconv.Itoa(int(p.TTL))
@@ -479,8 +438,7 @@ func BenchmarkURLEncodeWithoutTag(b *testing.B) {
 		v.Add("ErrorOnEmpty", pWithoutTag.ErrorOnEmpty)
 		v.Add("Domain", pWithoutTag.Domain)
 		v.Add("Subdomain", pWithoutTag.Subdomain)
-		id := strconv.Itoa(int(pWithoutTag.RecordId))
-		v.Add("RecordId", id)
+		v.Add("RecordId", pWithoutTag.RecordId)
 		v.Add("RecordLine", pWithoutTag.RecordLine)
 		v.Add("Value", pWithoutTag.Value)
 		ttl := strconv.Itoa(int(pWithoutTag.TTL))

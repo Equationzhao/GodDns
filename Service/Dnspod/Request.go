@@ -94,8 +94,7 @@ func (r *Request) encodeURL() (content string) {
 	ttl := strconv.Itoa(int(r.parameters.TTL))
 	v.Add("ttl", ttl)
 	v.Add("value", r.parameters.Value)
-	id := strconv.Itoa(int(r.parameters.RecordId))
-	v.Add("record_id", id)
+	v.Add("record_id", r.parameters.RecordId)
 	content = v.Encode()
 	return content
 }
@@ -278,14 +277,8 @@ func (r *Request) GetRecordId() (core.Status, error) {
 		return status, fmt.Errorf("no record found")
 	}
 
-	id, err := strconv.Atoi(s.Records[0].Id)
-	if err != nil {
-		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
-		return status, err
-	}
-
 	status.MG.AddInfo(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
-	r.parameters.RecordId = uint32(id)
+	r.parameters.RecordId = s.Records[0].Id
 	return status, nil
 }
 
@@ -332,13 +325,8 @@ func (r *Request) GetRecordIdByProxy() (core.Status, error) {
 		return *status, fmt.Errorf("no record found")
 	}
 
-	id, err := strconv.Atoi(s.Records[0].Id)
-	if err != nil {
-		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
-		return *status, err
-	}
 	status.MG.AddInfo(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
-	r.parameters.RecordId = uint32(id)
+	r.parameters.RecordId = s.Records[0].Id
 	return *status, nil
 }
 
