@@ -14,7 +14,7 @@ func init() {
 		Lang:         "en",
 		ErrorOnEmpty: "no",
 		Domain:       "example.com",
-		RecordId:     2,
+		RecordId:     "2",
 		Subdomain:    "s1",
 		RecordLine:   "默认",
 		Value:        "fe80::1",

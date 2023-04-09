@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 // OSDetect OS detection
@@ -22,6 +23,19 @@ func OSDetect() (os string, arch string) {
 	}
 
 	return
+}
+
+const (
+	bufferSize     = 1024
+	buffpoolEnable = true
+)
+
+var buffPool = sync.Pool{
+	New: func() any {
+		a := strings.Builder{}
+		a.Grow(bufferSize)
+		return &a
+	},
 }
 
 // ConvertableKeyValue  Convert any type to key-value according to the format
@@ -63,7 +77,7 @@ func Convert2KeyValue(format string, i any) string {
 		return i.(ConvertableKeyValue).Convert2KeyValue(format)
 	}
 
-	var content strings.Builder
+	content := buffPool.Get().(*strings.Builder)
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
 	if v.Kind() == reflect.Pointer {
@@ -189,7 +203,16 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
 
-	var content strings.Builder
+	var content *strings.Builder
+	if buffpoolEnable {
+		content = buffPool.Get().(*strings.Builder)
+		defer func() {
+			content.Reset()
+			buffPool.Put(content)
+		}()
+	} else {
+		content = new(strings.Builder)
+	}
 
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()

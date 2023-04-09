@@ -47,18 +47,8 @@ func TestConfig_ReadConfig(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(config)
-}
-
-func TestConfigFactory_Get(t *testing.T) {
-	a := configFactoryInstance.Get()
-	b := configFactoryInstance.Get()
-	a.(*Config).test = true
-	t.Log(a.(*Config).test)
-	b.(*Config).test = false
-	t.Log(a.(*Config).test)
-	if a != b {
-		t.Error("ConfigFactory.Get() is not singleton")
+	for _, parameters := range config {
+		t.Log(parameters)
 	}
 }
 

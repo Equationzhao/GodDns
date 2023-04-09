@@ -13,18 +13,18 @@ const serviceName = "Dnspod"
 // ExternalParameter is external parameter of dnspod ddns
 // Device is Device name when overriding ip with specific Device/interface
 type Parameters struct {
-	LoginToken   string `json:"login_token,omitempty" xwwwformurlencoded:"login_token" KeyValue:"login_token,get from https://console.dnspod.cn/account/token/token, 'ID,Token'"`
-	Format       string `json:"format,omitempty" xwwwformurlencoded:"format" KeyValue:"format,data format, json(recommended) or xml(not support yet)"`
-	Lang         string `json:"lang,omitempty" xwwwformurlencoded:"lang" KeyValue:"lang,language, en or zh(recommended)"`
-	ErrorOnEmpty string `json:"error_on_empty,omitempty" xwwwformurlencoded:"error_on_empty" KeyValue:"error_on_empty,return error if the data doesn't exist,no(recommended) or yes"`
+	LoginToken   string `json:"login_token,omitempty" xwwwformurlencoded:"login_token" KeyValue:"LoginToken,get from https://console.dnspod.cn/account/token/token, 'ID,Token'"`
+	Format       string `json:"format,omitempty" xwwwformurlencoded:"format" KeyValue:"Format,data format, json(recommended) or xml(not support yet)"`
+	Lang         string `json:"lang,omitempty" xwwwformurlencoded:"lang" KeyValue:"Lang,language, en or zh(recommended)"`
+	ErrorOnEmpty string `json:"error_on_empty,omitempty" xwwwformurlencoded:"ErrorOnEmpty" KeyValue:"ErrorOnEmpty,return error if the data doesn't exist,no(recommended) or yes"`
 	Domain       string `json:"domain,omitempty" xwwwformurlencoded:"domain" KeyValue:"domain,domain name"`
-	RecordId     uint32 `json:"record_id,omitempty" xwwwformurlencoded:"record_id" KeyValue:"record_id,record id can be get by making http POST request with required Parameters to https://dnsapi.cn/Record.List, more at https://docs.dnspod.com/api/get-record-list/"`
-	Subdomain    string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain" KeyValue:"sub_domain,record name like www., if you have multiple records to update, set like sub_domain=www,ftp,mail"`
-	RecordLine   string `json:"record_line,omitempty" xwwwformurlencoded:"record_line" KeyValue:"record_line,The record line.You can get the list from the API.The default value is '默认'"`
-	Value        string `json:"value,omitempty" xwwwformurlencoded:"value" KeyValue:"value,IP address like 6.6.6.6"`
-	TTL          uint16 `json:"ttl,omitempty" xwwwformurlencoded:"ttl" KeyValue:"ttl,Time-To-Live, 600(default)"`
-	Type         string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"type,A/AAAA/4/6"`
-	Device       string `json:"-" xwwwformurlencoded:"-" KeyValue:"device,device/net interface name"`
+	RecordId     string `json:"record_id,omitempty" xwwwformurlencoded:"record_id" KeyValue:"RecordId,record id can be get by making http POST request with required Parameters to https://dnsapi.cn/Record.List, more at https://docs.dnspod.com/api/get-record-list/"`
+	Subdomain    string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain" KeyValue:"Subdomain,record name like www., if you have multiple records to update, set like sub_domain=www,ftp,mail"`
+	RecordLine   string `json:"record_line,omitempty" xwwwformurlencoded:"record_line" KeyValue:"RecordLine,The record line.You can get the list from the API.The default value is '默认'"`
+	Value        string `json:"value,omitempty" xwwwformurlencoded:"value" KeyValue:"Value,IP address like 6.6.6.6"`
+	TTL          uint16 `json:"ttl,omitempty" xwwwformurlencoded:"ttl" KeyValue:"TTL,Time-To-Live, 600(default)"`
+	Type         string `json:"type,omitempty" xwwwformurlencoded:"type" KeyValue:"Type,A/AAAA/4/6"`
+	Device       string `json:"-" xwwwformurlencoded:"-" KeyValue:"Device,device/net interface name"`
 }
 
 func (p *Parameters) Target() string {
@@ -79,7 +79,7 @@ func GenerateDefaultConfigInfo() Parameters {
 		Lang:         "en",
 		ErrorOnEmpty: "no",
 		Domain:       "example.com",
-		RecordId:     0,
+		RecordId:     "record id",
 		Subdomain:    "www,mail,ftp...",
 		RecordLine:   "默认",
 		Value:        "1.2.3.4",

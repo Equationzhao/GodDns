@@ -9,7 +9,7 @@ all: tool check clean build
 
 fmt: ## Format the code
 	$(info Formatting the code)
-	go fmt ./...
+	gofumpt -l -w .
 
 vet: ## Vet the code
 	$(info Vet the code)
@@ -23,6 +23,7 @@ check: fmt vet lint ## Run all the checks
 
 tool: ## Install the tools
 	$(info Installing the tools)
+	go install github.com/mvdan/gofumpt@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 
