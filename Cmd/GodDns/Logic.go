@@ -8,13 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"GodDns/core"
-
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Net"
 	"GodDns/Util/Collections"
-	"github.com/panjf2000/ants/v2"
+	"GodDns/core"
+
 	"github.com/robfig/cron/v3"
 )
 
@@ -58,12 +57,6 @@ func RunDDNS(parameters *[]core.Parameters) error {
 	log.Debugf("run ddns")
 	// run ddns here
 
-	// get from api
-	if ApiName != "" {
-		return RunGetFromApi(parameters)
-	}
-
-	// -A is not set
 	return GenerateExecuteSave(parameters)
 }
 
@@ -253,7 +246,6 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 		if ip6s != nil && ip4s != nil {
 			break
 		}
-
 	}
 
 	o4 := sync.Once{}
@@ -443,8 +435,18 @@ func set(GlobalDevice Device.Device, ParameterToSet core.Service) error {
 	}
 }
 
+type NoRequestErr struct{}
+
+func (n NoRequestErr) Error() string {
+	return "no request generated"
+}
+
 func GenerateExecuteSave(parameters *[]core.Parameters) error {
 	requests := GenerateRequests(parameters)
+
+	if requests == nil {
+		return NoRequestErr{}
+	}
 
 	d, err := core.Find(*parameters, Device.ServiceName)
 	Parameters2Save := make([]core.Parameters, 0, len(*parameters))
@@ -468,7 +470,9 @@ func GenerateExecuteSave(parameters *[]core.Parameters) error {
 }
 
 func Display(request core.Request) {
-	_, _ = log.InfoPP.Fprintln(output, fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+	_, _ = log.InfoPP.Fprintln(output,
+		fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+
 	serviceInfo := request.Status().MG.GetMsgOf(core.Info)
 	if len(serviceInfo) > 0 {
 		for _, i := range serviceInfo {
@@ -522,26 +526,25 @@ func ExecuteRequests(requests ...core.Request) {
 			Retry(request, retryAttempt)
 		}
 
-		status := ""
+		var status string
 		res := (request).Status()
-		if res.Status == core.Success {
+		switch res.Status {
+		case core.Success:
 			status = "Success"
 			log.InfoRaw(fmt.Sprintf("name:%s, status:%s  msg:%s", res.Name, status, res.MG))
-		} else if res.Status == core.Failed {
+		case core.Failed:
 			errMsg := fmt.Sprintf("error executing request, %v", err)
-
 			log.ErrorRaw(errMsg)
 			status = "Failed"
 			log.InfoRaw(fmt.Sprintf("name:%s, status:%s, msg:%s", res.Name, status, res.MG))
 			if retryAttempt != 0 {
 				log.ErrorRaw(fmt.Sprintf("all retry failed, skip %s:%s", (request).GetName(), (request).Target()))
 			}
-		} else if res.Status == core.NotExecute {
+		case core.NotExecute:
 			log.Fatal("request not executed")
 		}
 	}
 
-	defer ants.Release()
 	if proxyEnable {
 		for _, request := range requests {
 			request := request
@@ -565,7 +568,6 @@ func ExecuteRequests(requests ...core.Request) {
 			}
 		}
 		wg.Wait()
-
 	} else {
 		for _, request := range requests {
 			request := request
@@ -636,8 +638,14 @@ func GenerateRequests(parameters *[]core.Parameters) []core.Request {
 		}
 		requests = append(requests, request)
 	}
-	log.Infof("finish generating requests with %d error(s)", errCount)
-	return requests
+
+	if len(requests) != 0 {
+		log.Infof("finish generating requests with %d error(s)", errCount)
+		return requests
+	} else {
+		// no request generated
+		return nil
+	}
 }
 
 func GenerateDefaultConfigure(ConfigFactories ...core.ConfigFactory) error {
