@@ -16,7 +16,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type BindDeviceService map[string][]*core.Service
+type BindDeviceService map[string][]*core.Service // refactor?
 
 var MainBinder = make(BindDeviceService, 20)
 
