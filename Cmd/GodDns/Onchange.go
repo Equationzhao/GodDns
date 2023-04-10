@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"GodDns/core"
-
 	"GodDns/Device"
 	"GodDns/Log"
 	log "GodDns/Log"
 	"GodDns/Net"
+	"GodDns/core"
+
 	"github.com/robfig/cron/v3"
 )
 
@@ -32,9 +32,16 @@ func OnChange(ps *[]core.Parameters, GlobalDevice *Device.Device) {
 		panic("no global device")
 	}
 	err := ModeController(ps, GlobalDevice)
-	if err != nil {
+	switch err {
+	case nil:
+		break
+	case NoRequestErr{}:
+		log.Error(err.Error())
+		return
+	default:
 		log.Error("error running ddns: ", log.String("error", err.Error()))
 	}
+
 	StartIpChangeDaemon(ps)
 }
 
@@ -99,8 +106,15 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 						Log.Error("error handle ip: ", Log.String("error", err.Error()).String())
 						continue
 					}
+					if len(handledIp) == 0 {
+						Log.Info("no ip left, please check ip handler or network", "device", d)
+						continue
+					}
 
 					if OldIp, ok := Device2Ips[d]; ok {
+						if OldIp.First == nil {
+							continue
+						}
 						if OldIp.GetFirst() == handledIp[0] {
 							Log.Info("ip not changed", "ip", OldIp.GetFirst())
 							continue
@@ -154,11 +168,14 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 						continue
 					}
 					if len(handledIp) == 0 {
-						Log.Info("no ip left, please check ip handler or network")
+						Log.Info("no ip left, please check ip handler or network", "device", d)
 						continue
 					}
 
 					if OldIp, ok := Device2Ips[d]; ok {
+						if OldIp.Second == nil {
+							break
+						}
 						if OldIp.GetSecond() == handledIp[0] {
 							Log.Info("ip not changed", "ip", OldIp.GetSecond())
 							continue

@@ -17,7 +17,7 @@ type Parameters struct {
 	Format       string `json:"format,omitempty" xwwwformurlencoded:"format" KeyValue:"Format,data format, json(recommended) or xml(not support yet)"`
 	Lang         string `json:"lang,omitempty" xwwwformurlencoded:"lang" KeyValue:"Lang,language, en or zh(recommended)"`
 	ErrorOnEmpty string `json:"error_on_empty,omitempty" xwwwformurlencoded:"ErrorOnEmpty" KeyValue:"ErrorOnEmpty,return error if the data doesn't exist,no(recommended) or yes"`
-	Domain       string `json:"domain,omitempty" xwwwformurlencoded:"domain" KeyValue:"domain,domain name"`
+	Domain       string `json:"domain,omitempty" xwwwformurlencoded:"domain" KeyValue:"Domain,domain name"`
 	RecordId     string `json:"record_id,omitempty" xwwwformurlencoded:"record_id" KeyValue:"RecordId,record id can be get by making http POST request with required Parameters to https://dnsapi.cn/Record.List, more at https://docs.dnspod.com/api/get-record-list/"`
 	Subdomain    string `json:"sub_domain,omitempty" xwwwformurlencoded:"sub_domain" KeyValue:"Subdomain,record name like www., if you have multiple records to update, set like sub_domain=www,ftp,mail"`
 	RecordLine   string `json:"record_line,omitempty" xwwwformurlencoded:"record_line" KeyValue:"RecordLine,The record line.You can get the list from the API.The default value is '默认'"`
