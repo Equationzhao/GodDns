@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
-	"sync"
 )
 
 // OSDetect OS detection
@@ -25,19 +24,6 @@ func OSDetect() (os string, arch string) {
 	return
 }
 
-const (
-	bufferSize     = 1024
-	buffpoolEnable = true
-)
-
-var buffPool = sync.Pool{
-	New: func() any {
-		a := strings.Builder{}
-		a.Grow(bufferSize)
-		return &a
-	},
-}
-
 // ConvertableKeyValue  Convert any type to key-value according to the format
 type ConvertableKeyValue interface {
 	Convert2KeyValue(format string) string
@@ -52,7 +38,7 @@ type ConvertableKeyValue interface {
 // else use the field name as key
 // example:
 //
-//	type B struct {
+//	type B structgo  {
 //		X string
 //		x string
 //	}
@@ -77,7 +63,17 @@ func Convert2KeyValue(format string, i any) string {
 		return i.(ConvertableKeyValue).Convert2KeyValue(format)
 	}
 
-	content := buffPool.Get().(*strings.Builder)
+	var content *strings.Builder
+	if StrBuilderPoolEnable {
+		content = StrBuilderPool.Get().(*strings.Builder)
+		defer func() {
+			content.Reset()
+			StrBuilderPool.Put(content)
+		}()
+	} else {
+		content = new(strings.Builder)
+	}
+
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
 	if v.Kind() == reflect.Pointer {
@@ -204,11 +200,11 @@ func convert2xwwwformurlencoded(i any, isTheLast bool) string {
 	t := reflect.TypeOf(i)
 
 	var content *strings.Builder
-	if buffpoolEnable {
-		content = buffPool.Get().(*strings.Builder)
+	if StrBuilderPoolEnable {
+		content = StrBuilderPool.Get().(*strings.Builder)
 		defer func() {
 			content.Reset()
-			buffPool.Put(content)
+			StrBuilderPool.Put(content)
 		}()
 	} else {
 		content = new(strings.Builder)

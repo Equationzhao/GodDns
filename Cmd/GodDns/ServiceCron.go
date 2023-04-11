@@ -9,7 +9,7 @@ import (
 )
 
 type ServiceCronJob struct {
-	ps           []DDNS.Parameters
+	ps           []*DDNS.Parameters
 	GlobalDevice *Device.Device
 	wg           *sync.WaitGroup
 	times        int // times to run
@@ -24,7 +24,7 @@ func (r *ServiceCronJob) SetWg(wg *sync.WaitGroup) {
 	r.wg = wg
 }
 
-func NewServiceCronJob(g *Device.Device, ps ...DDNS.Parameters) *ServiceCronJob {
+func NewServiceCronJob(g *Device.Device, ps ...*DDNS.Parameters) *ServiceCronJob {
 	return &ServiceCronJob{ps: ps, GlobalDevice: g}
 }
 
@@ -36,7 +36,7 @@ func (r *ServiceCronJob) Run() {
 	defer func() { r.times-- }()
 	ps := r.ps
 	gd := r.GlobalDevice
-	err := ModeController(&ps, gd)
+	err := ModeController(ps, gd)
 	if err != nil {
 		log.Error("error running ddns: ", log.String("error", err.Error()))
 	}
