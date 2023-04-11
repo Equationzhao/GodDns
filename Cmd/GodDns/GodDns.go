@@ -84,15 +84,41 @@ var (
 		Category:    "TRIGGER",
 	}
 
-	timeFlag = &cli.Uint64Flag{
+	onChangeScanTimeFlag = &cli.StringFlag{
+		Name:        "on-change-scan-time",
+		Aliases:     []string{"ocst", "OCST"},
+		Usage:       "scan ip change per time",
+		DefaultText: "1 minute",
+		Category:    "TRIGGER",
+		Action: func(context *cli.Context, s string) error {
+			if !context.Bool("on-change") {
+				return errors.New("on-change-scan-time should be used with on-change")
+			}
+
+			t, err := time.ParseDuration(s)
+			if err != nil {
+				return err
+			}
+			if t.Seconds() < MINTIMEGAP {
+				return errors.New("time gap is too short, should be more than 5 seconds")
+			}
+			core.UniversalConfig[core.OcScanTime] = t
+			return nil
+		},
+	}
+
+	timeFlag = &cli.StringFlag{
 		Name:        "time",
 		Aliases:     []string{"t", "T"},
-		Value:       0,
 		DefaultText: "disabled",
-		Usage:       "run ddns per time(`seconds`)",
-		Destination: &Time,
-		Action: func(context *cli.Context, u uint64) error {
-			if u < MINTIMEGAP {
+		Usage:       "run ddns per time",
+		Action: func(context *cli.Context, s string) error {
+			t, err := time.ParseDuration(s)
+			if err != nil {
+				return err
+			}
+			Time = uint64(t.Seconds())
+			if Time < MINTIMEGAP {
 				core.ReturnCode = 2
 				return fmt.Errorf("time gap is too short, should be more than %d seconds", MINTIMEGAP)
 			}
@@ -326,7 +352,7 @@ func main() {
 	defer pprof.StopCPUProfile()
 	defer core.CatchPanic(output)
 
-	var parameters []core.Parameters
+	var parameters []*core.Parameters
 	var GlobalDevice Device.Device
 	configFactoryList := core.ConfigFactoryList
 
@@ -339,11 +365,11 @@ func main() {
 			if fatal != nil {
 				// default setup
 				_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
-				_, _ = log.ErrPP.Fprintln(output, fatal)
+				_, _ = log.ErrPP.Fprintln(output, fatal.Error())
 				core.DefaultConfig.Setup()
 			} else {
 				if warn != nil {
-					_, _ = log.WarnPP.Fprintln(output, warn)
+					_, _ = log.WarnPP.Fprintln(output, warn.Error())
 				}
 				programConfig.Setup()
 			}
@@ -394,7 +420,10 @@ func main() {
 					if err != nil {
 						return err
 					}
-					parameters = parametersTemp
+
+					for _, p := range parametersTemp {
+						parameters = append(parameters, &p)
+					}
 
 					if ApiName == "" {
 						runMode = run
@@ -403,12 +432,12 @@ func main() {
 					}
 
 					if Time != 0 {
-						_ = RunDDNS(&parameters)
+						_ = RunDDNS(parameters)
 						RunPerTime(Time, nil, parameters)
 						return nil
 					}
 
-					return ModeController(&parameters, nil)
+					return ModeController(parameters, nil)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -441,6 +470,7 @@ func main() {
 							parallelFlag,
 							timeFlag,
 							onChangeFlag,
+							onChangeScanTimeFlag,
 							timesLimitationFlag,
 							retryFlag,
 							silentFlag,
@@ -466,7 +496,11 @@ func main() {
 							if err != nil {
 								return err
 							}
-							parameters = parametersTemp
+							for _, p := range parametersTemp {
+								p := p
+								parameters = append(parameters, &p)
+							}
+
 							GlobalDevice, err = GetGlobalDevice(parameters)
 							if err != nil {
 								return err
@@ -474,17 +508,17 @@ func main() {
 
 							runMode = runAuto
 							if onChange {
-								OnChange(&parameters, &GlobalDevice)
+								OnChange(parameters, &GlobalDevice)
 								return nil
 							}
 
 							if Time != 0 {
-								_ = RunAuto(GlobalDevice, &parameters)
+								_ = RunAuto(GlobalDevice, parameters)
 								RunPerTime(Time, &GlobalDevice, parameters)
 								return nil
 							}
 
-							return ModeController(&parameters, &GlobalDevice)
+							return ModeController(parameters, &GlobalDevice)
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -495,6 +529,7 @@ func main() {
 									parallelFlag,
 									timeFlag,
 									onChangeFlag,
+									onChangeScanTimeFlag,
 									timesLimitationFlag,
 									retryFlag,
 									silentFlag,
@@ -520,7 +555,9 @@ func main() {
 									if err != nil {
 										return err
 									}
-									parameters = parametersTemp
+									for _, p := range parametersTemp {
+										parameters = append(parameters, &p)
+									}
 									GlobalDevice, err = GetGlobalDevice(parameters)
 									if err != nil {
 										return err
@@ -528,17 +565,17 @@ func main() {
 
 									runMode = runAutoOverride
 									if onChange {
-										OnChange(&parameters, &GlobalDevice)
+										OnChange(parameters, &GlobalDevice)
 										return nil
 									}
 
 									if Time != 0 {
-										_ = RunOverride(GlobalDevice, &parameters)
+										_ = RunOverride(GlobalDevice, parameters)
 										RunPerTime(Time, &GlobalDevice, parameters)
 										return nil
 									}
 
-									return ModeController(&parameters, &GlobalDevice)
+									return ModeController(parameters, &GlobalDevice)
 								},
 							},
 						},

@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"GodDns/Util/Collections"
+
 	"GodDns/Device"
 	"GodDns/Log"
 	log "GodDns/Log"
@@ -16,16 +18,16 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type BindDeviceService map[string][]*core.Service // refactor?
+type BindDeviceService map[string][]*core.Parameters // refactor?
 
 var MainBinder = make(BindDeviceService, 20)
 
-func (b *BindDeviceService) Bind(Device string, Service *core.Service) (ok bool) {
+func (b *BindDeviceService) Bind(Device string, Service *core.Parameters) (ok bool) {
 	(*b)[Device] = append((*b)[Device], Service)
 	return true
 }
 
-func OnChange(ps *[]core.Parameters, GlobalDevice *Device.Device) {
+func OnChange(ps []*core.Parameters, GlobalDevice *Device.Device) {
 	defer core.CatchPanic(output)
 
 	if GlobalDevice == nil {
@@ -45,7 +47,7 @@ func OnChange(ps *[]core.Parameters, GlobalDevice *Device.Device) {
 	StartIpChangeDaemon(ps)
 }
 
-func StartIpChangeDaemon(ps *[]core.Parameters) {
+func StartIpChangeDaemon(ps []*core.Parameters) {
 	type result int
 	const (
 		done result = iota
@@ -69,16 +71,61 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 		TimesLimitation = MAXTIMES
 	}
 
-	save := make(chan struct{})
-	_ = core.MainGoroutinePool.Submit(func() {
-		for {
-			<-save
-			err := SaveFromParameters(*ps...)
-			if err != nil {
-				_, _ = Log.ErrPP.Fprintln(output, err.Error())
-			}
+	save := make(chan struct{}, 10)
+
+	scanGap, ok := core.UniversalConfig[core.OcScanTime].(time.Duration)
+	if !ok {
+		scanGap, _ = time.ParseDuration("10s")
+	}
+
+	sendSignal := func(OldIp Collections.Pair[string, string], handledIp []string, changedSignal []chan string,
+		services []*core.Parameters, serviceResult chan result, res *[4]int, timeout result, d string, done result,
+		unaffected result, errorOccur result, isA bool,
+	) {
+		var typeToHandle string
+		if isA {
+			typeToHandle = "ipv4"
+			*OldIp.First = handledIp[0]
+		} else {
+			typeToHandle = "ipv6"
+			*OldIp.Second = handledIp[0]
 		}
-	})
+
+		for _, s := range changedSignal {
+			s <- handledIp[0]
+		}
+
+		timeoutChan := time.After(30 * time.Second)
+		total := len(services)
+		countDone := make(chan struct{}, 1)
+		_ = core.MainGoroutinePool.Submit(func() {
+			defer func() {
+				countDone <- struct{}{}
+			}()
+
+			for {
+				select {
+				case status := <-serviceResult:
+					total--
+					res[status]++
+					if total == 0 {
+						return
+					}
+				case <-timeoutChan:
+					Log.Info("timeout")
+					return
+				}
+			}
+		})
+		<-countDone
+		res[timeout] += total
+
+		Log.Info(fmt.Sprintf("result for %s.%s", d, typeToHandle),
+			Log.Int("done", res[done]).String(),
+			Log.Int("unaffected", res[unaffected]).String(),
+			Log.Int("error", res[errorOccur]).String(),
+			Log.Int("timeout", res[timeout]).String())
+	}
 
 	for d, services := range MainBinder {
 		changedSignal := make([]chan string, len(services))
@@ -87,140 +134,68 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 		}
 		serviceResult := make(chan result, len(services))
 		wg.Add(len(services))
-		_, _ = c.AddFunc("@every 10s", func() {
+		_, _ = c.AddFunc(fmt.Sprintf("@every %s", scanGap.String()), func() {
 			defer core.CatchPanic(output)
 			Log.Info("checking ip change for device", Log.String("device", d).String())
 			res := [4]int{0, 0, 0, 0}
-			for i := 0; i < 2; i++ {
-				var t Net.Type
-				switch i {
-				case 0:
-					t = Net.A
-					ip, err := Net.GetIpByType(d, t)
-					if err != nil {
-						Log.Error("error getting ip", Log.String("error", err.Error()).String())
-						continue
-					}
-					handledIp, err := Net.HandleIp(ip)
-					if err != nil {
-						Log.Error("error handle ip: ", Log.String("error", err.Error()).String())
-						continue
-					}
-					if len(handledIp) == 0 {
-						Log.Info("no ip left, please check ip handler or network", "device", d)
-						continue
-					}
+			{
+				var handledIp []string
+				ip, err := Net.GetIpByType(d, Net.A)
+				if err != nil {
+					Log.Error("error getting ip", Log.String("error", err.Error()).String())
+					goto AAAA
+				}
+				handledIp, err = Net.HandleIp(ip)
+				if err != nil {
+					Log.Error("error handle ip: ", Log.String("error", err.Error()).String())
+					goto AAAA
+				}
+				if len(handledIp) == 0 {
+					Log.Info("no ip left, please check ip handler or network", "device", d)
+					goto AAAA
+				}
 
-					if OldIp, ok := Device2Ips[d]; ok {
-						if OldIp.First == nil {
-							continue
-						}
-						if OldIp.GetFirst() == handledIp[0] {
-							Log.Info("ip not changed", "ip", OldIp.GetFirst())
-							continue
-						}
-						Log.Info("ip changed", Log.String("old", OldIp.GetFirst()).String(), Log.String("new", handledIp[0]).String())
-						*OldIp.First = handledIp[0]
-						for _, s := range changedSignal {
-							s <- handledIp[0]
-						}
-
-						timeoutChan := time.After(30 * time.Second)
-						total := len(services)
-						countDone := make(chan struct{}, 1)
-						_ = core.MainGoroutinePool.Submit(func() {
-							defer func() {
-								countDone <- struct{}{}
-							}()
-
-							for {
-								select {
-								case status := <-serviceResult:
-									total--
-									res[status]++
-									if total == 0 {
-										return
-									}
-								case <-timeoutChan:
-									Log.Info("timeout")
-									return
-								}
-							}
-						})
-						<-countDone
-						res[timeout] += total
-						Log.Info(fmt.Sprintf("result for %s.%s", d, "ipv4"),
-							Log.Int("done", res[done]).String(),
-							Log.Int("unaffected", res[unaffected]).String(),
-							Log.Int("error", res[errorOccur]).String(),
-							Log.Int("timeout", res[timeout]).String())
+				if OldIp, ok := Device2Ips[d]; ok {
+					if OldIp.First == nil {
+						goto AAAA
 					}
-				case 1:
-					t = Net.AAAA
-					ip, err := Net.GetIpByType(d, t)
-					if err != nil {
-						Log.Error("error getting ip", Log.String("error", err.Error()).String())
-						continue
+					if OldIp.GetFirst() == handledIp[0] {
+						Log.Info("ip not changed", "ip", OldIp.GetFirst())
+						goto AAAA
 					}
-					handledIp, err := Net.HandleIp(ip)
-					if err != nil {
-						Log.Error("error handle ip: ", Log.String("error", err.Error()).String())
-						continue
-					}
-					if len(handledIp) == 0 {
-						Log.Info("no ip left, please check ip handler or network", "device", d)
-						continue
-					}
-
-					if OldIp, ok := Device2Ips[d]; ok {
-						if OldIp.Second == nil {
-							break
-						}
-						if OldIp.GetSecond() == handledIp[0] {
-							Log.Info("ip not changed", "ip", OldIp.GetSecond())
-							continue
-						}
-						Log.Info("ip changed", Log.String("old", OldIp.GetSecond()).String(), Log.String("new", handledIp[0]).String())
-						*OldIp.Second = handledIp[0]
-						for _, s := range changedSignal {
-							s <- handledIp[0]
-						}
-
-						timeoutChan := time.After(30 * time.Second)
-						total := len(services)
-						countDone := make(chan struct{}, 1)
-						_ = core.MainGoroutinePool.Submit(func() {
-							defer func() {
-								countDone <- struct{}{}
-							}()
-
-							for {
-								select {
-								case status := <-serviceResult:
-									total--
-									res[status]++
-									if total == 0 {
-										return
-									}
-								case <-timeoutChan:
-									Log.Info("timeout")
-									return
-								}
-							}
-						})
-						<-countDone
-						res[timeout] += total
-						Log.Info(fmt.Sprintf("result for %s.%s", d, "ipv6"),
-							Log.Int("done", res[done]).String(),
-							Log.Int("unaffected", res[unaffected]).String(),
-							Log.Int("error", res[errorOccur]).String(),
-							Log.Int("timeout", res[timeout]).String())
-					}
-				default:
-					panic("unknown type")
+					Log.Info("ip changed", Log.String("old", OldIp.GetFirst()).String(), Log.String("new", handledIp[0]).String())
+					sendSignal(OldIp, handledIp, changedSignal, services, serviceResult, &res,
+						timeout, d, done, unaffected, errorOccur, true)
 				}
 			}
+		AAAA:
+			{
+				ip, err := Net.GetIpByType(d, Net.AAAA)
+				if err != nil {
+					Log.Error("error getting ip", Log.String("error", err.Error()).String())
+				}
+				handledIp, err := Net.HandleIp(ip)
+				if err != nil {
+					Log.Error("error handle ip: ", Log.String("error", err.Error()).String())
+				}
+				if len(handledIp) == 0 {
+					Log.Info("no ip left, please check ip handler or network", "device", d)
+					goto END
+				}
 
+				if OldIp, ok := Device2Ips[d]; ok {
+					if OldIp.Second == nil {
+						goto END
+					}
+					if OldIp.GetSecond() == handledIp[0] {
+						Log.Info("ip not changed", "ip", OldIp.GetSecond())
+						goto END
+					}
+					sendSignal(OldIp, handledIp, changedSignal, services, serviceResult, &res,
+						timeout, d, done, unaffected, errorOccur, false)
+				}
+			}
+		END:
 			if res[done] != 0 {
 				save <- struct{}{}
 			}
@@ -236,9 +211,9 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 				for j := 0; j < times; j++ {
 					newIp := <-changedSignal[i]
 					_type := strconv.Itoa(int(Net.WhichType(newIp)))
-					if (*service).GetType() == _type {
-						(*service).SetValue(newIp)
-						request, err := (*service).ToRequest()
+					if (*service).(core.Service).GetType() == _type {
+						(*service).(core.Service).SetValue(newIp)
+						request, err := (*service).(core.Service).ToRequest()
 						if err != nil {
 							_, _ = Log.ErrPP.Fprintln(output, err.Error())
 							continue
@@ -269,7 +244,8 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 							serviceResult <- errorOccur
 							// todo timeout
 						}
-						Display(request)
+						Display(request, output)
+						*service = request.ToParameters()
 					} else {
 						serviceResult <- unaffected
 						_, _ = Log.InfoPP.Fprintln(output, "ip type not match")
@@ -282,6 +258,24 @@ func StartIpChangeDaemon(ps *[]core.Parameters) {
 	}
 
 	c.Start()
+
+	_ = core.MainGoroutinePool.Submit(func() {
+		for {
+			<-save
+			log.Info("save from cron")
+
+			log.Debug("services:", "all", ps)
+			toSave := make([]core.Parameters, 0, len(ps))
+			for _, p := range ps {
+				toSave = append(toSave, *p)
+			}
+			err := SaveFromParameters(toSave...)
+			if err != nil {
+				_, _ = Log.ErrPP.Fprintln(output, err.Error())
+			}
+			time.Sleep(1 * time.Second)
+		}
+	})
 
 	wg.Wait()
 

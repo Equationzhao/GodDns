@@ -179,6 +179,7 @@ func TestConfigStr(t *testing.T) {
 				resName:  "ip",
 			},
 		},
+		ocscantime: 1024,
 	}
 
 	t.Log(p.ConfigStr().Content)
