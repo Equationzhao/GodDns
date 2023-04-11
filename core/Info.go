@@ -96,7 +96,7 @@ func NowVersionInfo() string {
 var NowVersion = Version{
 	major: 0,
 	minor: 1,
-	patch: 7,
+	patch: 8,
 }
 
 // GetLatestVersionInfo get the latest version info from GitHub
@@ -177,7 +177,9 @@ func GetLatestVersionInfo() (Version, string, error) {
 
 	// https://api.github.com/repos/$owner$/$repo$/releases/latest
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-	_, err := resty.New().R().SetResult(&versionResponse).Get(url)
+	c := MainClientPool.Get().(*resty.Client)
+	defer MainClientPool.Put(c)
+	_, err := c.R().SetResult(&versionResponse).Get(url)
 	latest := Version{}
 	if err != nil {
 		return latest, "", err

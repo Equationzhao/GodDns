@@ -299,9 +299,7 @@ func GetGlobalDevice(parameters []*core.Parameters) (Device.Device, error) {
 		if (*d).GetName() == Device.ServiceName {
 			GlobalDevice, ok := (*d).(Device.Device)
 			if !ok {
-				log.Errorf("Section [Devices] is not a device, check configuration at %s", core.GetConfigureLocation())
-				return Device.Device{},
-					fmt.Errorf("section [Devices] is not a device, check configuration at %s", core.GetConfigureLocation())
+				panic("the parameter is not a Device but has a name equal to Device.ServiceName")
 			}
 			return GlobalDevice, nil
 		}

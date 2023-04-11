@@ -148,7 +148,11 @@ func (r *Request) RequestThroughProxy() error {
 	req := client.R()
 	for iter.NotLast() {
 		proxy := iter.Next()
-		response, err := req.SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
+		response, err := req.
+			SetResult(s).
+			SetHeader("Content-Type", "application/x-www-form-urlencoded").
+			SetBody([]byte(content)).
+			Post(DDNSURL)
 		if err != nil {
 			errMsg := fmt.Sprintf("request error through proxy %s: %v", proxy, err)
 			r.status.MG.AddError(errMsg)
@@ -188,7 +192,7 @@ func (r *Request) MakeRequest() error {
 
 	s := &resOfddns{}
 
-	content := ""
+	var content string
 	select {
 	case <-done:
 		if err != nil || status.Status != core.Success {
@@ -220,7 +224,11 @@ func (r *Request) MakeRequest() error {
 	log.Debugf("content:%s", content)
 	client := core.MainClientPool.Get().(*resty.Client)
 	defer core.MainClientPool.Put(client)
-	response, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody([]byte(content)).Post(DDNSURL)
+	response, err := client.R().
+		SetResult(s).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody([]byte(content)).
+		Post(DDNSURL)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
 	_ = json.Unmarshal(response.Body(), s)
@@ -254,7 +262,11 @@ func (r *Request) GetRecordId() (core.Status, error) {
 	// make request to "https://dnsapi.cn/Record.List" to get record id
 	client := core.MainClientPool.Get().(*resty.Client)
 	defer core.MainClientPool.Put(client)
-	_, err := client.R().SetResult(s).SetHeader("Content-Type", "application/x-www-form-urlencoded").SetBody(content).Post(RecordListUrl)
+	_, err := client.R().
+		SetResult(s).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetBody(content).
+		Post(RecordListUrl)
 
 	log.Debugf("after marshall:%s", s)
 	status := *code2status(s.Status.Code)

@@ -556,6 +556,7 @@ func main() {
 										return err
 									}
 									for _, p := range parametersTemp {
+										p := p
 										parameters = append(parameters, &p)
 									}
 									GlobalDevice, err = GetGlobalDevice(parameters)
