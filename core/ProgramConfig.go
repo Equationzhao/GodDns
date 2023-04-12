@@ -64,7 +64,7 @@ func (p proxies) Convert2KeyValue(format string) string {
 	return fmt.Sprintf(format, "Proxy", builder.String())
 }
 
-type LazyUsedConfig string
+type LazyUsedConfig = string
 
 const (
 	OcScanTime LazyUsedConfig = "OcScanTime"
@@ -179,7 +179,11 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 
 	// load from env
 	// proxy from env: ALL_PROXY, HTTP_PROXY, HTTPS_PROXY
-	envProxy, err := loadProxy(fmt.Sprintf("[%s %s %s]", os.Getenv("ALL_PROXY"), os.Getenv("HTTP_PROXY"), os.Getenv("HTTPS_PROXY")))
+	envProxy, err := loadProxy(
+		fmt.Sprintf("[%s %s %s]",
+			os.Getenv("ALL_PROXY"),
+			os.Getenv("HTTP_PROXY"),
+			os.Getenv("HTTPS_PROXY")))
 	res.proxy = envProxy
 	if err != nil {
 		Warn = errors.Join(Warn, err)

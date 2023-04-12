@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 
@@ -80,7 +82,6 @@ func checkLog(l string) error {
 	}
 }
 
-// todo return config setting command `GodDns config -service=cloudflare`
 func main() {
 	defer func() {
 		if memProfiling {
@@ -357,6 +358,89 @@ func main() {
 					configFlag,
 					cpuProfilingFlag,
 					memProfilingFlag,
+				},
+			},
+			{
+				Name:    "show-config",
+				Aliases: []string{"sc", "SC"},
+				Usage:   "show the configuration of a service/section *case insensitive*",
+				Action: func(c *cli.Context) error {
+					err := checkLog(logLevel)
+					if err != nil {
+						return err
+					}
+
+					all := c.Bool("all")
+					if !all {
+						services := c.Args().Slice()
+						if len(services) == 0 {
+							return errors.New("at least one service/section name is required")
+						}
+
+						for _, service := range services {
+							found := false
+							for _, configFactory := range configFactoryList {
+								if strings.ToLower(configFactory.GetName()) == strings.ToLower(service) {
+									found = true
+									configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
+									if erri != nil {
+										_, _ = log.ErrPP.Println(erri)
+										err = errors.Join(err, erri)
+										break
+									}
+									_, _ = log.InfoPP.Println(configStr.Content)
+									break
+								}
+							}
+							if !found {
+								erri := fmt.Errorf("service/section %s not found", service)
+								_, _ = log.ErrPP.Println(erri, "\n\n\n")
+								err = errors.Join(err, erri)
+							}
+						}
+					} else {
+						for _, configFactory := range configFactoryList {
+							configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
+							if erri != nil {
+								_, _ = log.ErrPP.Println(erri)
+								err = errors.Join(err, erri)
+							}
+							_, _ = log.InfoPP.Println(configStr.Content)
+						}
+					}
+					return err
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "all",
+						Aliases: []string{"a", "A"},
+						Value:   false,
+						Usage:   "show all available services/sections configuration",
+					},
+					logFlag,
+					cpuProfilingFlag,
+					memProfilingFlag,
+				},
+				Subcommands: []*cli.Command{
+					{
+						Name:  "ls",
+						Usage: "list all available services/sections",
+						Action: func(c *cli.Context) error {
+							err := checkLog(logLevel)
+							if err != nil {
+								return err
+							}
+							for _, configFactory := range configFactoryList {
+								_, _ = log.InfoPP.Println(configFactory.GetName())
+							}
+							return nil
+						},
+						Flags: []cli.Flag{
+							logFlag,
+							cpuProfilingFlag,
+							memProfilingFlag,
+						},
+					},
 				},
 			},
 		},
