@@ -3,10 +3,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 
 	"GodDns/Device"
 	log "GodDns/Log"
@@ -19,7 +24,7 @@ import (
 
 // -----------------------------------------------------------------------------------------------------------------------------------------//
 
-func ModeController(ps *[]core.Parameters, GlobalDevice *Device.Device) error {
+func ModeController(ps []*core.Parameters, GlobalDevice *Device.Device) error {
 	switch runMode {
 	case run:
 		err := RunDDNS(ps)
@@ -53,7 +58,7 @@ func ModeController(ps *[]core.Parameters, GlobalDevice *Device.Device) error {
 	return nil
 }
 
-func RunDDNS(parameters *[]core.Parameters) error {
+func RunDDNS(parameters []*core.Parameters) error {
 	log.Debugf("run ddns")
 	// run ddns here
 
@@ -103,7 +108,7 @@ func ReadConfig(configs []core.ConfigFactory) ([]core.Parameters, error) {
 
 // RunGetFromApi get ip address from api
 // require parameters contain Device.Device
-func RunGetFromApi(parameters *[]core.Parameters) error {
+func RunGetFromApi(parameters []*core.Parameters) error {
 	// if api is api name , get api from map
 	// if api is url , try to make request to url  http://example.com/api?ip=4 or http://example.com/api?ip=6
 
@@ -181,9 +186,9 @@ func RunGetFromApi(parameters *[]core.Parameters) error {
 		}
 	}
 
-	for _, parameter := range *parameters {
-		if parameter.GetName() != Device.ServiceName {
-			if d, ok := parameter.(core.Service); ok {
+	for _, parameter := range parameters {
+		if (*parameter).GetName() != Device.ServiceName {
+			if d, ok := (*parameter).(core.Service); ok {
 				if d.IsTypeSet() {
 					if Net.TypeEqual(d.GetType(), Net.A) {
 						d.SetValue(ip4)
@@ -200,7 +205,7 @@ func RunGetFromApi(parameters *[]core.Parameters) error {
 	return GenerateExecuteSave(parameters)
 }
 
-func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
+func RunAuto(GlobalDevice Device.Device, parameters []*core.Parameters) error {
 	log.Info("get ip address automatically")
 	// get ip addr automatically
 
@@ -227,6 +232,7 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 			} else {
 				log.Infof("ipv4 from %s: %s", device, ip4sTemp)
 				ip4s, err1 = Net.HandleIp(ip4sTemp)
+				device := device
 				ip4.Move(&device, &ip4s[0])
 			}
 		}
@@ -239,6 +245,7 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 			} else {
 				log.Infof("ipv6 from %s: %s", device, ip6sTemp)
 				ip6s, err2 = Net.HandleIp(ip6sTemp)
+				device := device
 				ip6.Move(&device, &ip6s[0])
 			}
 		}
@@ -250,12 +257,12 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 
 	o4 := sync.Once{}
 	o6 := sync.Once{}
-	set := func(parameter core.Service) error {
-		switch parameter.GetType() {
+	set := func(parameter *core.Parameters) error {
+		switch (*parameter).(core.Service).GetType() {
 		case "4":
 			if ip4.First != nil {
-				MainBinder.Bind(ip4.GetFirst(), &parameter)
-				parameter.SetValue(ip4.GetSecond())
+				MainBinder.Bind(ip4.GetFirst(), parameter)
+				(*parameter).(core.Service).SetValue(ip4.GetSecond())
 				o4.Do(
 					func() {
 						Device2Ips.Add(ip4.GetFirst(), ip4.GetSecond(), Net.A)
@@ -264,8 +271,8 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 			return err1
 		case "6":
 			if ip6.First != nil {
-				MainBinder.Bind(ip6.GetFirst(), &parameter)
-				parameter.SetValue(ip6.GetSecond())
+				MainBinder.Bind(ip6.GetFirst(), parameter)
+				(*parameter).(core.Service).SetValue(ip6.GetSecond())
 				o6.Do(
 					func() {
 						Device2Ips.Add(ip6.GetFirst(), ip6.GetSecond(), Net.AAAA)
@@ -273,15 +280,15 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 			}
 			return err2
 		default:
-			return fmt.Errorf("unknown type %s", parameter.GetType())
+			return fmt.Errorf("unknown type %s", (*parameter).(core.Service).GetType())
 		}
 	}
 
-	for _, parameter := range *parameters {
-		if service, ok := parameter.(core.Service); ok {
+	for _, parameter := range parameters {
+		if _, ok := (*parameter).(core.Service); ok {
 			// if parameter implements DeviceOverridable interface, set the ip address
-			if err := set(service); err != nil {
-				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), service.GetName())
+			if err := set(parameter); err != nil {
+				log.Errorf("error setting ip address: %s, skip service:%s", err.Error(), (*parameter).GetName())
 			}
 		}
 	}
@@ -291,39 +298,41 @@ func RunAuto(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
 
 // GetGlobalDevice get the global device
 // if not found, fatal
-func GetGlobalDevice(parameters []core.Parameters) (Device.Device, error) {
-	deviceInterface, err := core.Find(parameters, Device.ServiceName)
-	if err != nil {
-		log.Errorf("Section [Devices] not found, check configuration at %s", core.GetConfigureLocation())
-		return Device.Device{}, fmt.Errorf("section [Devices] not found, check configuration at %s", core.GetConfigureLocation())
+func GetGlobalDevice(parameters []*core.Parameters) (Device.Device, error) {
+	for _, d := range parameters {
+		if (*d).GetName() == Device.ServiceName {
+			GlobalDevice, ok := (*d).(Device.Device)
+			if !ok {
+				panic("the parameter is not a Device but has a name equal to Device.ServiceName")
+			}
+			return GlobalDevice, nil
+		}
 	}
 
-	GlobalDevice, ok := deviceInterface.(Device.Device)
-	if !ok {
-		log.Errorf("Section [Devices] is not a device, check configuration at %s", core.GetConfigureLocation())
-		return Device.Device{}, fmt.Errorf("section [Devices] is not a device, check configuration at %s", core.GetConfigureLocation())
-	}
-	return GlobalDevice, nil
+	log.Errorf("Section [Devices] not found, check configuration at %s", core.GetConfigureLocation())
+	return Device.Device{},
+		fmt.Errorf("section [Devices] not found, check configuration at %s", core.GetConfigureLocation())
 }
 
-func RunOverride(GlobalDevice Device.Device, parameters *[]core.Parameters) error {
+func RunOverride(GlobalDevice Device.Device, parameters []*core.Parameters) error {
 	// override the ip address here
 	// use the Key `Devices` and `Type` of the Service if exist
 	log.Info("-O is set, override the ip address")
 	var errCount uint16
 
-	for _, parameter := range *parameters {
+	for _, parameter := range parameters {
 		// skip the device parameter
-		if parameter.GetName() != Device.ServiceName {
+		if (*parameter).GetName() != Device.ServiceName {
 			// check if parameter implements DeviceOverridable interface
-			if d, ok := parameter.(core.DeviceOverridable); ok {
+			if d, ok := (*parameter).(core.DeviceOverridable); ok {
 				log.Debugf("Parameter %s implements DeviceOverridable interface", d.GetName())
 
 				var tempDeviceName string
 
 				// if device is not set, use Type IP value of Global Devices
 				if !d.IsDeviceSet() {
-					err := set(GlobalDevice, d)
+					err := set(GlobalDevice, parameter)
+					d = (*parameter).(core.DeviceOverridable)
 					if err != nil {
 						log.Errorf("error setting ip address: %s, skip overriding service:%s", err.Error(), d.GetName())
 						errCount++
@@ -353,17 +362,17 @@ func RunOverride(GlobalDevice Device.Device, parameters *[]core.Parameters) erro
 
 				log.Infof("override %s with %s", d.GetName(), ips[0])
 				d.SetValue(ips[0])
-				s := parameter.(core.Service)
-				MainBinder.Bind(tempDeviceName, &s)
+
+				MainBinder.Bind(tempDeviceName, parameter)
 			} else {
 				// Service is not DeviceOverridable, use ip got from Devices Section
-				err := set(GlobalDevice, parameter.(core.Service))
+				err := set(GlobalDevice, parameter)
 				if err != nil {
 					errCount++
-					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), parameter.(core.Service).GetIP())
+					log.Errorf("error setting ip address: %s, use default value:%s", err.Error(), (*parameter).(core.Service).GetIP())
 					continue
 				}
-				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", parameter.GetName(), parameter.(core.Service).GetIP())
+				log.Debugf("Parameter %s is not DeviceOverridable, use default value %s", (*parameter).GetName(), (*parameter).(core.Service).GetIP())
 			}
 		}
 	} // loop ends
@@ -373,8 +382,8 @@ func RunOverride(GlobalDevice Device.Device, parameters *[]core.Parameters) erro
 	return GenerateExecuteSave(parameters)
 }
 
-func set(GlobalDevice Device.Device, ParameterToSet core.Service) error {
-	Type := ParameterToSet.GetType() // Type is "4" or "6" or ""
+func set(GlobalDevice Device.Device, ParameterToSet *core.Parameters) error {
+	Type := (*ParameterToSet).(core.Service).GetType() // Type is "4" or "6" or ""
 
 	ip := Collections.Pair[string, string]{} // First is device, second is ip
 
@@ -423,12 +432,12 @@ func set(GlobalDevice Device.Device, ParameterToSet core.Service) error {
 		}
 
 	default:
-		return fmt.Errorf("unknown type %s", ParameterToSet.GetType())
+		return fmt.Errorf("unknown type %s", (*ParameterToSet).(core.Service).GetType())
 	}
 
 	if ip.First != nil && ip.Second != nil {
-		MainBinder.Bind(ip.GetFirst(), &ParameterToSet)
-		ParameterToSet.SetValue(ip.GetSecond())
+		MainBinder.Bind(ip.GetFirst(), ParameterToSet)
+		(*ParameterToSet).(core.Service).SetValue(ip.GetSecond())
 		return nil
 	} else {
 		return err
@@ -441,47 +450,74 @@ func (n NoRequestErr) Error() string {
 	return "no request generated"
 }
 
-func GenerateExecuteSave(parameters *[]core.Parameters) error {
+func GenerateExecuteSave(parameters []*core.Parameters) error {
 	requests := GenerateRequests(parameters)
 
 	if requests == nil {
 		return NoRequestErr{}
 	}
 
-	d, err := core.Find(*parameters, Device.ServiceName)
-	Parameters2Save := make([]core.Parameters, 0, len(*parameters))
-	if err == nil {
-		Parameters2Save = append(Parameters2Save, d)
+	Parameters2Save := make([]core.Parameters, 0, len(parameters))
+	for _, p := range parameters {
+		if (*p).GetName() == Device.ServiceName {
+			Parameters2Save = append(Parameters2Save, *p)
+			break
+		}
 	}
+
 	ExecuteRequests(requests...)
-	DisplayAll(requests...)
+	DisplayAll(output, requests...)
 	for _, request := range requests {
 		// update info from request.parameters
 		r2p := request.ToParameters()
 		Parameters2Save = append(Parameters2Save, r2p)
 	}
-	*parameters = Parameters2Save
-	err = SaveFromParameters(Parameters2Save...)
 
-	if err != nil {
-		return err
+	for i := range parameters {
+		*parameters[i] = Parameters2Save[i]
 	}
-	return nil
+
+	return SaveFromParameters(Parameters2Save...)
 }
 
-func Display(request core.Request) {
-	_, _ = log.InfoPP.Fprintln(output,
-		fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+func Display(request core.Request, output io.Writer) {
+	if box {
+		PrintInTable(request, output)
+	} else {
+		PrintDefault(request, output)
+	}
+}
 
+func DisplayAll(output io.Writer, requests ...core.Request) {
+	for _, request := range requests {
+		Display(request, output)
+		_, _ = fmt.Fprintln(output)
+	}
+}
+
+func PrintDefault(request core.Request, output io.Writer) {
 	serviceInfo := request.Status().MG.GetMsgOf(core.Info)
+	serviceErr := request.Status().MG.GetMsgOf(core.Error)
+	serviceWarn := request.Status().MG.GetMsgOf(core.Warn)
+
+	switch {
+	case len(serviceErr) > 0:
+		_, _ = log.ErrPP.Fprintln(output,
+			fmt.Sprint("error executing request ", request.GetName(), " at ", request.Target()))
+	case len(serviceWarn) > 0:
+		_, _ = log.WarnPP.Fprintln(output,
+			fmt.Sprint("warning executing request ", request.GetName(), " at ", request.Target()))
+	default:
+		_, _ = log.InfoPP.Fprintln(output,
+			fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+	}
+
 	if len(serviceInfo) > 0 {
 		for _, i := range serviceInfo {
 			_, _ = log.SuccessPP.Fprintln(output, i)
 		}
 	}
 
-	serviceErr := request.Status().MG.GetMsgOf(core.Error)
-	serviceWarn := request.Status().MG.GetMsgOf(core.Warn)
 	if len(serviceErr) > 0 {
 		for _, e := range serviceErr {
 			_, _ = log.ErrPP.Fprintln(output, e)
@@ -494,11 +530,70 @@ func Display(request core.Request) {
 	}
 }
 
-func DisplayAll(requests ...core.Request) {
-	for _, request := range requests {
-		Display(request)
-		_, _ = fmt.Fprintln(output)
+func PrintInTable(request core.Request, output io.Writer) {
+	t := table.NewWriter()
+	t.SetOutputMirror(output)
+	t.SetTitle(request.GetName())
+	status := "OK"
+	if request.Status().Status != core.Success {
+		status = "Fail"
 	}
+	TitleColor := text.Colors{text.FgGreen}
+	header := table.Row{"Service", "Status", "Target", "IP"}
+	content := table.Row{
+		request.GetName(),
+		status,
+		request.Target(),
+		request.ToParameters().GetIP(),
+	}
+
+	infoMsg := request.Status().MG.GetMsgOf(core.Info)
+	if len(infoMsg) != 0 {
+		TitleColor = text.Colors{text.FgRed}
+		header = append(header, "Info")
+		content = append(content, strings.Join(request.Status().MG.GetMsgOf(core.Info), "\n"))
+	}
+
+	errorsMsg := request.Status().MG.GetMsgOf(core.Error)
+	if len(errorsMsg) != 0 {
+		TitleColor = text.Colors{text.FgRed}
+		header = append(header, "Error")
+		content = append(content, strings.Join(request.Status().MG.GetMsgOf(core.Error), "\n"))
+	}
+
+	warnMsg := request.Status().MG.GetMsgOf(core.Warn)
+	if len(warnMsg) != 0 {
+		header = append(header, "Warn")
+		content = append(content, strings.Join(request.Status().MG.GetMsgOf(core.Warn), "\n"))
+	}
+
+	t.AppendHeader(header)
+	t.AppendRow(content)
+
+	t.SetStyle(
+		table.Style{
+			Name:  "result display",
+			Box:   table.StyleBoxBold,
+			Color: table.ColorOptionsDark,
+			Format: table.FormatOptions{
+				Header: text.FormatTitle,
+				Row:    text.FormatLower,
+			},
+			Options: table.Options{
+				DoNotColorBordersAndSeparators: true,
+				DrawBorder:                     true,
+				SeparateColumns:                true,
+				SeparateFooter:                 false,
+				SeparateHeader:                 false,
+				SeparateRows:                   false,
+			},
+			Title: table.TitleOptions{
+				Align:  text.AlignCenter,
+				Colors: TitleColor,
+				Format: text.FormatTitle,
+			},
+		})
+	t.Render()
 }
 
 func GenerateConfigure(configFactoryList []core.ConfigFactory) error {
@@ -616,24 +711,23 @@ func Retry(request core.Request, i uint8) {
 				return
 			}
 		}
-
 	}
 }
 
-func GenerateRequests(parameters *[]core.Parameters) []core.Request {
+func GenerateRequests(parameters []*core.Parameters) []core.Request {
 	log.Info("start generating requests")
 	var errCount uint8 = 0
-	requests := make([]core.Request, 0, len(*parameters))
-	for _, parameter := range *parameters {
-		if parameter.GetName() == Device.ServiceName {
+	requests := make([]core.Request, 0, len(parameters))
+	for _, parameter := range parameters {
+		if (*parameter).GetName() == Device.ServiceName {
 			continue // skip
 		}
 
-		log.Infof("service: %s", parameter.GetName())
-		request, err := parameter.(core.Service).ToRequest()
+		log.Infof("service: %s", (*parameter).GetName())
+		request, err := (*parameter).(core.Service).ToRequest()
 		if err != nil {
 			errCount++
-			log.Errorf("error generating request for %s:%s ", parameter.GetName(), err.Error())
+			log.Errorf("error generating request for %s:%s ", (*parameter).GetName(), err.Error())
 			continue
 		}
 		requests = append(requests, request)
@@ -669,7 +763,7 @@ func GenerateDefaultConfigure(ConfigFactories ...core.ConfigFactory) error {
 }
 
 // RunPerTime run ddns per time
-func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []core.Parameters) {
+func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []*core.Parameters) {
 	log.Infof("run ddns per %d seconds", Time)
 
 	cornLogfile, err := os.OpenFile("cron.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
@@ -723,6 +817,7 @@ func SaveConfig(FileName string, flag int, parameters ...core.Parameters) error 
 }
 
 func SaveFromParameters(parameters ...core.Parameters) error {
+	log.Debug(parameters)
 	// todo Merge Parameters that differ only by subdomain
 	err := SaveConfig(core.GetConfigureLocation(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, parameters...)
 	if err != nil {

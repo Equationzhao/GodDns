@@ -71,7 +71,7 @@ func (r *Request) MakeRequest() error {
 	_ = core.MainGoroutinePool.Submit(func() {
 		_responseRecordId, err := client.DescribeRecordList(requestRecord)
 		if _, ok := err.(*errors.TencentCloudSDKError); ok {
-			log.Debugf("an API error has returned: %s", err.Error())
+			log.Debug("an API error has returned ", log.String("error", err.Error()).String())
 			r.status.Status = core.Failed
 			r.status.MG.AddError(err.(*errors.TencentCloudSDKError).Message)
 			errChan <- err
@@ -105,7 +105,7 @@ func (r *Request) MakeRequest() error {
 	// 返回的resp是一个ModifyDynamicDNSResponse的实例，与请求对象对应
 	responseDDNS, err := client.ModifyDynamicDNS(requestDDNS)
 	if _, ok := err.(*errors.TencentCloudSDKError); ok {
-		log.Debugf("an API error has returned: %s", err.Error())
+		log.Debug("an API error has returned ", log.String("error", err.Error()).String())
 		r.status.Status = core.Failed
 		r.status.MG.AddError(err.(*errors.TencentCloudSDKError).Message)
 		return fmt.Errorf("an API error has returned: %w", err)
@@ -116,7 +116,9 @@ func (r *Request) MakeRequest() error {
 	res := res{}
 	err = json.UnmarshalString(responseDDNS.ToJsonString(), &res)
 	if err != nil {
-		log.Debugf("error unmarshalling response %v: %s", responseDDNS.ToJsonString(), err.Error())
+		log.Debug("error unmarshalling response ",
+			log.String("Json result", responseDDNS.ToJsonString()).String(),
+			log.String("error", err.Error()).String())
 		r.status.Status = core.Failed
 
 		return fmt.Errorf("error umarshaling response %v: %w", responseDDNS.ToJsonString(), err)

@@ -2,7 +2,6 @@
 package core
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	log "GodDns/Log"
 	"GodDns/Net"
@@ -45,13 +45,30 @@ func getDefaultProgramConfigurationLocation() func() (string, error) {
 type proxies []url.URL
 
 func (p proxies) Convert2KeyValue(format string) string {
-	v := "["
-	for _, proxy := range p {
-		v += proxy.String() + " "
+	var builder *strings.Builder
+	if Util.StrBuilderPoolEnable {
+		builder = Util.StrBuilderPool.Get().(*strings.Builder)
+		defer func() {
+			builder.Reset()
+			Util.StrBuilderPool.Put(builder)
+		}()
+	} else {
+		builder = new(strings.Builder)
 	}
-	v += "]\n\n"
-	return fmt.Sprintf(format, "Proxy", v)
+	builder.WriteRune('[')
+	for _, proxy := range p {
+		builder.WriteString(proxy.String())
+		builder.WriteByte(' ')
+	}
+	builder.WriteString("]\n")
+	return fmt.Sprintf(format, "Proxy", builder.String())
 }
+
+type LazyUsedConfig = string
+
+const (
+	OcScanTime LazyUsedConfig = "OcScanTime"
+)
 
 // ProgramConfig  config for program
 type ProgramConfig struct {
@@ -60,18 +77,33 @@ type ProgramConfig struct {
 	// 2. custom apis
 	// 3. custom services Vscode-like ?
 	// ...
-	proxy proxies
-	ags   []ApiGenerator
+	proxy      proxies
+	ags        []ApiGenerator
+	ocscantime time.Duration
 }
 
 func (p *ProgramConfig) Convert2KeyValue(format string) (content string) {
-	buffer := bytes.NewBufferString("[settings]\n")
-	buffer.WriteString(p.proxy.Convert2KeyValue(format))
-	buffer.WriteByte('\n')
-	for _, api := range p.ags {
-		buffer.WriteString(api.Convert2KeyValue(format))
+	var builder *strings.Builder
+	if Util.StrBuilderPoolEnable {
+		builder = Util.StrBuilderPool.Get().(*strings.Builder)
+		defer func() {
+			builder.Reset()
+			Util.StrBuilderPool.Put(builder)
+		}()
+	} else {
+		builder = new(strings.Builder)
 	}
-	return buffer.String()
+	builder.WriteString("[settings]\n")
+
+	builder.WriteString(p.proxy.Convert2KeyValue(format))
+	builder.WriteString(fmt.Sprintf(format, "OcScanTime", p.ocscantime))
+	builder.WriteString("\n\n")
+	for _, api := range p.ags {
+		builder.WriteString(api.Convert2KeyValue(format))
+	}
+	builder.WriteByte('\n')
+
+	return builder.String()
 }
 
 func (p *ProgramConfig) ConfigStr() ConfigStr {
@@ -80,6 +112,8 @@ func (p *ProgramConfig) ConfigStr() ConfigStr {
 		Content: p.Convert2KeyValue(Format),
 	}
 }
+
+var UniversalConfig = make(map[LazyUsedConfig]any)
 
 // Setup  program
 // 1. set proxy [not implemented]
@@ -95,6 +129,13 @@ func (p *ProgramConfig) Setup() {
 		api := ag.Generate()
 		Net.ApiMap.Add2Apis(ag.apiName, api)
 	}
+
+	// 3. set - oc scan time
+	// if not set, default=1 minute
+	if p.ocscantime == 0 {
+		p.ocscantime = 1 * time.Minute
+	}
+	UniversalConfig[OcScanTime] = p.ocscantime
 }
 
 var DefaultConfig = ProgramConfig{
@@ -138,7 +179,11 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 
 	// load from env
 	// proxy from env: ALL_PROXY, HTTP_PROXY, HTTPS_PROXY
-	envProxy, err := loadProxy(fmt.Sprintf("[%s %s %s]", os.Getenv("ALL_PROXY"), os.Getenv("HTTP_PROXY"), os.Getenv("HTTPS_PROXY")))
+	envProxy, err := loadProxy(
+		fmt.Sprintf("[%s %s %s]",
+			os.Getenv("ALL_PROXY"),
+			os.Getenv("HTTP_PROXY"),
+			os.Getenv("HTTPS_PROXY")))
 	res.proxy = envProxy
 	if err != nil {
 		Warn = errors.Join(Warn, err)
@@ -148,10 +193,10 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 	NoColor := os.Getenv("NO_COLOR")
 	if NoColor != "" {
 		// disable coloring
-		log.InfoPP.SetColoringEnabled(false)
-		log.WarnPP.SetColoringEnabled(false)
-		log.DebugPP.SetColoringEnabled(false)
-		log.ErrPP.SetColoringEnabled(false)
+		log.InfoPP.Disable = true
+		log.WarnPP.Disable = true
+		log.DebugPP.Disable = true
+		log.ErrPP.Disable = true
 	}
 
 	// load from file
@@ -168,6 +213,13 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 					res.proxy = proxy
 					if err != nil {
 						Warn = errors.Join(Warn, err)
+					}
+				case "ocst", "OCST", "OnChangeScanTime", "OcScanTime", "on change scan time":
+					duration, err := time.ParseDuration(k.Value())
+					if err != nil {
+						Warn = errors.Join(Warn, err)
+					} else {
+						res.ocscantime = duration
 					}
 				default:
 					Warn = errors.Join(Warn, NewUnknownKeyErr(k.Name(), section.Name()))
@@ -352,7 +404,7 @@ func (a *ApiGenerator) validateMethod() error {
 func (a *ApiGenerator) Generate() Net.Api {
 	copiedA := *a
 	f := func(t Net.Type) (string, error) {
-		URL := ""
+		var URL string
 		switch t {
 		case Net.A:
 			URL = copiedA.a

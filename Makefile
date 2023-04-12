@@ -23,7 +23,7 @@ check: fmt vet lint ## Run all the checks
 
 tool: ## Install the tools
 	$(info Installing the tools)
-	go install github.com/mvdan/gofumpt@latest
+	go install mvdan.cc/gofumpt@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 

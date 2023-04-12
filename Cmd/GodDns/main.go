@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,13 +15,11 @@ import (
 
 	"GodDns/Device"
 	log "GodDns/Log"
-	"GodDns/Net"
 	_ "GodDns/Service" // register all services
+
 	"github.com/panjf2000/ants/v2"
 	"github.com/urfave/cli/v2"
 )
-
-var output = os.Stdout
 
 const (
 	MAXRETRY            = 255
@@ -42,6 +41,7 @@ func init() {
 
 // global variables
 var (
+	output            = os.Stdout
 	Time              uint64
 	TimesLimitation   int // 0 means no limitation
 	ApiName           string
@@ -56,231 +56,8 @@ var (
 	isLogSet          bool
 	onChange          bool
 	memProfiling      bool
+	box               bool
 )
-
-// Flags
-var (
-	silentFlag = &cli.BoolFlag{
-		Name:    "no-output",
-		Aliases: []string{"s", "S", "silent"},
-		Value:   false,
-		Usage:   "no message output",
-		Action: func(context *cli.Context, silent bool) error {
-			// set output
-			if silent {
-				output = nil
-			}
-			return nil
-		},
-		Category: "OUTPUT",
-	}
-
-	onChangeFlag = &cli.BoolFlag{
-		Name:        "on-change",
-		Aliases:     []string{"oc", "OC"},
-		Value:       false,
-		Usage:       "run ddns automatically when ip changed",
-		Destination: &onChange,
-		Category:    "TRIGGER",
-	}
-
-	timeFlag = &cli.Uint64Flag{
-		Name:        "time",
-		Aliases:     []string{"t", "T"},
-		Value:       0,
-		DefaultText: "disabled",
-		Usage:       "run ddns per time(`seconds`)",
-		Destination: &Time,
-		Action: func(context *cli.Context, u uint64) error {
-			if u < MINTIMEGAP {
-				core.ReturnCode = 2
-				return fmt.Errorf("time gap is too short, should be more than %d seconds", MINTIMEGAP)
-			}
-			return nil
-		},
-		Category: "TRIGGER",
-	}
-
-	timesLimitationFlag = &cli.IntFlag{
-		Name:        "times-limitation",
-		Aliases:     []string{"tl", "TL"},
-		Value:       0,
-		DefaultText: "infinity",
-		Usage:       "run ddns per time(seconds) up to `n` times",
-		Destination: &TimesLimitation,
-		Action: func(context *cli.Context, i int) error {
-			t := context.Uint64("time")
-			if t == 0 && !onChange {
-				core.ReturnCode = 2
-				return errors.New("time limitation must be used with time flag or on-change flag")
-			}
-			return nil
-		},
-		Category: "TIMES",
-	}
-
-	retryFlag = &cli.UintFlag{
-		Name:  "retry",
-		Value: DEFAULTRETRYATTEMPT,
-		Usage: "retry `times`",
-		Action: func(context *cli.Context, u uint) error {
-			if u > MAXRETRY {
-				return fmt.Errorf("too many retry times, should be less than %d", MAXRETRY)
-			}
-			retryAttempt = uint8(u)
-			return nil
-		},
-		Category: "RUN",
-	}
-
-	logFlag = &cli.StringFlag{
-		Name:        "log",
-		Aliases:     []string{"l", "L", "Log"},
-		DefaultText: "Info",
-		Value: func() string {
-			debugEnv := os.Getenv("DEBUG")
-			if debugEnv != "" {
-				return "Debug"
-			}
-			return "Info"
-		}(),
-		Usage:       "`level`: Trace/Debug/Info/Warn/Error",
-		Destination: &logLevel,
-		Category:    "OUTPUT",
-	}
-
-	configFlag = &cli.StringFlag{
-		Name:        "config",
-		Aliases:     []string{"c", "C", "Config"},
-		Value:       "",
-		DefaultText: defaultLocation,
-		Usage:       "set configuration `file`",
-		Destination: &config,
-		Category:    "CONFIG",
-	}
-
-	proxyFlag = &cli.StringFlag{
-		Name:        "proxy",
-		Aliases:     []string{"p", "P", "Proxy"},
-		Value:       "",
-		Usage:       "set proxy `url`",
-		Destination: &proxy,
-		Action: func(context *cli.Context, s string) error {
-			if s != "" {
-				if s == "enable" {
-					if Net.GlobalProxies.GetProxyIter().Len() == 0 {
-						return fmt.Errorf("no proxy url found, please set proxy url in config/env/flag first")
-					}
-					proxyEnable = true
-					return nil
-				} else if s == "disable" {
-					return nil
-				} else if Net.IsProxyValid(s) {
-					proxyEnable = true
-					Net.AddProxy2Top(Net.GlobalProxies, s)
-					return nil
-				} else {
-					return errors.New("invalid proxy url")
-				}
-			}
-			return errors.New("empty proxy url")
-		},
-		Category: "RUN",
-	}
-
-	parallelFlag = &cli.BoolFlag{
-		Name:        "parallel",
-		Aliases:     []string{"Parallel"},
-		Value:       false,
-		Usage:       "run ddns parallel",
-		Destination: &parallelExecuting,
-		Category:    "RUN",
-	}
-
-	cpuProfilingFlag = &cli.BoolFlag{
-		Name:        "cpu-profile",
-		Aliases:     []string{"cpuprofile", "cpu", "cp"},
-		Value:       false,
-		DefaultText: "disabled",
-		Usage:       "enable cpu profiling",
-		Category:    "PERFORMANCE",
-		Action: func(context *cli.Context, b bool) error {
-			if b {
-				filename := "goddns-cpu-" + time.Now().Format("2006-01-02-15-04-05") + ".prof"
-				prof, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0o644)
-				if err != nil {
-					return err
-				}
-				err = pprof.StartCPUProfile(prof)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		},
-	}
-
-	memProfilingFlag = &cli.BoolFlag{
-		Name:        "mem-profile",
-		Aliases:     []string{"memprofile", "mem", "mp"},
-		Value:       false,
-		DefaultText: "disabled",
-		Usage:       "enable memory profiling",
-		Category:    "PERFORMANCE",
-		Destination: &memProfiling,
-	}
-)
-
-func init() {
-	cli.VersionFlag = &cli.BoolFlag{
-		Name:               "version",
-		Aliases:            []string{"v", "V"},
-		Usage:              "print the version info/upgrade info",
-		DisableDefaultText: true,
-	}
-
-	cli.VersionPrinter = func(c *cli.Context) {
-		msg := make(chan string, 2)
-		_ = core.MainGoroutinePool.Submit(func() {
-			CheckVersionUpgrade(msg)
-		})
-		fmt.Println(core.NowVersionInfo())
-
-		fmt.Println(func() string {
-			{
-				info, err := os.Stat(os.Args[0])
-				if err != nil {
-					return ""
-				}
-				t := info.ModTime().Local()
-				return fmt.Sprintf("compiled at %s", t.Format(time.RFC3339))
-			}
-		}())
-		for i := 0; i < 2; i++ {
-			select {
-			case s := <-msg:
-				if s != "" {
-					_, _ = log.DebugPP.Println(s) // use debug pretty print for green color
-				}
-			case <-time.After(2 * time.Second):
-				return
-			}
-		}
-	}
-
-	cli.HelpFlag = &cli.BoolFlag{
-		Name:               "help",
-		Aliases:            []string{"h", "H"},
-		Usage:              "show help",
-		DisableDefaultText: true,
-	}
-
-	var err error
-	defaultLocation, err = core.GetDefaultConfigurationLocation()
-	if err != nil {
-		defaultLocation = "./DDNS.conf"
-	}
-}
 
 func checkLog(l string) error {
 	switch l {
@@ -295,18 +72,16 @@ func checkLog(l string) error {
 	case "Error", "error", "ERROR":
 		_, err := log.InitLog("DDNS.log", 0o666, l, output)
 		if err != nil {
-			log.Error("failed to init log file ", log.String("error", err.Error()))
+			log.Error("failed to init log file ", log.String("error", err.Error()).String())
 			return err
 		}
 		isLogSet = true
-		// cleanUp = clean
 		return nil
 	default:
 		return errors.New("invalid log level")
 	}
 }
 
-// todo return config setting command `GodDns config -service=cloudflare`
 func main() {
 	defer func() {
 		if memProfiling {
@@ -326,7 +101,7 @@ func main() {
 	defer pprof.StopCPUProfile()
 	defer core.CatchPanic(output)
 
-	var parameters []core.Parameters
+	var parameters []*core.Parameters
 	var GlobalDevice Device.Device
 	configFactoryList := core.ConfigFactoryList
 
@@ -338,12 +113,12 @@ func main() {
 			programConfig, fatal, warn := core.LoadProgramConfig(location)
 			if fatal != nil {
 				// default setup
-				_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
-				_, _ = log.ErrPP.Fprintln(output, fatal)
+				_, _ = log.ErrPP.Fprintln(output, "error loading program config, use default config")
+				_, _ = log.ErrPP.Fprintln(output, fatal.Error())
 				core.DefaultConfig.Setup()
 			} else {
 				if warn != nil {
-					_, _ = log.WarnPP.Fprintln(output, warn)
+					_, _ = log.WarnPP.Fprintln(output, warn.Error())
 				}
 				programConfig.Setup()
 			}
@@ -394,7 +169,10 @@ func main() {
 					if err != nil {
 						return err
 					}
-					parameters = parametersTemp
+
+					for _, p := range parametersTemp {
+						parameters = append(parameters, &p)
+					}
 
 					if ApiName == "" {
 						runMode = run
@@ -403,12 +181,12 @@ func main() {
 					}
 
 					if Time != 0 {
-						_ = RunDDNS(&parameters)
+						_ = RunDDNS(parameters)
 						RunPerTime(Time, nil, parameters)
 						return nil
 					}
 
-					return ModeController(&parameters, nil)
+					return ModeController(parameters, nil)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -431,6 +209,7 @@ func main() {
 					proxyFlag,
 					cpuProfilingFlag,
 					memProfilingFlag,
+					boxFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
@@ -441,6 +220,7 @@ func main() {
 							parallelFlag,
 							timeFlag,
 							onChangeFlag,
+							onChangeScanTimeFlag,
 							timesLimitationFlag,
 							retryFlag,
 							silentFlag,
@@ -449,6 +229,7 @@ func main() {
 							proxyFlag,
 							cpuProfilingFlag,
 							memProfilingFlag,
+							boxFlag,
 						},
 						Action: func(context *cli.Context) error {
 							err := checkLog(logLevel)
@@ -466,7 +247,11 @@ func main() {
 							if err != nil {
 								return err
 							}
-							parameters = parametersTemp
+							for _, p := range parametersTemp {
+								p := p
+								parameters = append(parameters, &p)
+							}
+
 							GlobalDevice, err = GetGlobalDevice(parameters)
 							if err != nil {
 								return err
@@ -474,17 +259,17 @@ func main() {
 
 							runMode = runAuto
 							if onChange {
-								OnChange(&parameters, &GlobalDevice)
+								OnChange(parameters, &GlobalDevice)
 								return nil
 							}
 
 							if Time != 0 {
-								_ = RunAuto(GlobalDevice, &parameters)
+								_ = RunAuto(GlobalDevice, parameters)
 								RunPerTime(Time, &GlobalDevice, parameters)
 								return nil
 							}
 
-							return ModeController(&parameters, &GlobalDevice)
+							return ModeController(parameters, &GlobalDevice)
 						},
 						Subcommands: []*cli.Command{
 							{
@@ -495,6 +280,7 @@ func main() {
 									parallelFlag,
 									timeFlag,
 									onChangeFlag,
+									onChangeScanTimeFlag,
 									timesLimitationFlag,
 									retryFlag,
 									silentFlag,
@@ -503,6 +289,7 @@ func main() {
 									proxyFlag,
 									cpuProfilingFlag,
 									memProfilingFlag,
+									boxFlag,
 								},
 								Action: func(context *cli.Context) error {
 									err := checkLog(logLevel)
@@ -520,7 +307,10 @@ func main() {
 									if err != nil {
 										return err
 									}
-									parameters = parametersTemp
+									for _, p := range parametersTemp {
+										p := p
+										parameters = append(parameters, &p)
+									}
 									GlobalDevice, err = GetGlobalDevice(parameters)
 									if err != nil {
 										return err
@@ -528,17 +318,17 @@ func main() {
 
 									runMode = runAutoOverride
 									if onChange {
-										OnChange(&parameters, &GlobalDevice)
+										OnChange(parameters, &GlobalDevice)
 										return nil
 									}
 
 									if Time != 0 {
-										_ = RunOverride(GlobalDevice, &parameters)
+										_ = RunOverride(GlobalDevice, parameters)
 										RunPerTime(Time, &GlobalDevice, parameters)
 										return nil
 									}
 
-									return ModeController(&parameters, &GlobalDevice)
+									return ModeController(parameters, &GlobalDevice)
 								},
 							},
 						},
@@ -568,6 +358,89 @@ func main() {
 					configFlag,
 					cpuProfilingFlag,
 					memProfilingFlag,
+				},
+			},
+			{
+				Name:    "show-config",
+				Aliases: []string{"sc", "SC"},
+				Usage:   "show the configuration of a service/section *case insensitive*",
+				Action: func(c *cli.Context) error {
+					err := checkLog(logLevel)
+					if err != nil {
+						return err
+					}
+
+					all := c.Bool("all")
+					if !all {
+						services := c.Args().Slice()
+						if len(services) == 0 {
+							return errors.New("at least one service/section name is required")
+						}
+
+						for _, service := range services {
+							found := false
+							for _, configFactory := range configFactoryList {
+								if strings.EqualFold(configFactory.GetName(), service) {
+									found = true
+									configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
+									if erri != nil {
+										_, _ = log.ErrPP.Println(erri)
+										err = errors.Join(err, erri)
+										break
+									}
+									_, _ = log.InfoPP.Println(configStr.Content)
+									break
+								}
+							}
+							if !found {
+								erri := fmt.Errorf("service/section %s not found", service)
+								_, _ = log.ErrPP.Printf("%s\n\n\n", erri)
+								err = errors.Join(err, erri)
+							}
+						}
+					} else {
+						for _, configFactory := range configFactoryList {
+							configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
+							if erri != nil {
+								_, _ = log.ErrPP.Println(erri)
+								err = errors.Join(err, erri)
+							}
+							_, _ = log.InfoPP.Println(configStr.Content)
+						}
+					}
+					return err
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "all",
+						Aliases: []string{"a", "A"},
+						Value:   false,
+						Usage:   "show all available services/sections configuration",
+					},
+					logFlag,
+					cpuProfilingFlag,
+					memProfilingFlag,
+				},
+				Subcommands: []*cli.Command{
+					{
+						Name:  "ls",
+						Usage: "list all available services/sections",
+						Action: func(c *cli.Context) error {
+							err := checkLog(logLevel)
+							if err != nil {
+								return err
+							}
+							for _, configFactory := range configFactoryList {
+								_, _ = log.InfoPP.Println(configFactory.GetName())
+							}
+							return nil
+						},
+						Flags: []cli.Flag{
+							logFlag,
+							cpuProfilingFlag,
+							memProfilingFlag,
+						},
+					},
 				},
 			},
 		},
