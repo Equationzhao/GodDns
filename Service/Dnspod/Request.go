@@ -110,7 +110,7 @@ func (r *Request) RequestThroughProxy() error {
 
 	s := &resOfddns{}
 
-	content := ""
+	var content string
 	select {
 	case <-done:
 		if err != nil || status.Status != core.Success {
@@ -166,6 +166,9 @@ func (r *Request) RequestThroughProxy() error {
 		}
 	}
 	r.status = *code2status(s.Status.Code)
+	if s.Status.Message == "" {
+		s.Status.Message = "Fatal"
+	}
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 	if r.status.Status == core.Success {
 		r.status.MG.AddInfo(resultMsg)
@@ -234,6 +237,9 @@ func (r *Request) MakeRequest() error {
 	_ = json.Unmarshal(response.Body(), s)
 	log.Debugf("after marshall:%+v", s)
 	r.status = *code2status(s.Status.Code)
+	if s.Status.Message == "" {
+		s.Status.Message = "Fatal"
+	}
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 	if r.status.Status == core.Success {
 		r.status.MG.AddInfo(resultMsg)
@@ -271,6 +277,9 @@ func (r *Request) GetRecordId() (core.Status, error) {
 	log.Debugf("after marshall:%s", s)
 	status := *code2status(s.Status.Code)
 	if err != nil {
+		if s.Status.Message == "" {
+			s.Status.Message = "Fatal"
+		}
 		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return status, err
 	}

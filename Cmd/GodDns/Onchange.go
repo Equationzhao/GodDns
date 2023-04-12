@@ -136,7 +136,7 @@ func StartIpChangeDaemon(ps []*core.Parameters) {
 		wg.Add(len(services))
 		_, _ = c.AddFunc(fmt.Sprintf("@every %s", scanGap.String()), func() {
 			defer core.CatchPanic(output)
-			Log.Info("checking ip change for device", Log.String("device", d).String())
+			Log.Info("checking ip change ", Log.String("device", d).String())
 			res := [4]int{0, 0, 0, 0}
 			{
 				var handledIp []string
@@ -160,7 +160,7 @@ func StartIpChangeDaemon(ps []*core.Parameters) {
 						goto AAAA
 					}
 					if OldIp.GetFirst() == handledIp[0] {
-						Log.Info("ip not changed", "ip", OldIp.GetFirst())
+						Log.Info("ip not changed ", Log.String("ip", OldIp.GetFirst()).String())
 						goto AAAA
 					}
 					Log.Info("ip changed", Log.String("old", OldIp.GetFirst()).String(), Log.String("new", handledIp[0]).String())
@@ -172,14 +172,14 @@ func StartIpChangeDaemon(ps []*core.Parameters) {
 			{
 				ip, err := Net.GetIpByType(d, Net.AAAA)
 				if err != nil {
-					Log.Error("error getting ip", Log.String("error", err.Error()).String())
+					Log.Error("error getting ip ", Log.String("error", err.Error()).String())
 				}
 				handledIp, err := Net.HandleIp(ip)
 				if err != nil {
-					Log.Error("error handle ip: ", Log.String("error", err.Error()).String())
+					Log.Error("error handle ip ", Log.String("error", err.Error()).String())
 				}
 				if len(handledIp) == 0 {
-					Log.Info("no ip left, please check ip handler or network", "device", d)
+					Log.Info("no ip left, please check ip handler or network ", Log.String("device", d).String())
 					goto END
 				}
 
@@ -188,7 +188,7 @@ func StartIpChangeDaemon(ps []*core.Parameters) {
 						goto END
 					}
 					if OldIp.GetSecond() == handledIp[0] {
-						Log.Info("ip not changed", "ip", OldIp.GetSecond())
+						Log.Info("ip not changed ", Log.String("ip", OldIp.GetSecond()).String())
 						goto END
 					}
 					sendSignal(OldIp, handledIp, changedSignal, services, serviceResult, &res,
@@ -262,9 +262,9 @@ func StartIpChangeDaemon(ps []*core.Parameters) {
 	_ = core.MainGoroutinePool.Submit(func() {
 		for {
 			<-save
-			log.Info("save from cron")
+			log.Debug("save from cron")
 
-			log.Debug("services:", "all", ps)
+			log.Debug("services: ", Log.Any("all", ps).String())
 			toSave := make([]core.Parameters, 0, len(ps))
 			for _, p := range ps {
 				toSave = append(toSave, *p)

@@ -72,7 +72,7 @@ func checkLog(l string) error {
 	case "Error", "error", "ERROR":
 		_, err := log.InitLog("DDNS.log", 0o666, l, output)
 		if err != nil {
-			log.Error("failed to init log file ", log.String("error", err.Error()))
+			log.Error("failed to init log file ", log.String("error", err.Error()).String())
 			return err
 		}
 		isLogSet = true
@@ -113,7 +113,7 @@ func main() {
 			programConfig, fatal, warn := core.LoadProgramConfig(location)
 			if fatal != nil {
 				// default setup
-				_, _ = log.ErrPP.Fprintln(output, "error loading program config: ", err, " use default config")
+				_, _ = log.ErrPP.Fprintln(output, "error loading program config, use default config")
 				_, _ = log.ErrPP.Fprintln(output, fatal.Error())
 				core.DefaultConfig.Setup()
 			} else {
@@ -380,7 +380,7 @@ func main() {
 						for _, service := range services {
 							found := false
 							for _, configFactory := range configFactoryList {
-								if strings.ToLower(configFactory.GetName()) == strings.ToLower(service) {
+								if strings.EqualFold(configFactory.GetName(), service) {
 									found = true
 									configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
 									if erri != nil {
@@ -394,7 +394,7 @@ func main() {
 							}
 							if !found {
 								erri := fmt.Errorf("service/section %s not found", service)
-								_, _ = log.ErrPP.Println(erri, "\n\n\n")
+								_, _ = log.ErrPP.Printf("%s\n\n\n", erri)
 								err = errors.Join(err, erri)
 							}
 						}

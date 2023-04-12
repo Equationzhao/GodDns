@@ -27,9 +27,9 @@ func init() {
 		_ = core.MainGoroutinePool.Submit(func() {
 			CheckVersionUpgrade(msg)
 		})
-		fmt.Println(core.NowVersionInfo())
+		_, _ = fmt.Println(core.NowVersionInfo())
 
-		fmt.Println(func() string {
+		_, _ = fmt.Println(func() string {
 			{
 				info, err := os.Stat(os.Args[0])
 				if err != nil {
@@ -106,7 +106,7 @@ var (
 				return err
 			}
 			if t.Seconds() < MINTIMEGAP {
-				return errors.New("time gap is too short, should be more than 5 seconds")
+				return errors.New("time gap is too short, should >= 5 seconds")
 			}
 			core.UniversalConfig[core.OcScanTime] = t
 			return nil
