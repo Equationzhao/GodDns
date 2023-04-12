@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -55,58 +54,8 @@ var (
 	isLogSet          bool
 	onChange          bool
 	memProfiling      bool
+	box               bool
 )
-
-func init() {
-	cli.VersionFlag = &cli.BoolFlag{
-		Name:               "version",
-		Aliases:            []string{"v", "V"},
-		Usage:              "print the version info/upgrade info",
-		DisableDefaultText: true,
-	}
-
-	cli.VersionPrinter = func(c *cli.Context) {
-		msg := make(chan string, 2)
-		_ = core.MainGoroutinePool.Submit(func() {
-			CheckVersionUpgrade(msg)
-		})
-		fmt.Println(core.NowVersionInfo())
-
-		fmt.Println(func() string {
-			{
-				info, err := os.Stat(os.Args[0])
-				if err != nil {
-					return ""
-				}
-				t := info.ModTime().Local()
-				return fmt.Sprintf("compiled at %s", t.Format(time.RFC3339))
-			}
-		}())
-		for i := 0; i < 2; i++ {
-			select {
-			case s := <-msg:
-				if s != "" {
-					_, _ = log.DebugPP.Println(s) // use debug pretty print for green color
-				}
-			case <-time.After(2 * time.Second):
-				return
-			}
-		}
-	}
-
-	cli.HelpFlag = &cli.BoolFlag{
-		Name:               "help",
-		Aliases:            []string{"h", "H"},
-		Usage:              "show help",
-		DisableDefaultText: true,
-	}
-
-	var err error
-	defaultLocation, err = core.GetDefaultConfigurationLocation()
-	if err != nil {
-		defaultLocation = "./DDNS.conf"
-	}
-}
 
 func checkLog(l string) error {
 	switch l {
@@ -125,7 +74,6 @@ func checkLog(l string) error {
 			return err
 		}
 		isLogSet = true
-		// cleanUp = clean
 		return nil
 	default:
 		return errors.New("invalid log level")
@@ -260,6 +208,7 @@ func main() {
 					proxyFlag,
 					cpuProfilingFlag,
 					memProfilingFlag,
+					boxFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
@@ -279,6 +228,7 @@ func main() {
 							proxyFlag,
 							cpuProfilingFlag,
 							memProfilingFlag,
+							boxFlag,
 						},
 						Action: func(context *cli.Context) error {
 							err := checkLog(logLevel)
@@ -338,6 +288,7 @@ func main() {
 									proxyFlag,
 									cpuProfilingFlag,
 									memProfilingFlag,
+									boxFlag,
 								},
 								Action: func(context *cli.Context) error {
 									err := checkLog(logLevel)

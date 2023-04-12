@@ -189,10 +189,10 @@ func LoadProgramConfig(file string) (programConfig *ProgramConfig, Fatal error, 
 	NoColor := os.Getenv("NO_COLOR")
 	if NoColor != "" {
 		// disable coloring
-		log.InfoPP.SetColoringEnabled(false)
-		log.WarnPP.SetColoringEnabled(false)
-		log.DebugPP.SetColoringEnabled(false)
-		log.ErrPP.SetColoringEnabled(false)
+		log.InfoPP.Disable = true
+		log.WarnPP.Disable = true
+		log.DebugPP.Disable = true
+		log.ErrPP.Disable = true
 	}
 
 	// load from file

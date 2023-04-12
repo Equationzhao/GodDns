@@ -6,90 +6,69 @@ import (
 	"os"
 	"time"
 
-	"github.com/k0kubun/pp/v3"
 	log "golang.org/x/exp/slog"
 )
 
+type Color = string
+
+const (
+	Red              = "\x1b[31m"
+	Green            = "\x1b[32m"
+	Yellow           = "\x1b[33m"
+	White            = "\x1b[37m"
+	DefaultColor     = White
+	BackgroundPurple = "\x1b[45m"
+)
+
+type ColoredPrinter struct {
+	Color   Color
+	Disable bool
+}
+
+func (gp ColoredPrinter) Printf(format string, args ...interface{}) (int, error) {
+	if gp.Disable {
+		return fmt.Printf(format, args...)
+	}
+	return fmt.Printf(gp.Color+format+"\x1b[0m", args...)
+}
+
+func (gp ColoredPrinter) Println(args ...interface{}) (int, error) {
+	if gp.Disable {
+		return fmt.Println(args...)
+	}
+	return fmt.Println(gp.Color + fmt.Sprint(args...) + "\x1b[0m")
+}
+
+func (gp ColoredPrinter) Fprintf(writer io.Writer, format string, args ...interface{}) (int, error) {
+	if gp.Disable {
+		return fmt.Fprintf(writer, format, args...)
+	}
+	return fmt.Fprintf(writer, gp.Color+format+"\x1b[0m", args...)
+}
+
+func (gp ColoredPrinter) Fprintln(writer io.Writer, args ...interface{}) (int, error) {
+	if gp.Disable {
+		return fmt.Fprintln(writer, args...)
+	}
+	return fmt.Fprintln(writer, gp.Color+fmt.Sprint(args...)+"\x1b[0m")
+}
+
 var (
-	SuccessPP = pp.New()
+	SuccessPP = ColoredPrinter{Color: Green}
 	// InfoPP is a pretty printer for info with default color(white)
-	InfoPP = pp.Default
+	InfoPP = ColoredPrinter{Color: DefaultColor}
 	// ErrPP is a pretty printer for error with red color
-	ErrPP = pp.New()
+	ErrPP = ColoredPrinter{Color: Red}
 	// WarnPP is a pretty printer for warning with yellow color
-	WarnPP = pp.New()
+	WarnPP = ColoredPrinter{Color: Yellow}
 	// DebugPP is a pretty printer for debug with green color
-	DebugPP = pp.New()
+	DebugPP = ColoredPrinter{Color: BackgroundPurple}
 )
 
 var (
 	output []io.Writer
 	level  log.Level
 )
-
-func init() {
-	pp.Default.SetColoringEnabled(false)
-
-	DebugPP.SetColorScheme(pp.ColorScheme{
-		Bool:            pp.Bold | pp.BackgroundMagenta | pp.Black,
-		Integer:         pp.Bold | pp.BackgroundMagenta | pp.Black,
-		Float:           pp.Bold | pp.BackgroundMagenta | pp.Black,
-		String:          pp.Bold | pp.BackgroundMagenta | pp.Black,
-		StringQuotation: pp.Bold | pp.BackgroundMagenta | pp.Black,
-		EscapedChar:     pp.Bold | pp.BackgroundMagenta | pp.Black,
-		FieldName:       pp.Bold | pp.BackgroundMagenta | pp.Black,
-		PointerAdress:   pp.Bold | pp.BackgroundMagenta | pp.Black,
-		Nil:             pp.Bold | pp.BackgroundMagenta | pp.Black,
-		Time:            pp.Bold | pp.BackgroundMagenta | pp.Black,
-		StructName:      pp.Bold | pp.BackgroundMagenta | pp.Black,
-		ObjectLength:    pp.Bold | pp.BackgroundMagenta | pp.Black,
-	})
-
-	ErrPP.SetColorScheme(pp.ColorScheme{
-		Bool:            pp.Bold | pp.Red,
-		Integer:         pp.Bold | pp.Red,
-		Float:           pp.Bold | pp.Red,
-		String:          pp.Bold | pp.Red,
-		StringQuotation: pp.Bold | pp.Red,
-		EscapedChar:     pp.Bold | pp.Red,
-		FieldName:       pp.Bold | pp.Red,
-		PointerAdress:   pp.Bold | pp.Red,
-		Nil:             pp.Bold | pp.Red,
-		Time:            pp.Bold | pp.Red,
-		StructName:      pp.Bold | pp.Red,
-		ObjectLength:    pp.Bold | pp.Red,
-	})
-
-	WarnPP.SetColorScheme(pp.ColorScheme{
-		Bool:            pp.Bold | pp.Yellow,
-		Integer:         pp.Bold | pp.Yellow,
-		Float:           pp.Bold | pp.Yellow,
-		String:          pp.Bold | pp.Yellow,
-		StringQuotation: pp.Bold | pp.Yellow,
-		EscapedChar:     pp.Bold | pp.Yellow,
-		FieldName:       pp.Bold | pp.Yellow,
-		PointerAdress:   pp.Bold | pp.Yellow,
-		Nil:             pp.Bold | pp.Yellow,
-		Time:            pp.Bold | pp.Yellow,
-		StructName:      pp.Bold | pp.Yellow,
-		ObjectLength:    pp.Bold | pp.Yellow,
-	})
-
-	SuccessPP.SetColorScheme(pp.ColorScheme{
-		Bool:            pp.Bold | pp.Green,
-		Integer:         pp.Bold | pp.Green,
-		Float:           pp.Bold | pp.Green,
-		String:          pp.Bold | pp.Green,
-		StringQuotation: pp.Bold | pp.Green,
-		EscapedChar:     pp.Bold | pp.Green,
-		FieldName:       pp.Bold | pp.Green,
-		PointerAdress:   pp.Bold | pp.Green,
-		Nil:             pp.Bold | pp.Green,
-		Time:            pp.Bold | pp.Green,
-		StructName:      pp.Bold | pp.Green,
-		ObjectLength:    pp.Bold | pp.Green,
-	})
-}
 
 // TxtTo sets the output destination for a new logger and return it
 // You can set the output destination to any io.Writer,
@@ -176,7 +155,7 @@ func toOutput(l log.Level, v ...any) {
 				_, _ = DebugPP.Fprintln(mw, v...)
 
 			default:
-				_, _ = pp.Fprintln(mw, v...)
+				_, _ = InfoPP.Fprintln(mw, v...)
 			}
 		}
 	}

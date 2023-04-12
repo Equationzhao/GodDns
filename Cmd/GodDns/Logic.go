@@ -6,8 +6,12 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 
 	"GodDns/Device"
 	log "GodDns/Log"
@@ -477,18 +481,43 @@ func GenerateExecuteSave(parameters []*core.Parameters) error {
 }
 
 func Display(request core.Request, output io.Writer) {
-	_, _ = log.InfoPP.Fprintln(output,
-		fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+	if box {
+		PrintInTable(request, output)
+	} else {
+		PrintDefault(request, output)
+	}
+}
 
+func DisplayAll(output io.Writer, requests ...core.Request) {
+	for _, request := range requests {
+		Display(request, output)
+		_, _ = fmt.Fprintln(output)
+	}
+}
+
+func PrintDefault(request core.Request, output io.Writer) {
 	serviceInfo := request.Status().MG.GetMsgOf(core.Info)
+	serviceErr := request.Status().MG.GetMsgOf(core.Error)
+	serviceWarn := request.Status().MG.GetMsgOf(core.Warn)
+
+	switch {
+	case len(serviceErr) > 0:
+		_, _ = log.ErrPP.Fprintln(output,
+			fmt.Sprint("error executing request ", request.GetName(), " at ", request.Target()))
+	case len(serviceWarn) > 0:
+		_, _ = log.WarnPP.Fprintln(output,
+			fmt.Sprint("warning executing request ", request.GetName(), " at ", request.Target()))
+	default:
+		_, _ = log.InfoPP.Fprintln(output,
+			fmt.Sprint("displaying message from Service ", request.GetName(), " at ", request.Target()))
+	}
+
 	if len(serviceInfo) > 0 {
 		for _, i := range serviceInfo {
 			_, _ = log.SuccessPP.Fprintln(output, i)
 		}
 	}
 
-	serviceErr := request.Status().MG.GetMsgOf(core.Error)
-	serviceWarn := request.Status().MG.GetMsgOf(core.Warn)
 	if len(serviceErr) > 0 {
 		for _, e := range serviceErr {
 			_, _ = log.ErrPP.Fprintln(output, e)
@@ -501,11 +530,70 @@ func Display(request core.Request, output io.Writer) {
 	}
 }
 
-func DisplayAll(output io.Writer, requests ...core.Request) {
-	for _, request := range requests {
-		Display(request, output)
-		_, _ = fmt.Fprintln(output)
+func PrintInTable(request core.Request, output io.Writer) {
+	t := table.NewWriter()
+	t.SetOutputMirror(output)
+	t.SetTitle(request.GetName())
+	status := "OK"
+	if request.Status().Status != core.Success {
+		status = "Fail"
 	}
+	TitleColor := text.Colors{text.FgGreen}
+	header := table.Row{"Service", "Status", "Target", "IP"}
+	content := table.Row{
+		request.GetName(),
+		status,
+		request.Target(),
+		request.ToParameters().GetIP(),
+	}
+
+	infoMsg := request.Status().MG.GetMsgOf(core.Info)
+	if len(infoMsg) != 0 {
+		TitleColor = text.Colors{text.FgRed}
+		header = append(header, "Info")
+		content = append(content, strings.Join(request.Status().MG.GetMsgOf(core.Info), "\n"))
+	}
+
+	errorsMsg := request.Status().MG.GetMsgOf(core.Error)
+	if len(errorsMsg) != 0 {
+		TitleColor = text.Colors{text.FgRed}
+		header = append(header, "Error")
+		content = append(content, strings.Join(request.Status().MG.GetMsgOf(core.Error), "\n"))
+	}
+
+	warnMsg := request.Status().MG.GetMsgOf(core.Warn)
+	if len(warnMsg) != 0 {
+		header = append(header, "Warn")
+		content = append(content, strings.Join(request.Status().MG.GetMsgOf(core.Warn), "\n"))
+	}
+
+	t.AppendHeader(header)
+	t.AppendRow(content)
+
+	t.SetStyle(
+		table.Style{
+			Name:  "result display",
+			Box:   table.StyleBoxBold,
+			Color: table.ColorOptionsDark,
+			Format: table.FormatOptions{
+				Header: text.FormatTitle,
+				Row:    text.FormatLower,
+			},
+			Options: table.Options{
+				DoNotColorBordersAndSeparators: true,
+				DrawBorder:                     true,
+				SeparateColumns:                true,
+				SeparateFooter:                 false,
+				SeparateHeader:                 false,
+				SeparateRows:                   false,
+			},
+			Title: table.TitleOptions{
+				Align:  text.AlignCenter,
+				Colors: TitleColor,
+				Format: text.FormatTitle,
+			},
+		})
+	t.Render()
 }
 
 func GenerateConfigure(configFactoryList []core.ConfigFactory) error {
