@@ -74,8 +74,13 @@ COMMANDS:
 COMMANDS:
    generate, g, G  generate a default configuration file
    help, h         Shows a list of commands or help for one command
-
+   show-config, sc, SC  show the configuration of a service/section *case insensitive*
+   show-config ls       list all available services/sections
+   help, h              Shows a list of commands or help for one command
+   
 OPTIONS:
+   --all, -a, -A  show all available services/sections configuration (default: false)
+
    CONFIG
 
    --config file, -c file, -C file, --Config file  set configuration file

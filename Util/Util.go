@@ -120,7 +120,7 @@ func Convert2KeyValue(format string, i any) string {
 		}
 
 		if comments != "" {
-			content.WriteString(fmt.Sprintf(" # %s", comments))
+			content.WriteString(fmt.Sprintf("# %s", comments))
 			content.WriteByte('\n')
 			content.WriteString(fmt.Sprintf(format, name, vfiledi))
 			content.WriteByte('\n')
