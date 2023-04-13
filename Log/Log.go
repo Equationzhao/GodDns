@@ -25,6 +25,13 @@ type ColoredPrinter struct {
 	Disable bool
 }
 
+func (gp ColoredPrinter) Sprint(args ...any) string {
+	if gp.Disable {
+		return fmt.Sprint(args...)
+	}
+	return fmt.Sprint(gp.Color + fmt.Sprint(args...) + "\x1b[0m")
+}
+
 func (gp ColoredPrinter) Printf(format string, args ...interface{}) (int, error) {
 	if gp.Disable {
 		return fmt.Printf(format, args...)

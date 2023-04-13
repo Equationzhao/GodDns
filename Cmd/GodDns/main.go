@@ -56,7 +56,8 @@ var (
 	isLogSet          bool
 	onChange          bool
 	memProfiling      bool
-	box               bool
+	tab               bool
+	md                bool
 )
 
 func checkLog(l string) error {
@@ -171,6 +172,7 @@ func main() {
 					}
 
 					for _, p := range parametersTemp {
+						p := p
 						parameters = append(parameters, &p)
 					}
 
@@ -210,6 +212,7 @@ func main() {
 					cpuProfilingFlag,
 					memProfilingFlag,
 					boxFlag,
+					mdFlag,
 				},
 				Subcommands: []*cli.Command{
 					{
@@ -230,6 +233,7 @@ func main() {
 							cpuProfilingFlag,
 							memProfilingFlag,
 							boxFlag,
+							mdFlag,
 						},
 						Action: func(context *cli.Context) error {
 							err := checkLog(logLevel)
@@ -290,6 +294,7 @@ func main() {
 									cpuProfilingFlag,
 									memProfilingFlag,
 									boxFlag,
+									mdFlag,
 								},
 								Action: func(context *cli.Context) error {
 									err := checkLog(logLevel)

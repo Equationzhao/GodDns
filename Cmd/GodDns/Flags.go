@@ -267,7 +267,16 @@ var (
 		Aliases:     []string{"tb", "table", "pit"},
 		DefaultText: "disabled",
 		Usage:       "print result in table **may render incorrectly in some terminals**",
-		Destination: &box,
+		Destination: &tab,
+		Category:    "OUTPUT",
+	}
+
+	mdFlag = &cli.BoolFlag{
+		Name:        "print-in-markdown",
+		Aliases:     []string{"md", "markdown", "pim"},
+		DefaultText: "disabled",
+		Usage:       "print result in markdown",
+		Destination: &md,
 		Category:    "OUTPUT",
 	}
 )
