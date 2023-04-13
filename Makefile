@@ -5,7 +5,7 @@ OS=$(shell go env GOOS)
 Linux = linux
 Windows = windows
 
-all: tool check clean build
+all: tool check clean build install
 
 .PHONY: fmt
 fmt: ## Format the code
@@ -21,9 +21,12 @@ vet: ## Vet the code
 lint:
 	golangci-lint run
 
-.PHONY: check
-check: fmt vet lint ## Run all the checks
+.PHONY: mod
+mod:
 	go mod tidy
+
+.PHONY: check
+check: mod fmt vet lint ## Run all the checks
 
 .PHONY: tool
 tool: ## Install the tools
