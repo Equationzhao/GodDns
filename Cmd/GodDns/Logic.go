@@ -10,15 +10,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
-
+	// GodDns
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Net"
+	"GodDns/Util"
 	"GodDns/Util/Collections"
 	"GodDns/core"
 
+	// 3rd party
+	"github.com/charmbracelet/glamour"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/robfig/cron/v3"
 )
 
@@ -61,6 +64,9 @@ func ModeController(ps []*core.Parameters, GlobalDevice *Device.Device) error {
 func RunDDNS(parameters []*core.Parameters) error {
 	log.Debugf("run ddns")
 	// run ddns here
+
+	// todo check ip and type
+	// if not match, error
 
 	return GenerateExecuteSave(parameters)
 }
@@ -481,9 +487,12 @@ func GenerateExecuteSave(parameters []*core.Parameters) error {
 }
 
 func Display(request core.Request, output io.Writer) {
-	if box {
+	switch {
+	case tab:
 		PrintInTable(request, output)
-	} else {
+	case md:
+		PrintMD(request, output)
+	default:
 		PrintDefault(request, output)
 	}
 }
@@ -531,8 +540,67 @@ func PrintDefault(request core.Request, output io.Writer) {
 }
 
 func PrintInTable(request core.Request, output io.Writer) {
-	t := table.NewWriter()
+	t := GetTableObj(request)
 	t.SetOutputMirror(output)
+	t.Render()
+}
+
+func PrintMD(request core.Request, output io.Writer) {
+	var content *strings.Builder
+	if Util.StrBuilderPoolEnable {
+		content = Util.StrBuilderPool.Get().(*strings.Builder)
+		defer content.Reset()
+		defer Util.StrBuilderPool.Put(content)
+	} else {
+		content = &strings.Builder{}
+	}
+	defer Util.StrBuilderPool.Put(content)
+	content.WriteString("# ")
+	content.WriteString(request.GetName())
+	content.WriteString(" at ")
+	content.WriteString(request.Target())
+	content.WriteByte('\n')
+
+	infoMsg := request.Status().MG.GetMsgOf(core.Info)
+	if len(infoMsg) != 0 {
+		content.WriteString("## 🚩Info\n")
+		content.WriteString(strings.Join(request.Status().MG.GetMsgOf(core.Info), "\n"))
+	}
+
+	errorsMsg := request.Status().MG.GetMsgOf(core.Error)
+	if len(errorsMsg) != 0 {
+		content.WriteString("## ❌ Error\n")
+		e := request.Status().MG.GetMsgOf(core.Error)
+		for _, i := range e {
+			content.WriteString(i)
+			content.WriteByte('\n')
+		}
+	}
+
+	warnMsg := request.Status().MG.GetMsgOf(core.Warn)
+	if len(warnMsg) != 0 {
+		content.WriteString("## ⚠️ Warn\n")
+		e := request.Status().MG.GetMsgOf(core.Warn)
+		for _, i := range e {
+			content.WriteString(i)
+			content.WriteByte('\n')
+		}
+	}
+
+	renderer, _ := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithEmoji(),
+	)
+
+	out, err := renderer.Render(content.String())
+	if err != nil {
+		panic(err)
+	}
+	_, _ = log.InfoPP.Fprintln(output, out)
+}
+
+func GetTableObj(request core.Request) table.Writer {
+	t := table.NewWriter()
 	t.SetTitle(request.GetName())
 	status := "OK"
 	if request.Status().Status != core.Success {
@@ -593,7 +661,7 @@ func PrintInTable(request core.Request, output io.Writer) {
 				Format: text.FormatTitle,
 			},
 		})
-	t.Render()
+	return t
 }
 
 func GenerateConfigure(configFactoryList []core.ConfigFactory) error {
@@ -743,7 +811,7 @@ func GenerateRequests(parameters []*core.Parameters) []core.Request {
 }
 
 func GenerateDefaultConfigure(ConfigFactories ...core.ConfigFactory) error {
-	var infos []core.ConfigStr
+	infos := make([]core.ConfigStr, 0, len(ConfigFactories))
 	var err error
 	for _, factory := range ConfigFactories {
 		info, errTemp := factory.Get().GenerateDefaultConfigInfo()
@@ -781,7 +849,11 @@ func RunPerTime(Time uint64, GlobalDevice *Device.Device, parameters []*core.Par
 		TimesLimitation = MAXTIMES
 	}
 	newServiceCronJob.SetTimes(TimesLimitation)
-	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time), cron.NewChain(cron.Recover(logger), cron.DelayIfStillRunning(cron.DefaultLogger)).Then(newServiceCronJob))
+	_, err = c.AddJob(fmt.Sprintf("@every %ds", Time),
+		cron.NewChain(cron.Recover(logger),
+			cron.DelayIfStillRunning(cron.DefaultLogger)).
+			Then(newServiceCronJob))
+
 	if err != nil {
 		log.Errorf("error adding job : %s", err.Error())
 	}
@@ -840,7 +912,8 @@ func CheckVersionUpgrade(msg chan<- string) {
 			// "no suitable version"
 			if hasUpgrades {
 				msg <- fmt.Sprintf("new version %s is available", v.Info())
-				msg <- fmt.Sprintf("no compatible release for your operating system, consider building from source:%s ", core.RepoURLs())
+				msg <- fmt.Sprintf(`no compatible release for your operating system, 
+							consider building from source:%s `, core.RepoURLs())
 			} else {
 				// "already the latest version"
 				msg <- ""
