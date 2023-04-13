@@ -20,6 +20,8 @@ const (
 	RecordListUrl = "https://dnsapi.cn/Record.List"
 	// DDNSURL  url of DDNS
 	DDNSURL = "https://dnsapi.cn/Record.Ddns"
+
+	fatalStr = "Fatal"
 )
 
 type empty struct{}
@@ -167,7 +169,7 @@ func (r *Request) RequestThroughProxy() error {
 	}
 	r.status = *code2status(s.Status.Code)
 	if s.Status.Message == "" {
-		s.Status.Message = "Fatal"
+		s.Status.Message = fatalStr
 	}
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 	if r.status.Status == core.Success {
@@ -238,7 +240,7 @@ func (r *Request) MakeRequest() error {
 	log.Debugf("after marshall:%+v", s)
 	r.status = *code2status(s.Status.Code)
 	if s.Status.Message == "" {
-		s.Status.Message = "Fatal"
+		s.Status.Message = fatalStr
 	}
 	resultMsg := fmt.Sprintf("%s at %s %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain(), s.Record.Value)
 	if r.status.Status == core.Success {
@@ -278,7 +280,7 @@ func (r *Request) GetRecordId() (core.Status, error) {
 	status := *code2status(s.Status.Code)
 	if err != nil {
 		if s.Status.Message == "" {
-			s.Status.Message = "Fatal"
+			s.Status.Message = fatalStr
 		}
 		status.MG.AddError(fmt.Sprintf("%s at %s %s", s.Status.Message, s.Status.CreatedAt, r.parameters.getTotalDomain()))
 		return status, err
