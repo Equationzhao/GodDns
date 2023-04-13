@@ -7,11 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"GodDns/core"
-
 	log "GodDns/Log"
 	"GodDns/Net"
 	json "GodDns/Util/Json"
+	"GodDns/core"
 	"github.com/go-resty/resty/v2"
 )
 

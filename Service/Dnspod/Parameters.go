@@ -1,6 +1,7 @@
 package Dnspod
 
 import "C"
+
 import (
 	"GodDns/Net"
 	"GodDns/core"

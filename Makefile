@@ -22,14 +22,20 @@ lint:
 	golangci-lint run
 
 .PHONY: check
-check: fmt vet lint ## Run all the checks
+check: fmt vet lint gci ## Run all the checks
 	go mod tidy
+
+.PHONY: gci
+gci: ## Run gci
+	$(info Running gci)
+	gci write .
 
 .PHONY: tool
 tool: ## Install the tools
 	$(info Installing the tools)
 	go install mvdan.cc/gofumpt@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/daixiang0/gci@latest
 
 
 build: ## Build the binary

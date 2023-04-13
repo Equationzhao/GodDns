@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"GodDns/core"
-
 	"gopkg.in/ini.v1"
 )
 

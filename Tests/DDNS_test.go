@@ -5,9 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"GodDns/core"
-
 	"GodDns/Service/Dnspod"
+	"GodDns/core"
 )
 
 func TestConfigFileLocation(t *testing.T) {

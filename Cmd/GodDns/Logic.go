@@ -17,7 +17,6 @@ import (
 	"GodDns/Util"
 	"GodDns/Util/Collections"
 	"GodDns/core"
-
 	// 3rd party
 	"github.com/charmbracelet/glamour"
 	"github.com/jedib0t/go-pretty/v6/table"

@@ -11,12 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"GodDns/core"
-
 	"GodDns/Device"
 	log "GodDns/Log"
 	_ "GodDns/Service" // register all services
-
+	"GodDns/core"
 	"github.com/panjf2000/ants/v2"
 	"github.com/urfave/cli/v2"
 )

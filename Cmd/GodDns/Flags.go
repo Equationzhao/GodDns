@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "GodDns/Log"
-
 	"GodDns/Net"
 	"GodDns/core"
 	"github.com/urfave/cli/v2"

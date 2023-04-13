@@ -7,14 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"GodDns/Util/Collections"
-
 	"GodDns/Device"
 	"GodDns/Log"
 	log "GodDns/Log"
 	"GodDns/Net"
+	"GodDns/Util/Collections"
 	"GodDns/core"
-
 	"github.com/robfig/cron/v3"
 )
 
