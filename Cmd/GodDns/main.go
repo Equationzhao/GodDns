@@ -11,10 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"GodDns/core"
+
 	"GodDns/Device"
 	log "GodDns/Log"
 	_ "GodDns/Service" // register all services
-	"GodDns/core"
+
+	"github.com/charmbracelet/glamour"
 	"github.com/panjf2000/ants/v2"
 	"github.com/urfave/cli/v2"
 )
@@ -386,13 +389,28 @@ func main() {
 								if strings.EqualFold(configFactory.GetName(), service) {
 									found = true
 									configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
-									if erri != nil {
-										_, _ = log.ErrPP.Println(erri)
-										err = errors.Join(err, erri)
+									if !md {
+										if erri != nil {
+											_, _ = log.ErrPP.Println(erri)
+											err = errors.Join(err, erri)
+											break
+										}
+										_, _ = log.InfoPP.Println(configStr.Content)
+										break
+									} else {
+										configStr.Content = "# " + configFactory.GetName() + "\n" + strings.ReplaceAll(strings.ReplaceAll(configStr.Content, "#", "##"), "\n", "\n\n")
+										renderer, _ := glamour.NewTermRenderer(
+											glamour.WithAutoStyle(),
+											glamour.WithEmoji(),
+										)
+										out, err := renderer.Render(configStr.Content)
+										if err != nil {
+											return err
+										}
+										_, _ = log.InfoPP.Fprintln(output, out)
 										break
 									}
-									_, _ = log.InfoPP.Println(configStr.Content)
-									break
+
 								}
 							}
 							if !found {
@@ -420,6 +438,7 @@ func main() {
 						Value:   false,
 						Usage:   "show all available services/sections configuration",
 					},
+					mdFlag,
 					logFlag,
 					cpuProfilingFlag,
 					memProfilingFlag,
