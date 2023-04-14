@@ -269,7 +269,7 @@ func GetApp(configFactoryList []core.ConfigFactory, parameters []*core.Parameter
 					if !all {
 						services := c.Args().Slice()
 						if len(services) == 0 {
-							return errors.New("at least one service/section name is required")
+							return showContent()
 						}
 						Collections.RemoveDuplicate(&services)
 						var out string
