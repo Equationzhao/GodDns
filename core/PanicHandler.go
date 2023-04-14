@@ -21,6 +21,7 @@ var Errchan = make(chan error, 1)
 
 var MainPanicHandler = NewPanicHandler()
 
+// CatchPanic catches panic in **current goroutine** and print it to output with stack trace
 func CatchPanic(output io.Writer) {
 	if err := recover(); err != nil {
 		MainPanicHandler.Receive(err, debug.Stack())
@@ -28,6 +29,7 @@ func CatchPanic(output io.Writer) {
 	}
 }
 
+// PrintPanic prints panic to output with stack trace
 func PrintPanic(output io.Writer, e chan error) {
 	_, _ = fmt.Fprintln(output, "version: ", NowVersion)
 	_, _ = fmt.Fprintln(output, "panic: ", MainPanicHandler)

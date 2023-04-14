@@ -23,9 +23,10 @@ lint:
 
 .PHONY: mod
 mod:
-.PHONY: check
-check: fmt vet lint gci ## Run all the checks
 	go mod tidy
+
+.PHONY: check
+check: mod fmt vet lint gci ## Run all the checks
 
 .PHONY: gci
 gci: ## Run gci

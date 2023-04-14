@@ -2,24 +2,19 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"runtime/pprof"
-	"strings"
+	"sync"
 	"syscall"
 	"time"
-
-	"GodDns/core"
 
 	"GodDns/Device"
 	log "GodDns/Log"
 	_ "GodDns/Service" // register all services
-
+	"GodDns/core"
 	"github.com/charmbracelet/glamour"
 	"github.com/panjf2000/ants/v2"
-	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -37,7 +32,7 @@ const (
 )
 
 func init() {
-	core.MainGoroutinePool, _ = ants.NewPool(200, ants.WithNonblocking(true))
+	core.MainGoroutinePool, _ = ants.NewPool(200, ants.WithNonblocking(false))
 }
 
 // global variables
@@ -60,6 +55,23 @@ var (
 	tab               bool
 	md                bool
 )
+
+var (
+	mdRenderer sync.Once
+	renderer   *glamour.TermRenderer
+)
+
+func GetMDRenderer() *glamour.TermRenderer {
+	mdRenderer.Do(
+		func() {
+			renderer, _ = glamour.NewTermRenderer(
+				glamour.WithAutoStyle(),
+				glamour.WithEmoji(),
+			)
+		},
+	)
+	return renderer
+}
 
 func checkLog(l string) error {
 	switch l {
@@ -137,347 +149,13 @@ func main() {
 		}
 	}
 
-	app := &cli.App{
-		Name:     core.FullName,
-		Usage:    "A DDNS tool written in Go",
-		Version:  core.NowVersion.Info(),
-		Compiled: time.Now(),
-		Authors: []*cli.Author{
-			{
-				Name:  core.Author,
-				Email: core.FeedbackEmail(),
-			},
-		},
-		Suggest:              true,
-		EnableBashCompletion: true,
-		Commands: []*cli.Command{
-			{
-				Name:    "run",
-				Aliases: []string{"r", "R"},
-				Usage:   "run the DDNS service",
-
-				Action: func(context *cli.Context) error {
-					err := checkLog(logLevel)
-					if err != nil {
-						return err
-					}
-					if config != "" {
-						core.UpdateConfigureLocation(config)
-					} else {
-						core.UpdateConfigureLocation(defaultLocation)
-					}
-
-					parametersTemp, err := ReadConfig(configFactoryList)
-					if err != nil {
-						return err
-					}
-
-					for _, p := range parametersTemp {
-						p := p
-						parameters = append(parameters, &p)
-					}
-
-					if ApiName == "" {
-						runMode = run
-					} else {
-						runMode = runApi
-					}
-
-					if Time != 0 {
-						_ = RunDDNS(parameters)
-						RunPerTime(Time, nil, parameters)
-						return nil
-					}
-
-					return ModeController(parameters, nil)
-				},
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "api",
-						Aliases: []string{"i", "I"},
-
-						Usage: "get ip address from provided `ApiName`, eg: ipify/identMe",
-
-						Destination: &ApiName,
-
-						Category: "RUN",
-					},
-					parallelFlag,
-					timeFlag,
-					timesLimitationFlag,
-					retryFlag,
-					silentFlag,
-					logFlag,
-					configFlag,
-					proxyFlag,
-					cpuProfilingFlag,
-					memProfilingFlag,
-					boxFlag,
-					mdFlag,
-				},
-				Subcommands: []*cli.Command{
-					{
-						Name:    "auto",
-						Aliases: []string{"a", "A"},
-						Usage:   "run ddns, use ip address of interface set in Device Section automatically",
-						Flags: []cli.Flag{
-							parallelFlag,
-							timeFlag,
-							onChangeFlag,
-							onChangeScanTimeFlag,
-							timesLimitationFlag,
-							retryFlag,
-							silentFlag,
-							logFlag,
-							configFlag,
-							proxyFlag,
-							cpuProfilingFlag,
-							memProfilingFlag,
-							boxFlag,
-							mdFlag,
-						},
-						Action: func(context *cli.Context) error {
-							err := checkLog(logLevel)
-							if err != nil {
-								return err
-							}
-
-							if config != "" {
-								core.UpdateConfigureLocation(config)
-							} else {
-								core.UpdateConfigureLocation(defaultLocation)
-							}
-
-							parametersTemp, err := ReadConfig(configFactoryList)
-							if err != nil {
-								return err
-							}
-							for _, p := range parametersTemp {
-								p := p
-								parameters = append(parameters, &p)
-							}
-
-							GlobalDevice, err = GetGlobalDevice(parameters)
-							if err != nil {
-								return err
-							}
-
-							runMode = runAuto
-							if onChange {
-								OnChange(parameters, &GlobalDevice)
-								return nil
-							}
-
-							if Time != 0 {
-								_ = RunAuto(GlobalDevice, parameters)
-								RunPerTime(Time, &GlobalDevice, parameters)
-								return nil
-							}
-
-							return ModeController(parameters, &GlobalDevice)
-						},
-						Subcommands: []*cli.Command{
-							{
-								Name:    "override",
-								Aliases: []string{"o", "O"},
-								Usage:   "run ddns, override the ip address of interface set in each service Section",
-								Flags: []cli.Flag{
-									parallelFlag,
-									timeFlag,
-									onChangeFlag,
-									onChangeScanTimeFlag,
-									timesLimitationFlag,
-									retryFlag,
-									silentFlag,
-									logFlag,
-									configFlag,
-									proxyFlag,
-									cpuProfilingFlag,
-									memProfilingFlag,
-									boxFlag,
-									mdFlag,
-								},
-								Action: func(context *cli.Context) error {
-									err := checkLog(logLevel)
-									if err != nil {
-										return err
-									}
-
-									if config != "" {
-										core.UpdateConfigureLocation(config)
-									} else {
-										core.UpdateConfigureLocation(defaultLocation)
-									}
-
-									parametersTemp, err := ReadConfig(configFactoryList)
-									if err != nil {
-										return err
-									}
-									for _, p := range parametersTemp {
-										p := p
-										parameters = append(parameters, &p)
-									}
-									GlobalDevice, err = GetGlobalDevice(parameters)
-									if err != nil {
-										return err
-									}
-
-									runMode = runAutoOverride
-									if onChange {
-										OnChange(parameters, &GlobalDevice)
-										return nil
-									}
-
-									if Time != 0 {
-										_ = RunOverride(GlobalDevice, parameters)
-										RunPerTime(Time, &GlobalDevice, parameters)
-										return nil
-									}
-
-									return ModeController(parameters, &GlobalDevice)
-								},
-							},
-						},
-					},
-				},
-			},
-			{
-				Name:    "generate",
-				Aliases: []string{"g", "G"},
-				Usage:   "generate a default configuration file",
-				Action: func(*cli.Context) error {
-					err := checkLog(logLevel)
-					if err != nil {
-						return err
-					}
-
-					if config != "" {
-						core.UpdateConfigureLocation(config)
-					} else {
-						core.UpdateConfigureLocation(defaultLocation)
-					}
-					return GenerateConfigure(configFactoryList)
-				},
-				Flags: []cli.Flag{
-					silentFlag,
-					logFlag,
-					configFlag,
-					cpuProfilingFlag,
-					memProfilingFlag,
-				},
-			},
-			{
-				Name:    "show-config",
-				Aliases: []string{"sc", "SC"},
-				Usage:   "show the configuration of a service/section *case insensitive*",
-				Action: func(c *cli.Context) error {
-					err := checkLog(logLevel)
-					if err != nil {
-						return err
-					}
-
-					all := c.Bool("all")
-					if !all {
-						services := c.Args().Slice()
-						if len(services) == 0 {
-							return errors.New("at least one service/section name is required")
-						}
-
-						for _, service := range services {
-							found := false
-							for _, configFactory := range configFactoryList {
-								if strings.EqualFold(configFactory.GetName(), service) {
-									found = true
-									configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
-									if !md {
-										if erri != nil {
-											_, _ = log.ErrPP.Println(erri)
-											err = errors.Join(err, erri)
-											break
-										}
-										_, _ = log.InfoPP.Println(configStr.Content)
-										break
-									} else {
-										configStr.Content = "# " + configFactory.GetName() + "\n" + strings.ReplaceAll(strings.ReplaceAll(configStr.Content, "#", "##"), "\n", "\n\n")
-										renderer, _ := glamour.NewTermRenderer(
-											glamour.WithAutoStyle(),
-											glamour.WithEmoji(),
-										)
-										out, err := renderer.Render(configStr.Content)
-										if err != nil {
-											return err
-										}
-										_, _ = log.InfoPP.Fprintln(output, out)
-										break
-									}
-
-								}
-							}
-							if !found {
-								erri := fmt.Errorf("service/section %s not found", service)
-								_, _ = log.ErrPP.Printf("%s\n\n\n", erri)
-								err = errors.Join(err, erri)
-							}
-						}
-					} else {
-						for _, configFactory := range configFactoryList {
-							configStr, erri := configFactory.Get().GenerateDefaultConfigInfo()
-							if erri != nil {
-								_, _ = log.ErrPP.Println(erri)
-								err = errors.Join(err, erri)
-							}
-							_, _ = log.InfoPP.Println(configStr.Content)
-						}
-					}
-					return err
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "all",
-						Aliases: []string{"a", "A"},
-						Value:   false,
-						Usage:   "show all available services/sections configuration",
-					},
-					mdFlag,
-					logFlag,
-					cpuProfilingFlag,
-					memProfilingFlag,
-				},
-				Subcommands: []*cli.Command{
-					{
-						Name:  "ls",
-						Usage: "list all available services/sections",
-						Action: func(c *cli.Context) error {
-							err := checkLog(logLevel)
-							if err != nil {
-								return err
-							}
-							for _, configFactory := range configFactoryList {
-								_, _ = log.InfoPP.Println(configFactory.GetName())
-							}
-							return nil
-						},
-						Flags: []cli.Flag{
-							logFlag,
-							cpuProfilingFlag,
-							memProfilingFlag,
-						},
-					},
-				},
-			},
-		},
-	}
+	app := GetApp(configFactoryList, parameters, GlobalDevice)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	_ = core.MainGoroutinePool.Submit(func() {
-		defer func() {
-			if err := recover(); err != nil {
-				core.MainPanicHandler.Receive(err, debug.Stack())
-				core.PrintPanic(output, core.Errchan)
-			}
-		}()
+		defer core.CatchPanic(output)
 		core.Errchan <- app.Run(os.Args)
 	})
 
@@ -488,9 +166,9 @@ func main() {
 				core.ReturnCode = 1
 			}
 			if isLogSet {
-				log.Errorf("fatal: %s", err)
+				log.Errorf("fatal:\n%s", err)
 			} else {
-				_, _ = log.ErrPP.Fprintln(output, "fatal: ", err.Error())
+				_, _ = log.ErrPP.Fprintln(output, "fatal:\n", err.Error())
 			}
 		}
 	case <-interrupt:

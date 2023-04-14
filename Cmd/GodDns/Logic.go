@@ -18,7 +18,6 @@ import (
 	"GodDns/Util/Collections"
 	"GodDns/core"
 	// 3rd party
-	"github.com/charmbracelet/glamour"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/robfig/cron/v3"
@@ -586,12 +585,7 @@ func PrintMD(request core.Request, output io.Writer) {
 		}
 	}
 
-	renderer, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithEmoji(),
-	)
-
-	out, err := renderer.Render(content.String())
+	out, err := GetMDRenderer().Render(content.String())
 	if err != nil {
 		panic(err)
 	}
