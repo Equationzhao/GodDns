@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"GodDns/Util/Json"
+	"github.com/charmbracelet/glamour"
 	"github.com/go-resty/resty/v2"
 	"github.com/panjf2000/ants/v2"
 )
@@ -34,4 +35,21 @@ func init() {
 	for i := 0; i < DEFAULTPOOLSIZE; i++ {
 		MainClientPool.Put(MainClientPool.New())
 	}
+}
+
+var (
+	mdRenderer sync.Once
+	renderer   *glamour.TermRenderer
+)
+
+func GetMDRenderer() *glamour.TermRenderer {
+	mdRenderer.Do(
+		func() {
+			renderer, _ = glamour.NewTermRenderer(
+				glamour.WithAutoStyle(),
+				glamour.WithEmoji(),
+			)
+		},
+	)
+	return renderer
 }

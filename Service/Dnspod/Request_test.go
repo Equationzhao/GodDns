@@ -7,7 +7,6 @@ import (
 
 	"GodDns/Util"
 	DDNS "GodDns/core"
-
 	"github.com/sirupsen/logrus"
 )
 

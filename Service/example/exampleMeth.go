@@ -4,11 +4,10 @@ package example
 import (
 	"strings"
 
-	"GodDns/core"
-
 	"GodDns/Net"
 	"GodDns/Util"
 	"GodDns/Util/Collections"
+	"GodDns/core"
 	"gopkg.in/ini.v1"
 )
 

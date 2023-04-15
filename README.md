@@ -74,8 +74,13 @@ COMMANDS:
 COMMANDS:
    generate, g, G  generate a default configuration file
    help, h         Shows a list of commands or help for one command
-
+   show-config, sc, SC  show the configuration of a service/section *case insensitive*
+   show-config ls       list all available services/sections
+   help, h              Shows a list of commands or help for one command
+   
 OPTIONS:
+   --all, -a, -A  show all available services/sections configuration (default: false)
+
    CONFIG
 
    --config file, -c file, -C file, --Config file  set configuration file
@@ -137,7 +142,6 @@ make install
 
 * [ ] add more service
 * [ ] new feature support multi-device for each service(like Device does)
-* [ ] ? refactor Dnspod.Config.ReadConfig:62
 
 ## Recent activity [![Time period](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_badge.svg)](https://repography.com)
 [![Timeline graph](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_timeline.svg)](https://github.com/Equationzhao/GodDns/commits)

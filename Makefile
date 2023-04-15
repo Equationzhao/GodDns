@@ -5,22 +5,39 @@ OS=$(shell go env GOOS)
 Linux = linux
 Windows = windows
 
-all: tool check clean build
+.PHONY: pre
+pre: tool
 
+.PHONY: all
+all: check clean build
+
+.PHONY: fmt
 fmt: ## Format the code
 	$(info Formatting the code)
 	gofumpt -l -w .
 
+.PHONY : vet
 vet: ## Vet the code
 	$(info Vet the code)
 	go vet ./...
 
+.PHONY : lint
 lint:
 	golangci-lint run
 
-check: fmt vet lint ## Run all the checks
+.PHONY: mod
+mod:
 	go mod tidy
 
+.PHONY: check
+check: mod fmt vet lint gci ## Run all the checks
+
+.PHONY: gci
+gci: ## Run gci
+	$(info Running gci)
+	gci write .
+
+.PHONY: tool
 tool: ## Install the tools
 	$(info Installing the tools)
 	go install mvdan.cc/gofumpt@latest
@@ -44,23 +61,27 @@ build: ## Build the binary
 
 rebuild: clean build ## Clean and build the binary
 
-
+.PHONY: init
 init: ## Initialize the config
 	$(info Initializing the config)
 	go run GodDns/Cmd/GodDns g
 
+.PHONY: run
 run race: ## Run the binary, checking date race
 	$(info Running the binary)
 	go run -race GodDns/Cmd/GodDns run auto -parallel
 
+.PHONY: clean
 clean: ## Clean up the build
 	rm -rf build
 	go clean
 
+.PHONY : install
 install: ## Install the binary to the GOPATH
 	$(info Installing the binary)
 	go install GodDns/Cmd/GodDns
 
+.PHONY : uninstall
 uninstall : ## Uninstall the binary from GOPATH
 	@if [ ${OS} = ${Linux} ]; \
 	then \
@@ -75,6 +96,7 @@ uninstall : ## Uninstall the binary from GOPATH
   		echo "Please remove the binary manually"; \
   		echo "Path: $(GOPATH)/bin/${App}"; \
   	fi \
+
 
 upx: ## Compress the binary
 	$(info Compressing the binary)

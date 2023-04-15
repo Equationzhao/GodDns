@@ -3,12 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"runtime/pprof"
 	"time"
 
 	log "GodDns/Log"
-
 	"GodDns/Net"
 	"GodDns/core"
 	"github.com/urfave/cli/v2"
@@ -74,7 +74,7 @@ var (
 		Action: func(context *cli.Context, silent bool) error {
 			// set output
 			if silent {
-				output = nil
+				output = io.Discard
 			}
 			return nil
 		},
@@ -267,7 +267,16 @@ var (
 		Aliases:     []string{"tb", "table", "pit"},
 		DefaultText: "disabled",
 		Usage:       "print result in table **may render incorrectly in some terminals**",
-		Destination: &box,
+		Destination: &tab,
+		Category:    "OUTPUT",
+	}
+
+	mdFlag = &cli.BoolFlag{
+		Name:        "print-in-markdown",
+		Aliases:     []string{"md", "markdown", "pim"},
+		DefaultText: "disabled",
+		Usage:       "print result in markdown",
+		Destination: &md,
 		Category:    "OUTPUT",
 	}
 )

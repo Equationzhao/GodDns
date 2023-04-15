@@ -8,7 +8,6 @@ import (
 
 	"GodDns/Util"
 	"GodDns/core"
-
 	"gopkg.in/ini.v1"
 )
 
