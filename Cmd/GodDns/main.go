@@ -2,10 +2,10 @@ package main
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/signal"
 	"runtime/pprof"
-	"sync"
 	"syscall"
 	"time"
 
@@ -13,7 +13,6 @@ import (
 	log "GodDns/Log"
 	_ "GodDns/Service" // register all services
 	"GodDns/core"
-	"github.com/charmbracelet/glamour"
 	"github.com/panjf2000/ants/v2"
 )
 
@@ -37,7 +36,7 @@ func init() {
 
 // global variables
 var (
-	output            = os.Stdout
+	output            io.Writer = os.Stdout
 	Time              uint64
 	TimesLimitation   int // 0 means no limitation
 	ApiName           string
@@ -55,23 +54,6 @@ var (
 	tab               bool
 	md                bool
 )
-
-var (
-	mdRenderer sync.Once
-	renderer   *glamour.TermRenderer
-)
-
-func GetMDRenderer() *glamour.TermRenderer {
-	mdRenderer.Do(
-		func() {
-			renderer, _ = glamour.NewTermRenderer(
-				glamour.WithAutoStyle(),
-				glamour.WithEmoji(),
-			)
-		},
-	)
-	return renderer
-}
 
 func checkLog(l string) error {
 	switch l {
