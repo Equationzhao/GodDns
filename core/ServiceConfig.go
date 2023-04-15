@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strconv"
 
-	log "GodDns/Log"
+	log "GodDns/log"
 	"gopkg.in/ini.v1"
 )
 

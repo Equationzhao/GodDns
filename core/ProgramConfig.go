@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	log "GodDns/Log"
-	"GodDns/Net"
-	"GodDns/Util"
-	"GodDns/Util/Collections"
-	json "GodDns/Util/Json"
+	log "GodDns/log"
+	"GodDns/net"
+	"GodDns/util"
+	"GodDns/util/collections"
+	json "GodDns/util/json"
 	"github.com/go-resty/resty/v2"
 	"gopkg.in/ini.v1"
 )
@@ -267,7 +267,7 @@ func loadProxy(proxy string) (res []url.URL, err error) {
 	}
 
 	// remove duplicate
-	Collections.RemoveDuplicate[url.URL](&res)
+	collections.RemoveDuplicate[url.URL](&res)
 
 	return res, err
 }

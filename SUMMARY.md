@@ -1,13 +1,13 @@
 # Table of contents
 
 * [GodDNS](README.md)
-* [Service](Service/README.md)
-  * [example](Service/example/README.md)
-  * [Dnspod](Service/Dnspod/README.md)
-  * [DnspodYunApi](Service/DnspodYunApi/README.md)
+* [Service](service/README.md)
+    * [example](service/example/README.md)
+    * [Dnspod](service/Dnspod/README.md)
+    * [DnspodYunApi](service/DnspodYunApi/README.md)
 * [Device/Net Interface](Device/README.md)
-* [Log](Log/README.md)
-* [Net](Net/README.md)
+* [Log](log/README.md)
+* [Net](net/README.md)
 * [Program Config](core/README.md)
-* [Util](Util/README.md)
+* [Util](util/README.md)
 

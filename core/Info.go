@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"GodDns/Util"
+	"GodDns/util"
 	"github.com/go-resty/resty/v2"
 )
 

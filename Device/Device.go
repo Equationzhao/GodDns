@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"strings"
 
-	"GodDns/Util"
 	"GodDns/core"
+	"GodDns/util"
 	"gopkg.in/ini.v1"
 )
 

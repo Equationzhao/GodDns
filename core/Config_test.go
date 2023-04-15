@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"GodDns/Net"
-	sonic "GodDns/Util/Json"
+	"GodDns/net"
+	sonic "GodDns/util/json"
 	jsoniter "github.com/json-iterator/go"
 )
 
