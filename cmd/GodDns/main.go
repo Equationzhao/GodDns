@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"GodDns/Device"
 	"GodDns/core"
 	log "GodDns/log"
+	"GodDns/netinterface"
 	_ "GodDns/service" // register all services
 	"github.com/panjf2000/ants/v2"
 )
@@ -98,7 +98,7 @@ func main() {
 	defer core.CatchPanic(output)
 
 	var parameters []*core.Parameters
-	var GlobalDevice Device.Device
+	var GlobalDevice netinterface.Device
 	configFactoryList := core.ConfigFactoryList
 
 	location, err := core.GetProgramConfigLocation()

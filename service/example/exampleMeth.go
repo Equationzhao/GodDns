@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"GodDns/core"
-	"GodDns/net"
+	"GodDns/netutil"
 	"GodDns/util"
 	"GodDns/util/collections"
 	"gopkg.in/ini.v1"
@@ -46,7 +46,7 @@ func (p *Parameter) GetIP() string {
 
 // GetType Note that return value of this method should be "4" or "6"
 func (p *Parameter) GetType() string {
-	return Net.Type2Num(p.Type)
+	return netutil.Type2Num(p.Type)
 }
 
 func (p *Parameter) IsTypeSet() bool {
@@ -111,7 +111,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]core.Parameters, error) {
 				subdomains = strings.Split(strings.ReplaceAll(subdomain, ",", " "), " ")
 				collections.RemoveDuplicate(&subdomains) // remove duplicate subdomains, remind to pass pointer
 			case "Type":
-				p.Type = Net.Type2Str(sec.Key(name).String()) // convert "4"/"6"/"A"/"AAAA" to "A"/"AAAA"
+				p.Type = netutil.Type2Str(sec.Key(name).String()) // convert "4"/"6"/"A"/"AAAA" to "A"/"AAAA"
 			// case UnexportedField:
 			// Set field
 
@@ -119,7 +119,7 @@ func (c Config) ReadConfig(sec ini.Section) ([]core.Parameters, error) {
 			// do something special
 			default:
 				// any other !EXPORTED! field with no special treatment
-				err := Util.SetVariable(&p, name, sec.Key(name).String())
+				err := util.SetVariable(&p, name, sec.Key(name).String())
 				if err != nil {
 					return nil, err
 				}
@@ -152,7 +152,7 @@ func (c Config) GenerateConfigInfo(parameters core.Parameters, u uint) (core.Con
 	// if it's not the first section, the name looks like [example#1] [example#2] ...
 	head := core.ConfigHead(parameters, u)
 
-	body := Util.Convert2KeyValue(core.Format, parameters)
+	body := util.Convert2KeyValue(core.Format, parameters)
 	// the default Convert will convert struct to key-value string like
 
 	//	type B struct {

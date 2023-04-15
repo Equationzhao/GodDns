@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"GodDns/Device"
 	"GodDns/cmd/GodDns/tui"
 	"GodDns/core"
 	log "GodDns/log"
+	"GodDns/netinterface"
 	"GodDns/util/collections"
 	"github.com/urfave/cli/v2"
 )
 
-func GetApp(configFactoryList []core.ConfigFactory, parameters []*core.Parameters, GlobalDevice Device.Device) *cli.App {
+func GetApp(configFactoryList []core.ConfigFactory, parameters []*core.Parameters, GlobalDevice netinterface.Device) *cli.App {
 	app := &cli.App{
 		Name:     core.FullName,
 		Usage:    "A DDNS tool written in Go",
