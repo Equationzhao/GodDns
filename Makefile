@@ -49,10 +49,10 @@ build: ## Build the binary
 	@mkdir "build"
 	@if [ ${OS} = ${Linux} ]; \
 	then \
-		go build -ldflags="-s -w" -o build/${App} GodDns/Cmd/GodDns; \
+		go build -ldflags="-s -w" -o build/${App} GodDns/cmd/GodDns; \
 	elif [ ${OS} = ${Windows} ]; \
     then \
-		go build -ldflags="-s -w" -o build/${App}.exe GodDns/Cmd/GodDns; \
+		go build -ldflags="-s -w" -o build/${App}.exe GodDns/cmd/GodDns; \
   	else \
   		echo "Unsupported OS"; \
   		echo "Please remove the binary manually"; \
@@ -64,12 +64,12 @@ rebuild: clean build ## Clean and build the binary
 .PHONY: init
 init: ## Initialize the config
 	$(info Initializing the config)
-	go run GodDns/Cmd/GodDns g
+	go run GodDns/cmd/GodDns g
 
 .PHONY: run
 run race: ## Run the binary, checking date race
 	$(info Running the binary)
-	go run -race GodDns/Cmd/GodDns run auto -parallel
+	go run -race GodDns/cmd/GodDns run auto -parallel
 
 .PHONY: clean
 clean: ## Clean up the build
@@ -79,7 +79,7 @@ clean: ## Clean up the build
 .PHONY : install
 install: ## Install the binary to the GOPATH
 	$(info Installing the binary)
-	go install GodDns/Cmd/GodDns
+	go install GodDns/cmd/GodDns
 
 .PHONY : uninstall
 uninstall : ## Uninstall the binary from GOPATH
@@ -113,6 +113,6 @@ build-all: ## Build the binary for all the platforms
 	$(info Building the binary for all the platforms)
 	@mkdir "build"
 	@echo "Building for Windows"
-	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o build/${App}-Windows-amd64.exe GodDns/Cmd/GodDns
+	@GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o build/${App}-Windows-amd64.exe GodDns/cmd/GodDns
 	@echo "Building for Linux"
-	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/${App}-Linux-amd64 GodDns/Cmd/GodDns
+	@GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o build/${App}-Linux-amd64 GodDns/cmd/GodDns

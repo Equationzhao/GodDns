@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"GodDns/Util"
+	"GodDns/util"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -191,7 +191,7 @@ func GetLatestVersionInfo() (Version, string, error) {
 		return latest, "", err
 	}
 
-	os, arch := Util.OSDetect()
+	os, arch := util.OSDetect()
 	for _, asset := range versionResponse.Assets {
 		if strings.Contains(strings.ToLower(asset.Name), strings.ToLower(os)) &&
 			strings.Contains(strings.ToLower(asset.Name), strings.ToLower(arch)) {

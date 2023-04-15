@@ -122,7 +122,7 @@ GLOBAL OPTIONS:
 
 [Program Config](core/README.md)
 
-[Service Config](Service/README.md)
+[Service Config](service/README.md)
 
 ## Build from source
 
