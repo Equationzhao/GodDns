@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"GodDns/Cmd/GodDns/tui"
 	// GodDns
 	"GodDns/Device"
 	log "GodDns/Log"
@@ -17,6 +18,7 @@ import (
 	"GodDns/Util"
 	"GodDns/Util/Collections"
 	"GodDns/core"
+	tea "github.com/charmbracelet/bubbletea"
 	// 3rd party
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -561,31 +563,31 @@ func PrintMD(request core.Request, output io.Writer) {
 
 	infoMsg := request.Status().MG.GetMsgOf(core.Info)
 	if len(infoMsg) != 0 {
-		content.WriteString("## 🚩Info\n")
-		content.WriteString(strings.Join(request.Status().MG.GetMsgOf(core.Info), "\n"))
+		content.WriteString("## 🚩 Info\n")
+		content.WriteString(strings.Join(request.Status().MG.GetMsgOf(core.Info), "\n\n"))
 	}
 
 	errorsMsg := request.Status().MG.GetMsgOf(core.Error)
 	if len(errorsMsg) != 0 {
-		content.WriteString("## ❌ Error\n")
+		content.WriteString("\n## ❌  Error\n")
 		e := request.Status().MG.GetMsgOf(core.Error)
 		for _, i := range e {
 			content.WriteString(i)
-			content.WriteByte('\n')
+			content.WriteString("\n\n")
 		}
 	}
 
 	warnMsg := request.Status().MG.GetMsgOf(core.Warn)
 	if len(warnMsg) != 0 {
-		content.WriteString("## ⚠️ Warn\n")
+		content.WriteString("\n## ⚠️  Warn\n")
 		e := request.Status().MG.GetMsgOf(core.Warn)
 		for _, i := range e {
 			content.WriteString(i)
-			content.WriteByte('\n')
+			content.WriteString("\n\n")
 		}
 	}
 
-	out, err := GetMDRenderer().Render(content.String())
+	out, err := core.GetMDRenderer().Render(content.String())
 	if err != nil {
 		panic(err)
 	}
@@ -701,6 +703,18 @@ func ExecuteRequests(requests ...core.Request) {
 		}
 	}
 
+	msgSpinner := make(chan struct{})
+	if output != io.Discard {
+		_ = core.MainGoroutinePool.Submit(func() {
+			tui.ShowSpinner(
+				func() tea.Msg {
+					<-msgSpinner
+					return struct{}{}
+				},
+			)
+		})
+	}
+
 	if proxyEnable {
 		for _, request := range requests {
 			request := request
@@ -742,7 +756,10 @@ func ExecuteRequests(requests ...core.Request) {
 		}
 		wg.Wait()
 	}
-
+	if output != io.Discard {
+		msgSpinner <- struct{}{}
+		time.Sleep(time.Millisecond * 100) // wait for spinner stop
+	}
 	log.Info("all requests finished")
 }
 

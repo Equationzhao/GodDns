@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"fmt"
@@ -49,17 +49,17 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	_, _ = fmt.Fprint(w, fn(str))
 }
 
-type model struct {
+type lModel struct {
 	list     list.Model
 	choice   core.ConfigStr
 	quitting bool
 }
 
-func (m model) Init() tea.Cmd {
+func (m lModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m lModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
@@ -85,10 +85,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m lModel) View() string {
 	if m.choice.Name != "" {
 		m.choice.Content = "# " + strings.ReplaceAll(strings.ReplaceAll(m.choice.Content, "#", "##"), "\n", "\n\n")
-		str, _ := GetMDRenderer().Render(m.choice.Content)
+		str, _ := core.GetMDRenderer().Render(m.choice.Content)
 		return quitTextStyle.Render(str)
 	}
 	if m.quitting {
@@ -97,7 +97,7 @@ func (m model) View() string {
 	return "\n" + m.list.View()
 }
 
-func showContent() error {
+func ShowConfigList() error {
 	const defaultWidth = 20
 	items := make([]list.Item, 0, len(core.ConfigFactoryList))
 	for _, v := range core.ConfigFactoryList {
@@ -112,7 +112,7 @@ func showContent() error {
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
 
-	m := model{list: l}
+	m := lModel{list: l}
 
 	_, err := tea.NewProgram(m).Run()
 	return err

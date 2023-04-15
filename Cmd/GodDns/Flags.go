@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -73,7 +74,7 @@ var (
 		Action: func(context *cli.Context, silent bool) error {
 			// set output
 			if silent {
-				output = nil
+				output = io.Discard
 			}
 			return nil
 		},

@@ -5,7 +5,11 @@ OS=$(shell go env GOOS)
 Linux = linux
 Windows = windows
 
-all: tool check clean build
+.PHONY: pre
+pre: tool
+
+.PHONY: all
+all: check clean build
 
 .PHONY: fmt
 fmt: ## Format the code

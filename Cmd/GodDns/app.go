@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"GodDns/Cmd/GodDns/tui"
 	"GodDns/Device"
 	log "GodDns/Log"
 	"GodDns/Util/Collections"
@@ -257,7 +258,7 @@ func GetApp(configFactoryList []core.ConfigFactory, parameters []*core.Parameter
 
 					render := func(configStr core.ConfigStr, out string) (string, error) {
 						configStr.Content = "# " + strings.ReplaceAll(strings.ReplaceAll(configStr.Content, "#", "##"), "\n", "\n\n")
-						outi, err := GetMDRenderer().Render(configStr.Content)
+						outi, err := core.GetMDRenderer().Render(configStr.Content)
 						if err != nil {
 							// should not reach here
 							return "", err
@@ -269,7 +270,7 @@ func GetApp(configFactoryList []core.ConfigFactory, parameters []*core.Parameter
 					if !all {
 						services := c.Args().Slice()
 						if len(services) == 0 {
-							return showContent()
+							return tui.ShowConfigList()
 						}
 						Collections.RemoveDuplicate(&services)
 						var out string
@@ -313,7 +314,7 @@ func GetApp(configFactoryList []core.ConfigFactory, parameters []*core.Parameter
 								out += configStr.Content
 							} else {
 								configStr.Content = "# " + strings.ReplaceAll(strings.ReplaceAll(configStr.Content, "#", "##"), "\n", "\n\n")
-								outi, err := GetMDRenderer().Render(configStr.Content)
+								outi, err := core.GetMDRenderer().Render(configStr.Content)
 								if err != nil {
 									return err
 								}
