@@ -62,6 +62,8 @@ USAGE:
    GodDns run auto - run ddns, use ip address of interface set in Device Section automatically
    GodDns run auto override - run ddns, override the ip address of interface set in each service Section
    GodDns generate - generate a default configuration file
+   GodDns show-config service/section - show the configuration of a service/section *case insensitive*
+   GodDns show-config ls - list all available services/sections
 ```
 
 ```
@@ -89,6 +91,8 @@ OPTIONS:
 
    --log level, -l level, -L level, --Log level  level: Trace/Debug/Info/Warn/Error (default: Info)
    --no-output, -s, -S, --silent                 no message output (default: false)
+   --print-in-markdown, --md, --markdown, --pim  print result in markdown (default: disabled)
+   --print-in-table, --pt, --table, --pit        print result in table (default: disabled)
    
    PERFORMANCE
 
