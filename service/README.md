@@ -3,6 +3,6 @@ Contains the configuration of each service.
 
 [example](example/README.md)
 
-[Dnspod](Dnspod/README.md)
+[Dnspod](dnspod/README.md)
 
-[DnspodYunApi](DnspodYunApi/README.md)
+[DnspodYunApi](dnspodyunapi/README.md)
