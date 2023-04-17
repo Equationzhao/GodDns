@@ -62,6 +62,8 @@ USAGE:
    GodDns run auto - run ddns, use ip address of interface set in Device Section automatically
    GodDns run auto override - run ddns, override the ip address of interface set in each service Section
    GodDns generate - generate a default configuration file
+   GodDns show-config service/section - show the configuration of a service/section *case insensitive*
+   GodDns show-config ls - list all available services/sections
 ```
 
 ```
@@ -89,6 +91,8 @@ OPTIONS:
 
    --log level, -l level, -L level, --Log level  level: Trace/Debug/Info/Warn/Error (default: Info)
    --no-output, -s, -S, --silent                 no message output (default: false)
+   --print-in-markdown, --md, --markdown, --pim  print result in markdown (default: disabled)
+   --print-in-table, --pt, --table, --pit        print result in table (default: disabled)
    
    PERFORMANCE
 
@@ -124,18 +128,40 @@ GLOBAL OPTIONS:
 
 [Service Config](service/README.md)
 
+## Download
+
+download in [release](https://github.com/Equationzhao/GodDns/releases)
+
 ## Build from source
 
 build binary
 
 ```bash
+git clone https://github.com/Equationzhao/GodDns.git
+cd GodDns
 make build
 ```
 
 install to $GOPATH/bin
 
 ```bash
+git clone https://github.com/Equationzhao/GodDns.git
+cd GodDns
 make install
+```
+
+### Arch Linux
+
+```bash
+git clone https://aur.archlinux.org/goddns.git
+cd goddns
+makepkg -si
+```
+
+or through aur helper
+
+```bash
+yay -S goddns
 ```
 
 ## TODO
@@ -144,9 +170,8 @@ make install
 * [ ] new feature support multi-device for each service(like Device does)
 
 ## Recent activity [![Time period](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_badge.svg)](https://repography.com)
+
 [![Timeline graph](https://images.repography.com/35290882/Equationzhao/GodDns/recent-activity/q65o3PECpPMnwg4phwoyLACVdMlhp7RSU_ZM56V6IsI/OblplC2Dj_Os64IMBtDy1MYIbUUtq2xrjYEpyDc2C2M_timeline.svg)](https://github.com/Equationzhao/GodDns/commits)
-
-
 
 ## Structure
 

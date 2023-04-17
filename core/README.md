@@ -1,9 +1,10 @@
 # DDNS
 Program config
-## Config
+## Config example
 ```ini
 [settings]
-Proxy=[socks://localhost:10808 http://127.0.0.1:10809]
+Proxy = [socks://localhost:10808 http://127.0.0.1:10809]
+ocst = 10s
 
 
 # when Response=TEXT, Value is the no-th ip in the response
