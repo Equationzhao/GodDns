@@ -42,6 +42,7 @@ tool: ## Install the tools
 	$(info Installing the tools)
 	go install mvdan.cc/gofumpt@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/daixiang0/gci@latest
 
 
 build: ## Build the binary
