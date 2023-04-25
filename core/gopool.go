@@ -1,12 +1,11 @@
 package core
 
 import (
-	"sync"
-
 	"GodDns/util/json"
 	"github.com/charmbracelet/glamour"
 	"github.com/go-resty/resty/v2"
 	"github.com/panjf2000/ants/v2"
+	"sync"
 )
 
 const DEFAULTGOPOOLSIZE = 100
@@ -20,6 +19,7 @@ func init() {
 // MainClientPool is a global ClientPool
 var MainClientPool *sync.Pool
 
+// DEFAULTPOOLSIZE is the default size of goroutine Pool and ClientPool
 const DEFAULTPOOLSIZE = 20
 
 func init() {

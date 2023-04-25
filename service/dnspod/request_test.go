@@ -7,7 +7,6 @@ import (
 
 	DDNS "GodDns/core"
 	"GodDns/util"
-	"github.com/sirupsen/logrus"
 )
 
 func TestXWWWFORMURLENCODED(t *testing.T) {
@@ -61,7 +60,6 @@ func TestRequest_GetRecordId(t *testing.T) {
 }
 
 func TestRequest_MakeRequest(t *testing.T) {
-	logrus.SetLevel(logrus.TraceLevel)
 
 	p := Parameters{
 		LoginToken:   "TOKEN",
