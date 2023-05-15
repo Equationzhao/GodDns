@@ -1,4 +1,4 @@
-// Package Core
+// Package core
 // software version info
 package core
 
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"GodDns/util"
+
 	"github.com/go-resty/resty/v2"
 )
 

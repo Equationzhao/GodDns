@@ -17,6 +17,7 @@ import (
 	"GodDns/util"
 	"GodDns/util/collections"
 	json "GodDns/util/json"
+
 	"github.com/go-resty/resty/v2"
 	"gopkg.in/ini.v1"
 )
@@ -115,7 +116,7 @@ func (p *ProgramConfig) ConfigStr() ConfigStr {
 var UniversalConfig = make(map[LazyUsedConfig]any)
 
 // Setup  program
-// 1. set proxy [not implemented]
+// 1. set proxy
 // 2. add apis
 // 3. ...
 func (p *ProgramConfig) Setup() {

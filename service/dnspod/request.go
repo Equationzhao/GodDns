@@ -10,7 +10,7 @@ import (
 	"GodDns/core"
 	log "GodDns/log"
 	"GodDns/netutil"
-	json "GodDns/util/json"
+
 	"github.com/go-resty/resty/v2"
 )
 
@@ -149,7 +149,7 @@ func (r *Request) RequestThroughProxy() error {
 	req := client.R()
 	for iter.NotLast() {
 		proxy := iter.Next()
-		response, err := req.
+		_, err := req.
 			SetResult(s).
 			SetHeader("Content-Type", "application/x-www-form-urlencoded").
 			SetBody([]byte(content)).
@@ -160,9 +160,8 @@ func (r *Request) RequestThroughProxy() error {
 			log.Errorf(errMsg)
 			continue
 		} else {
-			log.Debugf("result:%+v", string(response.Body()))
-			_ = json.Unmarshal(response.Body(), s)
-			log.Debugf("after marshall:%+v", s)
+			log.Debugf("result:%+v", s)
+
 			break
 		}
 	}
@@ -235,8 +234,7 @@ func (r *Request) MakeRequest() error {
 		Post(DDNSURL)
 	log.Tracef("response: %v", response)
 	log.Debugf("result:%+v", s)
-	_ = json.Unmarshal(response.Body(), s)
-	log.Debugf("after marshall:%+v", s)
+
 	r.status = *code2status(s.Status.Code)
 	if s.Status.Message == "" {
 		s.Status.Message = fatalStr

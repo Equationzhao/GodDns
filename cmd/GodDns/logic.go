@@ -18,6 +18,7 @@ import (
 	"GodDns/netutil"
 	"GodDns/util"
 	"GodDns/util/collections"
+
 	tea "github.com/charmbracelet/bubbletea"
 	// 3rd party
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -134,7 +135,7 @@ func RunGetFromApi(parameters []*core.Parameters) error {
 
 	var err1 error
 	_ = core.MainGoroutinePool.Submit(func() {
-		_ip4, err1 = api.Get(4)
+		_ip4, err1 = api.Get(netutil.A)
 		if err1 != nil {
 			ip4Done <- false
 		} else {
@@ -146,7 +147,7 @@ func RunGetFromApi(parameters []*core.Parameters) error {
 
 	var err2 error
 	_ = core.MainGoroutinePool.Submit(func() {
-		_ip6, err2 = api.Get(6)
+		_ip6, err2 = api.Get(netutil.AAAA)
 		if err2 != nil {
 			ip6Done <- false
 		} else {
